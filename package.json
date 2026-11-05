@@ -1,0 +1,33 @@
+{
+  "name": "kb-app",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run typecheck && npm run test && npm run build",
+    "icons": "node scripts/make-icons.mjs",
+    "deploy": "npm run check && node scripts/deploy.mjs"
+  },
+  "dependencies": {
+    "@preact/signals": "^2.11.4",
+    "dexie": "^4.4.7",
+    "preact": "^11.1.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "^2.10.6",
+    "@types/node": "^26.6.6",
+    "fake-indexeddb": "^6.2.7",
+    "sharp": "^0.35.5",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5",
+    "vite-plugin-pwa": "^2.0.0",
+    "vitest": "^5.1.0",
+    "workbox-window": "^7.4.1"
+  }
+}

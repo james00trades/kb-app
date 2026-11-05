@@ -1,0 +1,22 @@
+# Build output and tools
+node_modules/
+dist/
+dev-dist/
+*.log
+
+# Planning docs mention personal details; the repo is public. Keep them on this PC only.
+CLAUDE.md
+docs/
+
+# Paid-program material and personal media. Never commit (see DECISIONS.md, "Clip pack").
+reference/
+clips/
+clip-pack/
+*.mp4
+*.mov
+*.m4v
+*.pdf
+
+# Local editor / Claude settings
+.claude/
+.vscode/

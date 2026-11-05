@@ -1,0 +1,124 @@
+{
+  "version": 1,
+  "name": "Kettlebell: first 3 months",
+  "rotation": ["A", "B", "C", "A", "B", "C", "REST"],
+  "defaultRest": 60,
+  "breathPatterns": {
+    "box": { "name": "Box breathing", "steps": [["in", 4], ["hold", 4], ["out", 4], ["hold", 4]] },
+    "4-7-8": { "name": "4-7-8 breathing", "steps": [["in", 4], ["hold", 7], ["out", 8]] },
+    "belly": { "name": "Belly breathing", "steps": [["in", 4], ["out", 6]] }
+  },
+  "phases": [
+    {
+      "id": "m1",
+      "name": "Month 1: Wake up and learn foundations",
+      "weeks": [1, 4],
+      "effort": "5–6 out of 10",
+      "minutes": "20–25 min",
+      "setCapInWeek": { "1": 2 },
+      "warmup": [
+        { "id": "wu-air-squat", "move": "air-squat", "kind": "reps", "sets": 1, "reps": 10, "rest": 0 },
+        { "id": "wu-push-up", "move": "push-up", "kind": "reps", "sets": 1, "reps": 10, "rest": 0, "notes": "Knees or hands on a bench is fine" },
+        { "id": "wu-reverse-lunge", "move": "reverse-lunge", "kind": "reps", "sets": 1, "reps": 10, "rest": 0, "notes": "Alternate legs" },
+        { "id": "wu-hindu-push-up", "move": "hindu-push-up", "kind": "reps", "sets": 1, "reps": 10, "rest": 0 },
+        { "id": "wu-step-back-burpee", "move": "step-back-burpee", "kind": "reps", "sets": 1, "reps": 10, "rest": 0, "notes": "No jump" }
+      ],
+      "cooldown": [
+        { "id": "cd-breath", "kind": "breath", "minutes": 4, "patterns": ["box", "4-7-8", "belly"] }
+      ],
+      "days": {
+        "A": {
+          "title": "Hinge and press",
+          "items": [
+            { "id": "a-hinge-drill", "move": "hip-hinge-drill", "kind": "reps", "sets": 2, "reps": 10, "rest": 45, "weeks": [1, 2], "notes": "No bell" },
+            { "id": "a-deadlift", "move": "deadlift", "kind": "reps", "sets": 3, "reps": [8, 10], "bell": 45 },
+            { "id": "a-swing", "move": "hike-pass", "kind": "reps", "sets": 5, "reps": 5, "bell": 25, "weeks": [2, 4],
+              "notes": "Swing path",
+              "byWeek": {
+                "3": { "move": "full-stop-swing", "sets": 5, "reps": 5, "bell": 25 },
+                "4": { "move": "two-hand-swing", "sets": 5, "reps": [8, 10], "bell": 45 }
+              } },
+            { "id": "a-goblet-squat", "move": "goblet-squat", "kind": "reps", "sets": 3, "reps": 8, "bell": 25,
+              "byWeek": { "3": { "reps": [8, 10] } } },
+            { "id": "a-press", "move": "single-arm-press", "kind": "reps", "sets": 3, "reps": 5, "perSide": true, "bell": 25,
+              "byWeek": { "3": { "reps": [5, 7] } } },
+            { "id": "a-suitcase-carry", "move": "suitcase-carry", "kind": "time", "sets": 3, "seconds": 30, "perSide": true, "bell": 45 }
+          ]
+        },
+        "B": {
+          "title": "Pull and lunge",
+          "items": [
+            { "id": "b-swing", "move": "hike-pass", "kind": "reps", "sets": 5, "reps": 5, "bell": 25, "weeks": [2, 4],
+              "notes": "Swing path",
+              "byWeek": {
+                "3": { "move": "full-stop-swing", "sets": 5, "reps": 5, "bell": 25 },
+                "4": { "move": "two-hand-swing", "sets": 5, "reps": [8, 10], "bell": 45 }
+              } },
+            { "id": "b-row", "move": "bent-over-row", "kind": "reps", "sets": 3, "reps": [8, 10], "perSide": true, "bell": 45 },
+            { "id": "b-reverse-lunge", "move": "reverse-lunge", "kind": "reps", "sets": 3, "reps": 6, "perSide": true, "bell": "BW",
+              "ladder": [{ "bell": "BW" }, { "bell": 25 }],
+              "notes": "When loaded, hold the 25 goblet-style" },
+            { "id": "b-floor-press", "move": "floor-press", "kind": "reps", "sets": 3, "reps": 8, "perSide": true, "bell": 25,
+              "byWeek": { "3": { "reps": [8, 10] } } },
+            { "id": "b-halo", "move": "halo", "kind": "reps", "sets": 2, "reps": 5, "perSide": true, "sideLabel": "each direction", "bell": 25,
+              "byWeek": { "3": { "reps": [5, 7] } } },
+            { "id": "b-dead-hang", "move": "dead-hang", "kind": "time", "sets": 3, "seconds": [15, 20] }
+          ]
+        },
+        "C": {
+          "title": "Skill and mobility",
+          "items": [
+            { "id": "c-get-up", "move": "get-up-pieces", "kind": "reps", "sets": 3, "reps": 1, "perSide": true, "bell": 25, "rest": 45,
+              "notes": "One rep per side each set" },
+            { "id": "c-arm-bar", "move": "arm-bar", "kind": "time", "sets": 2, "seconds": 30, "perSide": true, "bell": 25 },
+            { "id": "c-sldl", "move": "single-leg-deadlift", "kind": "reps", "sets": 3, "reps": 5, "perSide": true, "bell": "BW",
+              "ladder": [{ "bell": "BW" }, { "bell": 25 }] },
+            { "id": "c-cossack", "move": "cossack-squat", "kind": "reps", "sets": 2, "reps": 5, "perSide": true,
+              "byWeek": { "3": { "reps": [5, 7] } } },
+            { "id": "c-pullover", "move": "pullover", "kind": "reps", "sets": 2, "reps": 8, "bell": 25,
+              "byWeek": { "3": { "reps": [8, 10] } } },
+            { "id": "c-mini-flow", "move": "mini-flow", "kind": "time", "sets": 3, "seconds": 60, "bell": 25, "notes": "Slow" }
+          ]
+        },
+        "REST": {
+          "title": "Rest / walk day",
+          "notes": "Trail walk if you can. Evening holds whenever you like."
+        }
+      },
+      "morning": {
+        "title": "Morning wake-up",
+        "transition": 0,
+        "stations": [
+          { "label": "Jumping twists", "seconds": 30 },
+          { "label": "Arm circles forward", "seconds": 15 },
+          { "label": "Arm circles backward", "seconds": 15 },
+          { "label": "Arm swings", "seconds": 30 },
+          { "label": "Elbow throws", "seconds": 30 },
+          { "label": "Ragdoll twists", "seconds": 30 },
+          { "label": "Body waves", "seconds": 30 },
+          { "label": "Side bends", "seconds": 30 },
+          { "label": "Lunge reaches", "seconds": 30 },
+          { "label": "Monk squats", "seconds": 30, "move": "monk-squat" },
+          { "label": "Cossack squats", "seconds": 30, "move": "cossack-squat" }
+        ]
+      },
+      "evening": {
+        "title": "Evening holds",
+        "transition": 10,
+        "stations": [
+          { "label": "Straddle", "seconds": 120, "move": "straddle" },
+          { "label": "Bridge (regressed)", "seconds": 120, "move": "bridge-regressed" },
+          { "label": "Deep squat hold", "seconds": 120, "move": "deep-squat-hold" },
+          { "label": "Lizard twist", "seconds": 120, "move": "lizard-twist" },
+          { "label": "Pump stretch", "seconds": 120, "move": "pump-stretch" }
+        ]
+      },
+      "checks": [
+        "3 × 10 deadlifts (45) with clean form",
+        "20 crisp two-hand swings (45)",
+        "Get-up to half-kneeling (25), each side",
+        "No joint pain the day after sessions"
+      ]
+    }
+  ]
+}
