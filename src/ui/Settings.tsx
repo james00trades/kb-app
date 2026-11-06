@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { buildBackupFile, readBackupFile, restoreBackup, saveBackupFile, type Backup } from '../lib/backup';
-import { beep, say, unlockAudio } from '../lib/sound';
+import { beep, loadVoice, say, unlockAudio } from '../lib/sound';
 import { markBackedUp, meta, persisted, sessions, settings, updateSettings } from '../lib/store';
 import { wakeLockSupported } from '../lib/wakelock';
 import { Sheet, Stepper, Toggle, daysAgo } from './common';
@@ -42,8 +42,10 @@ export function Settings() {
           class="row"
           onClick={() => {
             unlockAudio();
-            beep('go');
-            say('3, 2, 1, go');
+            void loadVoice().then(() => {
+              beep('go');
+              say('3, 2, 1, go');
+            });
           }}
         >
           <span class="row-label">Test sound</span>

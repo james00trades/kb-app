@@ -1,7 +1,7 @@
 // One timer engine for every timer type. Driven by clock timestamps, not tick counting,
 // so it stays accurate if the phone stutters or the app is briefly in the background.
 import { signal } from '@preact/signals';
-import { beep, say } from './sound';
+import { beep, say, stopVoice } from './sound';
 import type { BreathPattern } from '../engine/schema';
 
 export type PhaseKind = 'prep' | 'work' | 'rest' | 'switch' | 'in' | 'hold' | 'out';
@@ -127,7 +127,7 @@ export function startTimer(spec: TimerSpec) {
 
 export function stopTimer() {
   stopLoop();
-  if (typeof window !== 'undefined' && 'speechSynthesis' in window) speechSynthesis.cancel();
+  stopVoice();
   timer.value = null;
 }
 

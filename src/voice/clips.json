@@ -1,0 +1,282 @@
+{
+  "1": {
+    "file": "1.wav",
+    "dur": 0.344
+  },
+  "2": {
+    "file": "2.wav",
+    "dur": 0.313
+  },
+  "3": {
+    "file": "3.wav",
+    "dur": 0.424
+  },
+  "4": {
+    "file": "4.wav",
+    "dur": 0.359
+  },
+  "5": {
+    "file": "5.wav",
+    "dur": 0.32
+  },
+  "6": {
+    "file": "6.wav",
+    "dur": 0.543
+  },
+  "7": {
+    "file": "7.wav",
+    "dur": 0.434
+  },
+  "8": {
+    "file": "8.wav",
+    "dur": 0.261
+  },
+  "9": {
+    "file": "9.wav",
+    "dur": 0.378
+  },
+  "10": {
+    "file": "10.wav",
+    "dur": 0.353
+  },
+  "11": {
+    "file": "11.wav",
+    "dur": 0.453
+  },
+  "12": {
+    "file": "12.wav",
+    "dur": 0.453
+  },
+  "13": {
+    "file": "13.wav",
+    "dur": 0.57
+  },
+  "14": {
+    "file": "14.wav",
+    "dur": 0.593
+  },
+  "15": {
+    "file": "15.wav",
+    "dur": 0.551
+  },
+  "16": {
+    "file": "16.wav",
+    "dur": 0.644
+  },
+  "17": {
+    "file": "17.wav",
+    "dur": 0.685
+  },
+  "18": {
+    "file": "18.wav",
+    "dur": 0.485
+  },
+  "19": {
+    "file": "19.wav",
+    "dur": 0.585
+  },
+  "20": {
+    "file": "20.wav",
+    "dur": 0.437
+  },
+  "21": {
+    "file": "21.wav",
+    "dur": 0.676
+  },
+  "22": {
+    "file": "22.wav",
+    "dur": 0.666
+  },
+  "23": {
+    "file": "23.wav",
+    "dur": 0.745
+  },
+  "24": {
+    "file": "24.wav",
+    "dur": 0.722
+  },
+  "25": {
+    "file": "25.wav",
+    "dur": 0.717
+  },
+  "26": {
+    "file": "26.wav",
+    "dur": 0.882
+  },
+  "27": {
+    "file": "27.wav",
+    "dur": 0.755
+  },
+  "28": {
+    "file": "28.wav",
+    "dur": 0.597
+  },
+  "29": {
+    "file": "29.wav",
+    "dur": 0.695
+  },
+  "30": {
+    "file": "30.wav",
+    "dur": 0.435
+  },
+  "4-7-8 breathing": {
+    "file": "4-7-8-breathing.wav",
+    "dur": 1.8
+  },
+  "air squats": {
+    "file": "air-squats.wav",
+    "dur": 0.832
+  },
+  "arm circles backward": {
+    "file": "arm-circles-backward.wav",
+    "dur": 1.194
+  },
+  "arm circles forward": {
+    "file": "arm-circles-forward.wav",
+    "dur": 1.127
+  },
+  "arm swings": {
+    "file": "arm-swings.wav",
+    "dur": 0.837
+  },
+  "belly breathing": {
+    "file": "belly-breathing.wav",
+    "dur": 0.667
+  },
+  "body waves": {
+    "file": "body-waves.wav",
+    "dur": 0.78
+  },
+  "box breathing": {
+    "file": "box-breathing.wav",
+    "dur": 0.715
+  },
+  "breathe in": {
+    "file": "breathe-in.wav",
+    "dur": 0.475
+  },
+  "breathe out": {
+    "file": "breathe-out.wav",
+    "dur": 0.474
+  },
+  "bridge": {
+    "file": "bridge.wav",
+    "dur": 0.448
+  },
+  "cossack squats": {
+    "file": "cossack-squats.wav",
+    "dur": 1.114
+  },
+  "deep squat hold": {
+    "file": "deep-squat-hold.wav",
+    "dur": 0.91
+  },
+  "done": {
+    "file": "done.wav",
+    "dur": 0.394
+  },
+  "elbow throws": {
+    "file": "elbow-throws.wav",
+    "dur": 0.912
+  },
+  "first": {
+    "file": "first.wav",
+    "dur": 0.495
+  },
+  "get ready": {
+    "file": "get-ready.wav",
+    "dur": 0.515
+  },
+  "go": {
+    "file": "go.wav",
+    "dur": 0.354
+  },
+  "hindu push-ups": {
+    "file": "hindu-push-ups.wav",
+    "dur": 1.255
+  },
+  "hold": {
+    "file": "hold.wav",
+    "dur": 0.399
+  },
+  "in": {
+    "file": "in.wav",
+    "dur": 0.268
+  },
+  "jumping twists": {
+    "file": "jumping-twists.wav",
+    "dur": 1.033
+  },
+  "left side": {
+    "file": "left-side.wav",
+    "dur": 0.677
+  },
+  "lizard twist": {
+    "file": "lizard-twist.wav",
+    "dur": 0.848
+  },
+  "lunge reaches": {
+    "file": "lunge-reaches.wav",
+    "dur": 0.855
+  },
+  "minute": {
+    "file": "minute.wav",
+    "dur": 0.326
+  },
+  "monk squats": {
+    "file": "monk-squats.wav",
+    "dur": 0.885
+  },
+  "next": {
+    "file": "next.wav",
+    "dur": 0.556
+  },
+  "out": {
+    "file": "out.wav",
+    "dur": 0.274
+  },
+  "pump stretch": {
+    "file": "pump-stretch.wav",
+    "dur": 0.793
+  },
+  "push-ups": {
+    "file": "push-ups.wav",
+    "dur": 0.909
+  },
+  "ragdoll twists": {
+    "file": "ragdoll-twists.wav",
+    "dur": 1.09
+  },
+  "rest": {
+    "file": "rest.wav",
+    "dur": 0.489
+  },
+  "reverse lunges": {
+    "file": "reverse-lunges.wav",
+    "dur": 0.966
+  },
+  "right side": {
+    "file": "right-side.wav",
+    "dur": 0.639
+  },
+  "round": {
+    "file": "round.wav",
+    "dur": 0.45
+  },
+  "side bends": {
+    "file": "side-bends.wav",
+    "dur": 0.842
+  },
+  "step-back burpees": {
+    "file": "step-back-burpees.wav",
+    "dur": 1.115
+  },
+  "straddle": {
+    "file": "straddle.wav",
+    "dur": 0.516
+  },
+  "switch sides": {
+    "file": "switch-sides.wav",
+    "dur": 0.885
+  }
+}

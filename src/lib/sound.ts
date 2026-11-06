@@ -1,16 +1,24 @@
-// Beeps (Web Audio) and spoken cues (on-device speech, works offline).
-// iOS only allows sound after a tap, so unlockAudio() runs on the first touch.
+// Beeps and spoken cues, both played through Web Audio so they mix with the user's music.
+// The voice is recorded clips bundled with the app (public/voice/), not the phone's
+// built-in speech: on iPhone, built-in speech stops music playing in other apps.
+// iOS only allows sound after a tap, so unlockAudio() runs on every touch.
+import { CLIPS, voicePlan } from './voiceText';
 
 let ctx: AudioContext | null = null;
-let speechPrimed = false;
 let voiceOn = true;
+
+const buffers = new Map<string, AudioBuffer>();
+let loading: Promise<void> | null = null;
+let loaded = false;
+let speaking: AudioBufferSourceNode[] = [];
+let sayId = 0;
 
 export function setVoice(on: boolean) {
   voiceOn = on;
-  if (!on && hasSpeech()) speechSynthesis.cancel();
+  if (!on) stopVoice();
 }
 
-/** "Play through silent switch" uses the playback session (may pause music); otherwise mix with music. */
+/** "Play through silent switch" uses the playback session (pauses music); otherwise mix with music. */
 export function setAudioSession(throughSilent: boolean) {
   const session = (navigator as unknown as { audioSession?: { type: string } }).audioSession;
   if (session) {
@@ -34,15 +42,34 @@ export function unlockAudio() {
     src.buffer = buf;
     src.connect(ctx.destination);
     src.start(0);
+    void loadVoice();
   } catch {
     /* audio unavailable */
   }
-  if (!speechPrimed && 'speechSynthesis' in window) {
-    const u = new SpeechSynthesisUtterance(' ');
-    u.volume = 0;
-    speechSynthesis.speak(u);
-    speechPrimed = true;
+}
+
+/** Fetch and decode the voice clips once (they're in the offline cache). */
+export function loadVoice(): Promise<void> {
+  const c = ctx;
+  if (!c) return Promise.resolve();
+  if (!loading) {
+    const base = `${import.meta.env.BASE_URL}voice/`;
+    loading = Promise.all(
+      Object.entries(CLIPS).map(async ([key, clip]) => {
+        if (buffers.has(key)) return;
+        const res = await fetch(base + clip.file);
+        if (!res.ok) throw new Error(`voice clip ${clip.file}: ${res.status}`);
+        buffers.set(key, await c.decodeAudioData(await res.arrayBuffer()));
+      }),
+    )
+      .then(() => {
+        loaded = true;
+      })
+      .catch(() => {
+        loading = null; // try again on the next tap
+      });
   }
+  return loading;
 }
 
 type BeepKind = 'tick' | 'go' | 'rest' | 'end' | 'soft';
@@ -75,13 +102,40 @@ export function beep(kind: BeepKind) {
   }
 }
 
-const hasSpeech = () => typeof window !== 'undefined' && 'speechSynthesis' in window;
+export function stopVoice() {
+  sayId++;
+  for (const src of speaking) {
+    try {
+      src.stop();
+    } catch {
+      /* already stopped */
+    }
+  }
+  speaking = [];
+}
 
+/** Speak a cue with the recorded clips. A new cue cuts off the previous one. */
 export function say(text: string) {
-  if (!voiceOn || !hasSpeech() || !text) return;
-  speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.rate = 1.05;
-  u.lang = 'en-US';
-  speechSynthesis.speak(u);
+  if (!voiceOn || !ctx || !text) return;
+  stopVoice();
+  const id = sayId;
+  if (loaded) play(text);
+  else void loadVoice().then(() => id === sayId && loaded && play(text));
+}
+
+function play(text: string) {
+  const c = ctx;
+  if (!c) return;
+  if (c.state === 'suspended') void c.resume();
+  let at = c.currentTime + 0.02;
+  for (const key of voicePlan(text).keys) {
+    const buf = buffers.get(key);
+    if (!buf) continue;
+    const src = c.createBufferSource();
+    src.buffer = buf;
+    src.connect(c.destination);
+    src.start(at);
+    at += buf.duration + 0.05;
+    speaking.push(src);
+  }
 }
