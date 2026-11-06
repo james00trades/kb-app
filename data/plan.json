@@ -17,11 +17,15 @@
       "minutes": "20–25 min",
       "setCapInWeek": { "1": 2 },
       "warmup": [
-        { "id": "wu-air-squat", "move": "air-squat", "kind": "reps", "sets": 1, "reps": 10, "rest": 0 },
-        { "id": "wu-push-up", "move": "push-up", "kind": "reps", "sets": 1, "reps": 10, "rest": 0, "notes": "Knees or hands on a bench is fine" },
-        { "id": "wu-reverse-lunge", "move": "reverse-lunge", "kind": "reps", "sets": 1, "reps": 10, "rest": 0, "notes": "Alternate legs" },
-        { "id": "wu-hindu-push-up", "move": "hindu-push-up", "kind": "reps", "sets": 1, "reps": 10, "rest": 0 },
-        { "id": "wu-step-back-burpee", "move": "step-back-burpee", "kind": "reps", "sets": 1, "reps": 10, "rest": 0, "notes": "No jump" }
+        { "id": "wu-guided", "kind": "routine", "label": "Guided warm-up", "routine": "morning", "transition": 0, "rest": 0,
+          "notes": "Trevor's wake-up routine, then bodyweight moves. 30 s each, no breaks.",
+          "stations": [
+            { "label": "Air squats", "seconds": 30, "move": "air-squat" },
+            { "label": "Push-ups (knees or bench OK)", "seconds": 30, "move": "push-up" },
+            { "label": "Reverse lunges (alternate legs)", "seconds": 30, "move": "reverse-lunge" },
+            { "label": "Hindu push-ups", "seconds": 30, "move": "hindu-push-up" },
+            { "label": "Step-back burpees (no jump)", "seconds": 30, "move": "step-back-burpee" }
+          ] }
       ],
       "cooldown": [
         { "id": "cd-breath", "kind": "breath", "minutes": 4, "patterns": ["box", "4-7-8", "belly"] }

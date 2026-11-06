@@ -32,6 +32,14 @@ export const MovementFile = z.object({
   movements: z.array(Movement),
 });
 
+/** One timed move in a guided routine. */
+export const Station = z.object({
+  label: z.string(),
+  seconds: z.number().positive(),
+  move: z.string().optional(),
+});
+export type Station = z.infer<typeof Station>;
+
 /** Fields that can change week to week, or step to step on a progression ladder. */
 const Override = z.object({
   move: z.string(),
@@ -49,7 +57,13 @@ export type LadderStep = z.infer<typeof LadderStep>;
 
 export const Item = Override.extend({
   id: z.string(),
-  kind: z.enum(['reps', 'time', 'breath']),
+  kind: z.enum(['reps', 'time', 'breath', 'routine']),
+  /** Routine items only: a guided timer that runs this phase routine (e.g. the morning wake-up) first… */
+  routine: z.enum(['morning', 'evening']).optional(),
+  /** …then these stations. */
+  stations: z.array(Station).optional(),
+  /** Seconds between stations. Defaults to the phase routine's, else 0. */
+  transition: z.number().min(0).optional(),
   perSide: z.boolean().optional(),
   sideLabel: z.string().optional(),
   /** Only appears in these weeks (inclusive). */
@@ -65,13 +79,6 @@ export const Item = Override.extend({
   patterns: z.array(z.string()).optional(),
 });
 export type Item = z.infer<typeof Item>;
-
-export const Station = z.object({
-  label: z.string(),
-  seconds: z.number().positive(),
-  move: z.string().optional(),
-});
-export type Station = z.infer<typeof Station>;
 
 export const Extra = z.object({
   title: z.string(),

@@ -81,9 +81,11 @@ function SessionDetail({ s, onClose }: { s: SessionLog; onClose: () => void }) {
               <div key={it.plan.itemId} class="detail-row">
                 <div>{p.name}</div>
                 <div class="muted small">
-                  {it.plan.kind === 'breath'
+                  {it.plan.kind === 'breath' || it.plan.kind === 'routine'
                     ? done.length
-                      ? `${it.plan.breath?.pattern.name ?? 'Breathwork'} ✓`
+                      ? it.plan.kind === 'breath'
+                        ? `${it.plan.breath?.pattern.name ?? 'Breathwork'} ✓`
+                        : 'done ✓'
                       : 'not done'
                     : done.length
                       ? done.map((x) => `${x.actual}${unit}`).join(', ') +

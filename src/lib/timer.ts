@@ -213,6 +213,7 @@ export function intervalSpec(
   stations: { label: string; seconds: number }[],
   transition: number,
   onDone?: () => void,
+  autoClose = false,
 ): TimerSpec {
   const phases: TPhase[] = [{ label: 'Get ready', seconds: 5, kind: 'prep', say: `Get ready. First, ${stations[0].label}`, sub: `First: ${stations[0].label}` }];
   stations.forEach((s, i) => {
@@ -222,7 +223,7 @@ export function intervalSpec(
       phases.push({ label: 'Change', seconds: transition, kind: 'switch', say: `Next, ${next.label}`, sub: `Next: ${next.label}` });
     }
   });
-  return { title, mode: 'interval', view: 'full', phases, onDone };
+  return { title, mode: 'interval', view: 'full', phases, onDone, autoClose };
 }
 
 export function roundsSpec(title: string, rounds: number, work: number, rest: number, onDone?: () => void, autoClose = false): TimerSpec {

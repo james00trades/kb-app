@@ -1,7 +1,7 @@
 // The plan engine: turns plan data + saved state into today's session,
 // and folds a finished session back into state. Pure functions only.
 import type { AppData } from './data';
-import type { Bell, BreathPattern, DayKey, Item, LadderStep, Phase, PlanFile } from './schema';
+import type { Bell, BreathPattern, DayKey, Item, LadderStep, Phase, PlanFile, Station } from './schema';
 
 // ---------- State ----------
 
@@ -170,6 +170,14 @@ export interface BreathPlan {
   minutes: number;
 }
 
+export interface RoutinePlan {
+  title: string;
+  stations: Station[];
+  transition: number;
+  /** Total length, including transitions. */
+  seconds: number;
+}
+
 export interface PlannedItem {
   itemId: string;
   section: Section;
@@ -183,6 +191,7 @@ export interface PlannedItem {
   /** The next ladder step, offered when the last session went to plan. */
   up?: Prescription;
   breath?: BreathPlan;
+  routine?: RoutinePlan;
 }
 
 export interface PlannedSession {
@@ -232,6 +241,22 @@ function planItem(
       step: 0,
       stay: { name: r.label ?? pattern.name, sets: 1, target: minutes * 60, bell: null, planBell: null, rest: 0 },
       breath: { patternKey, pattern, minutes },
+    };
+  }
+
+  if (r.kind === 'routine') {
+    const extra = r.routine ? ctx.phase[r.routine] : undefined;
+    const stations = [...(extra?.stations ?? []), ...(r.stations ?? [])];
+    if (!stations.length) return null;
+    const transition = r.transition ?? extra?.transition ?? 0;
+    const seconds = stations.reduce((sum, st) => sum + st.seconds, 0) + transition * (stations.length - 1);
+    const title = r.label ?? extra?.title ?? 'Routine';
+    return {
+      ...base,
+      ladderLen: 1,
+      step: 0,
+      stay: { name: title, sets: 1, target: seconds, bell: null, planBell: null, rest: r.rest ?? 0, notes: r.notes },
+      routine: { title, stations, transition, seconds },
     };
   }
 

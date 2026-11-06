@@ -21,6 +21,9 @@ export function prescText(item: PlannedItem, p: Prescription, withBell = true): 
   if (item.kind === 'breath' && item.breath) {
     const steps = item.breath.pattern.steps.map(([k, n]) => `${k} ${n}`).join(' · ');
     return `${item.breath.minutes} min · ${steps}`;
+  } else if (item.kind === 'routine' && item.routine) {
+    const r = item.routine;
+    return `${fmtSeconds(r.seconds)}${r.transition ? '' : ', no breaks'} · ${r.stations.map((st) => st.label).join(', ')}`;
   } else if (item.kind === 'time') {
     s = p.sets === 1 ? `${p.target} s` : `${p.sets} × ${p.target} s`;
   } else {
@@ -43,6 +46,14 @@ export function upText(item: PlannedItem): string {
   if (up.bell !== stay.bell) parts.push(`${bellText(up.bell)} (was ${bellText(stay.bell)})`);
   if (up.sets !== stay.sets) parts.push(`${up.sets} sets (was ${stay.sets})`);
   return parts.join(', ');
+}
+
+/** 450 → "7 min 30 s", 300 → "5 min", 45 → "45 s". */
+export function fmtSeconds(sec: number): string {
+  const m = Math.floor(sec / 60);
+  const s = Math.round(sec % 60);
+  if (!m) return `${s} s`;
+  return s ? `${m} min ${s} s` : `${m} min`;
 }
 
 export function fmtDuration(ms: number): string {

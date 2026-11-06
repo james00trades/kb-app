@@ -30,7 +30,12 @@ export function crossCheck(plan: PlanFile, movements: Movement[]): string[] {
       itemIds.add(item.id);
       const moves = [item.move, ...Object.values(item.byWeek ?? {}).map((o) => o.move)];
       for (const mv of moves) if (mv && !ids.has(mv)) problems.push(`${where} ${item.id}: unknown move ${mv}`);
-      if (item.kind !== 'breath' && !item.move && !item.label) problems.push(`${where} ${item.id}: needs a move or a label`);
+      if (item.kind !== 'breath' && item.kind !== 'routine' && !item.move && !item.label) problems.push(`${where} ${item.id}: needs a move or a label`);
+      if (item.kind === 'routine') {
+        if (item.routine && !phase[item.routine]) problems.push(`${where} ${item.id}: no ${item.routine} routine in this phase`);
+        if (!item.routine && !item.stations?.length) problems.push(`${where} ${item.id}: routine has no stations`);
+        for (const s of item.stations ?? []) if (s.move && !ids.has(s.move)) problems.push(`${where} ${item.id}: unknown station move ${s.move}`);
+      }
       if (item.kind === 'reps' && item.reps === undefined) problems.push(`${where} ${item.id}: reps missing`);
       if (item.kind === 'time' && item.seconds === undefined) problems.push(`${where} ${item.id}: seconds missing`);
       if (item.kind === 'breath') {

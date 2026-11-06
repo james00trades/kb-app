@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { chosen, isItemComplete, setChoice, type DraftItem, type SessionDraft } from '../engine/engine';
 import type { Bell } from '../engine/schema';
 import { discardWorkout, draft, finishWorkout, moveSheet, settings, updateDraft } from '../lib/store';
-import { breathSpec, fmtClock, holdSpec, restSpec, startTimer, stopTimer, timer } from '../lib/timer';
-import { Icon, Sheet, Stepper, bellShort, prescText, sideText, upText } from './common';
+import { breathSpec, fmtClock, holdSpec, intervalSpec, restSpec, startTimer, stopTimer, timer } from '../lib/timer';
+import { Icon, Sheet, Stepper, bellShort, fmtSeconds, prescText, sideText, upText } from './common';
 
 const SECTION_TITLES = { warmup: 'Warm-up', main: 'Main work', cooldown: 'Breathwork' } as const;
 
@@ -189,7 +189,7 @@ function ActiveItem({ it, i, onComplete }: { it: DraftItem; i: number; onComplet
         </div>
       )}
 
-      {it.plan.kind !== 'breath' && (it.sets.length > 1 || complete) && (
+      {it.plan.kind !== 'breath' && it.plan.kind !== 'routine' && (it.sets.length > 1 || complete) && (
         <div class="set-chips">
           {it.sets.map((s, k) => (
             <button
@@ -246,6 +246,23 @@ function ActiveItem({ it, i, onComplete }: { it: DraftItem; i: number; onComplet
         </>
       )}
 
+      {!complete && it.plan.kind === 'routine' && it.plan.routine && (
+        <>
+          <button
+            class="big-btn primary"
+            onClick={() => {
+              const r = it.plan.routine!;
+              startTimer(intervalSpec(r.title, r.stations, r.transition, onComplete, true));
+            }}
+          >
+            <Icon name="play" /> {it.plan.section === 'warmup' ? 'Start warm-up' : 'Start'} · {fmtSeconds(it.plan.routine.seconds)}
+          </button>
+          <button class="link-btn" onClick={onComplete}>
+            Mark done without the timer
+          </button>
+        </>
+      )}
+
       {!complete && !it.skipped && (
         <button class="link-btn muted" onClick={() => patchItem(i, (x) => ({ ...x, skipped: true }))}>
           Skip this move
@@ -256,7 +273,14 @@ function ActiveItem({ it, i, onComplete }: { it: DraftItem; i: number; onComplet
           Skipped. Tap to un-skip
         </button>
       )}
-      {complete && !it.skipped && <div class="good-text small">Done. Tap a set above to undo it.</div>}
+      {complete && !it.skipped && it.sets.length > 0 && (it.plan.kind === 'routine' || it.plan.kind === 'breath') && (
+        <button class="link-btn" onClick={() => undoSet(0)}>
+          Done. Tap to undo.
+        </button>
+      )}
+      {complete && !it.skipped && it.plan.kind !== 'routine' && it.plan.kind !== 'breath' && (
+        <div class="good-text small">Done. Tap a set above to undo it.</div>
+      )}
     </section>
   );
 }
