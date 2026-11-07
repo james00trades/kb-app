@@ -1461,3 +1461,98 @@ div.stats {
   font-weight: 600;
   color: var(--muted);
 }
+
+/* ---------- Weekly check-in with Claude ---------- */
+.checkin-result {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.checkin-result p {
+  margin: 0;
+}
+.checkin-headline {
+  font-size: 19px;
+  font-weight: 650;
+  line-height: 1.3;
+}
+.lever {
+  align-self: flex-start;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-weight: 700;
+  background: var(--surface-2);
+  border-left: 4px solid var(--accent);
+}
+.lever-label {
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-right: 4px;
+}
+.lever-stay {
+  border-left-color: var(--good);
+}
+.checkin-list {
+  margin: 0;
+  padding-left: 22px;
+  font-size: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.checkin-waiting {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+}
+.spinner {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  border-radius: 50%;
+  border: 3px solid var(--surface-2);
+  border-top-color: var(--accent);
+  animation: spin 0.9s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.block {
+  display: block;
+}
+.note-input,
+.text-input {
+  width: 100%;
+  background: var(--surface-2);
+  color: var(--text);
+  border: none;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font: inherit;
+  font-size: 16px;
+  resize: vertical;
+}
+.steps {
+  margin: 0;
+  padding-left: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.link-btn.inline {
+  padding: 0;
+  font-size: inherit;
+}
+.checkin-past {
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+}
+#checkin-settings {
+  scroll-margin-top: calc(var(--safe-t) + var(--topbar-h) + 12px);
+}

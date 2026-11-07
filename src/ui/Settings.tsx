@@ -3,6 +3,7 @@ import { buildBackupFile, readBackupFile, restoreBackup, saveBackupFile, type Ba
 import { beep, loadVoice, say, unlockAudio } from '../lib/sound';
 import { markBackedUp, meta, persisted, sessions, settings, updateSettings } from '../lib/store';
 import { wakeLockSupported } from '../lib/wakelock';
+import { CheckInSettings } from './CheckIn';
 import { Sheet, Stepper, Toggle, daysAgo } from './common';
 
 export function Settings() {
@@ -92,6 +93,8 @@ export function Settings() {
           </button>
         </div>
       </div>
+
+      <CheckInSettings />
 
       <h3 class="section-title">Backup</h3>
       <div class="card">

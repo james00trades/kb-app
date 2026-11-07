@@ -5,8 +5,10 @@ import { PHOTO_EVERY_DAYS, WAIST_EVERY_DAYS, daysBetween, type WeightPoint } fro
 import { addDays } from '../engine/streak';
 import type { PhotoMeta, Pose } from '../lib/db';
 import {
-  body, bodyDue, bodySheet, deletePhoto, photoData, photoSession, photos, setBody, todayStr, weightStats, weights,
+  body, bodyDue, bodySheet, checkinDue, deletePhoto, photoData, photoSession, photos, progressView, setBody, tab, todayStr, weightStats,
+  weights,
 } from '../lib/store';
+import { CheckInCard } from './CheckIn';
 import { Icon, Sheet, fmtDay } from './common';
 
 export const POSE_LABEL: Record<Pose, string> = { front: 'Front', side: 'Side', back: 'Back' };
@@ -85,6 +87,7 @@ function Thumb({ photo, onOpen }: { photo: PhotoMeta; onOpen: () => void }) {
 export function BodyView() {
   return (
     <>
+      <CheckInCard />
       <WeightCard />
       <WaistCard />
       <PhotosCard />
@@ -545,7 +548,8 @@ function BodyEntrySheet({ kind, date: startDate }: { kind: 'weight' | 'waist'; d
 export function BodyCheckIn() {
   const due = bodyDue.value;
   const today = todayStr.value;
-  if (!due.weight && !due.photos && !due.waist) return null;
+  const checkin = checkinDue.value;
+  if (!due.weight && !due.photos && !due.waist && !checkin) return null;
   const lastWeight = weights.value[weights.value.length - 1];
   return (
     <div class="list body-checkin">
@@ -569,6 +573,23 @@ export function BodyCheckIn() {
             <span class="muted small">
               {due.lastPhoto ? `Last set ${whenText(due.lastPhoto, today)}` : 'Your first set: the "before" pictures'}
             </span>
+          </span>
+          <Icon name="next" size={20} />
+        </button>
+      )}
+      {checkin && (
+        <button
+          class="list-row"
+          onClick={() => {
+            progressView.value = 'body';
+            tab.value = 'history';
+            window.scrollTo(0, 0);
+          }}
+        >
+          <Icon name="check" />
+          <span class="list-main grow">
+            <span>Weekly check-in with Claude</span>
+            <span class="muted small">See which lever to pull this week</span>
           </span>
           <Icon name="next" size={20} />
         </button>

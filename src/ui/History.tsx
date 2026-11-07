@@ -1,14 +1,10 @@
-import { signal } from '@preact/signals';
 import { useState } from 'preact/hooks';
 import { chosen, type SessionLog } from '../engine/engine';
-import { engine, sessions } from '../lib/store';
+import { engine, progressView as view, sessions } from '../lib/store';
 import { BodyView } from './Body';
 import { Sheet, bellText, fmtDay, fmtDuration } from './common';
 
 const STATUS_TEXT = { done: 'Done', partial: 'Partial', skipped: 'Skipped', rest: 'Rest day' } as const;
-
-/** Which half of the Progress tab is showing (kept while the app is open). */
-const view = signal<'body' | 'workouts'>('body');
 
 export function History() {
   return (

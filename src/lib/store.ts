@@ -9,6 +9,8 @@ import { addDays, streak } from '../engine/streak';
 import { bodyDue as dueNow, weightSummary, weightTrend } from '../engine/body';
 import { db, getKV, putKV, type BodyEntry, type Daily, type PhotoMeta, type Pose } from './db';
 import { setAudioSession, setVoice } from './sound';
+import { toBase64 } from './backup';
+import { buildReport, checkInDue, pickPhotoDates, type CheckIn, type CheckInImage } from './checkin';
 
 export const data: AppData = loadData();
 
@@ -50,8 +52,18 @@ export const body = signal<Record<string, BodyEntry>>({});
 export const photos = signal<PhotoMeta[]>([]);
 /** The weight or waist entry sheet that's open (any screen). */
 export const bodySheet = signal<{ kind: 'weight' | 'waist'; date?: string } | null>(null);
+/** Which half of the Progress tab is showing. */
+export const progressView = signal<'body' | 'workouts'>('body');
 /** The progress-photo camera is open. */
 export const photoSession = signal(false);
+/** James's Claude API key (this phone only; never in backups). */
+export const apiKey = signal<string | null>(null);
+/** Optional "About you" text sent with each check-in. */
+export const checkinAbout = signal('');
+/** Weekly check-ins with Claude, newest first. */
+export const checkins = signal<CheckIn[]>([]);
+export const checkinRunning = signal(false);
+export const checkinError = signal<string | null>(null);
 /** Move id whose card (cues) is open. */
 export const moveSheet = signal<string | null>(null);
 /** The workout screen is showing. Off when James backs out to the day; the workout stays in progress. */
@@ -94,6 +106,14 @@ export const bodyDue = computed(() =>
   dueNow(Object.values(body.value), photos.value.map((p) => p.date), todayStr.value),
 );
 
+/** A check-in is worth running: a key is set, a week has passed, and there's something to look at. */
+export const checkinDue = computed(
+  () =>
+    !!apiKey.value &&
+    checkInDue(checkins.value, todayStr.value) &&
+    (weights.value.length >= 3 || sessions.value.some((s) => s.status === 'done' || s.status === 'partial')),
+);
+
 export const currentStreak = computed(() => streak(sessions.value, daily.value, todayStr.value));
 
 export const isUnlocked = (id: string) =>
@@ -106,7 +126,7 @@ const uid = () =>
 
 export async function init() {
   try {
-    const [eng, set, met, unl, dr, sess, days, bodyRows, photoRows] = await Promise.all([
+    const [eng, set, met, unl, dr, sess, days, bodyRows, photoRows, key, about, cks] = await Promise.all([
       getKV<EngineState>('engine'),
       getKV<Settings>('settings'),
       getKV<Meta>('meta'),
@@ -116,6 +136,9 @@ export async function init() {
       db.daily.toArray(),
       db.body.toArray(),
       db.photos.orderBy('date').reverse().toArray(),
+      getKV<string>('apiKey'),
+      getKV<string>('checkinAbout'),
+      getKV<CheckIn[]>('checkins'),
     ]);
     engine.value = eng ?? initialState();
     const saved = { ...defaultSettings(), ...set };
@@ -135,6 +158,9 @@ export async function init() {
     daily.value = Object.fromEntries(days.map((d) => [d.date, d]));
     body.value = Object.fromEntries(bodyRows.map((b) => [b.date, b]));
     photos.value = photoRows.sort((a, b) => b.takenAt - a.takenAt);
+    apiKey.value = key ?? null;
+    checkinAbout.value = about ?? '';
+    checkins.value = cks ?? [];
     setVoice(settings.value.voice);
     setAudioSession(settings.value.throughSilent);
     ready.value = true;
@@ -285,4 +311,92 @@ export async function deletePhoto(id: string) {
 /** The full-size picture (loaded only when needed). */
 export async function photoData(id: string): Promise<ArrayBuffer | undefined> {
   return (await db.photoFiles.get(id))?.data;
+}
+
+// ---------- Weekly check-in with Claude ----------
+
+export async function saveApiKey(key: string | null) {
+  const k = key?.trim() || null;
+  apiKey.value = k;
+  if (k) await putKV('apiKey', k);
+  else await db.kv.delete('apiKey');
+}
+
+export async function saveCheckinAbout(text: string) {
+  checkinAbout.value = text;
+  await putKV('checkinAbout', text);
+}
+
+/** The first photo set, the one from about a month ago, and the latest (up to 9 pictures), oldest first. */
+async function checkinPhotos(): Promise<{ sets: { label: string; date: string; poses: Pose[] }[]; images: CheckInImage[] }> {
+  const picks = pickPhotoDates(photos.value.map((p) => p.date), todayStr.value);
+  const order: Pose[] = ['front', 'side', 'back'];
+  const sets: { label: string; date: string; poses: Pose[] }[] = [];
+  const images: CheckInImage[] = [];
+  for (const pick of picks) {
+    const metas = order
+      .map((pose) => photos.value.find((p) => p.date === pick.date && p.pose === pose))
+      .filter((m): m is PhotoMeta => !!m);
+    const poses: Pose[] = [];
+    for (const m of metas) {
+      const buf = await photoData(m.id);
+      if (!buf) continue;
+      poses.push(m.pose);
+      images.push({ label: `${pick.label} (${pick.date}), ${m.pose}:`, data: toBase64(buf) });
+    }
+    if (poses.length) sets.push({ ...pick, poses });
+  }
+  return { sets, images };
+}
+
+export async function runCheckIn(note: string) {
+  const key = apiKey.value;
+  if (!key || checkinRunning.value) return;
+  checkinRunning.value = true;
+  checkinError.value = null;
+  try {
+    const plan = today.value;
+    const { sets, images } = await checkinPhotos();
+    const report = buildReport({
+      today: todayStr.value,
+      program: {
+        name: plan.phaseName,
+        week: plan.week,
+        effort: plan.effort,
+        rotation: data.plan.rotation,
+        phases: data.plan.phases.map((p) => ({ name: p.name, weeks: p.weeks as [number, number], effort: p.effort })),
+      },
+      about: checkinAbout.value,
+      note,
+      streak: { current: currentStreak.value.current, best: currentStreak.value.best },
+      weights: weights.value,
+      body: Object.values(body.value),
+      sessions: sessions.value,
+      daily: daily.value,
+      checkins: checkins.value,
+      photoSets: sets,
+    });
+    const { requestCheckIn } = await import('./checkin-api');
+    const r = await requestCheckIn({ apiKey: key, report, images });
+    const entry: CheckIn = {
+      id: uid(),
+      date: todayStr.value,
+      at: Date.now(),
+      model: r.model,
+      note: note.trim() || undefined,
+      result: r.result,
+      usage: r.usage,
+    };
+    checkins.value = [entry, ...checkins.value];
+    await putKV('checkins', checkins.value);
+  } catch (e) {
+    checkinError.value = (e as Error).message;
+  } finally {
+    checkinRunning.value = false;
+  }
+}
+
+export async function deleteCheckIn(id: string) {
+  checkins.value = checkins.value.filter((c) => c.id !== id);
+  await putKV('checkins', checkins.value);
 }
