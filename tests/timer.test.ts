@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  adjust, breathSpec, holdSpec, intervalSpec, restSpec, secondsLeft, skipPhase, startTimer, stopTimer, timer, togglePause,
+  adjust, breathSpec, holdSpec, intervalSpec, restSpec, secondsLeft, skipPhase, skipRest, startTimer, stopTimer, timer, togglePause,
 } from '../src/lib/timer';
 
 beforeEach(() => {
@@ -85,5 +85,36 @@ describe('timer engine', () => {
     const spec = breathSpec({ name: 'Box', steps: [['in', 4], ['hold', 4], ['out', 4], ['hold', 4]] }, 4);
     const total = spec.phases.slice(1).reduce((s, p) => s + p.seconds, 0);
     expect(total).toBe(240);
+  });
+});
+
+describe('timed set after rest (James, Nov 7)', () => {
+  const hold = (prep: boolean) => holdSpec('Carry', 30, true, undefined, true, prep);
+
+  it('starts the timed set as soon as the rest ends, without a second get-ready', () => {
+    const rested = vi.fn();
+    startTimer(restSpec(60, rested, (skipped) => hold(skipped)));
+    vi.advanceTimersByTime(60_300);
+    expect(rested).toHaveBeenCalledOnce();
+    expect(timer.value!.spec.title).toBe('Carry');
+    expect(timer.value!.done).toBe(false);
+    expect(label()).toBe('Left side');
+  });
+
+  it('Skip on the rest bar starts it right away, with the 5 s get-ready', () => {
+    startTimer(restSpec(60, undefined, (skipped) => hold(skipped)));
+    vi.advanceTimersByTime(10_000);
+    skipRest();
+    expect(timer.value!.spec.title).toBe('Carry');
+    expect(label()).toBe('Get ready');
+  });
+
+  it('a rest with nothing timed next just ends as before', () => {
+    startTimer(restSpec(60, undefined, () => null));
+    vi.advanceTimersByTime(60_300);
+    expect(timer.value!.done).toBe(true);
+    startTimer(restSpec(60, undefined, () => null));
+    skipRest();
+    expect(timer.value).toBeNull();
   });
 });

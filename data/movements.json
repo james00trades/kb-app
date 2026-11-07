@@ -14,7 +14,7 @@
     { "id": "step-back-burpee", "name": "Step-back burpee", "tier": 0, "pattern": "compound", "bell": false, "unlocked": true, "firstClips": true,
       "cues": ["Hands down", "Step back one foot at a time", "Step in, stand", "No jump"] },
     { "id": "deep-squat-hold", "name": "Deep squat hold", "tier": 0, "pattern": "mobility", "bell": false, "unlocked": true, "firstClips": true,
-      "cues": ["Heels down", "Hold the 25 goblet-style as a counterweight, or hold a door frame", "Breathe"] },
+      "cues": ["Heels down", "Hold the 18 goblet-style as a counterweight, or hold a door frame", "Breathe"] },
     { "id": "lizard-twist", "name": "Lizard twist", "tier": 0, "pattern": "mobility", "bell": false, "unlocked": true, "firstClips": true,
       "cues": ["Deep lunge, back knee down", "Hand inside the front foot", "Rotate and reach the other arm to the sky"] },
     { "id": "pump-stretch", "name": "Pump stretch", "tier": 0, "pattern": "mobility", "bell": false, "unlocked": true, "firstClips": true,

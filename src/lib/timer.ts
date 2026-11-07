@@ -27,6 +27,9 @@ export interface TimerSpec {
   /** Close automatically when finished. */
   autoClose?: boolean;
   onDone?: () => void;
+  /** A timer to start as soon as this one ends (a timed set after its rest).
+   *  `skipped` is true when the rest was cut short with Skip. Return null for none. */
+  then?: (skipped: boolean) => TimerSpec | null;
 }
 
 export interface TimerState {
@@ -62,6 +65,14 @@ function startPhase(t: TimerState, index: number, at: number, announce: boolean)
 }
 
 function finish(t: TimerState) {
+  const next = t.spec.then?.(false);
+  if (next) {
+    // Straight into the next timer; its own "Go" replaces this one's end cue
+    stopLoop();
+    t.spec.onDone?.();
+    startTimer(next);
+    return;
+  }
   beep('end');
   say(t.spec.mode === 'rest' ? 'Go' : 'Done');
   const done = { ...t, done: true, pausedLeft: 0 };
@@ -131,6 +142,14 @@ export function stopTimer() {
   timer.value = null;
 }
 
+/** Rest bar "Skip": end the rest now. A timed set waiting on it starts right away. */
+export function skipRest() {
+  const t = timer.value;
+  const next = t && !t.done ? t.spec.then?.(true) : null;
+  if (next) startTimer(next);
+  else stopTimer();
+}
+
 export function togglePause() {
   const t = timer.value;
   if (!t || t.done) return;
@@ -185,19 +204,28 @@ export function fmtClock(sec: number): string {
 
 // ---------- Timer recipes ----------
 
-export function restSpec(seconds: number, onDone?: () => void): TimerSpec {
+export function restSpec(seconds: number, onDone?: () => void, then?: TimerSpec['then']): TimerSpec {
   return {
     title: 'Rest',
     mode: 'rest',
     view: 'bar',
     autoClose: true,
     onDone,
+    then,
     phases: [{ label: 'Rest', seconds, kind: 'rest', say: '' }],
   };
 }
 
-export function holdSpec(title: string, seconds: number, perSide: boolean, onDone?: () => void, autoClose = false): TimerSpec {
-  const phases: TPhase[] = [{ label: 'Get ready', seconds: 5, kind: 'prep', say: 'Get ready' }];
+/** `prep: false` leaves out the 5 s "Get ready" (the rest before it already counted down). */
+export function holdSpec(
+  title: string,
+  seconds: number,
+  perSide: boolean,
+  onDone?: () => void,
+  autoClose = false,
+  prep = true,
+): TimerSpec {
+  const phases: TPhase[] = prep ? [{ label: 'Get ready', seconds: 5, kind: 'prep', say: 'Get ready' }] : [];
   if (perSide) {
     phases.push({ label: 'Left side', seconds, kind: 'work', say: 'Left side, go', sub: 'Then right side' });
     phases.push({ label: 'Switch sides', seconds: 5, kind: 'switch', say: 'Switch sides' });

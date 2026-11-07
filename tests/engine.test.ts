@@ -69,9 +69,9 @@ describe('Month 1 recipes', () => {
         const s = planSession(data, at(week, day));
         const labels = s.warmup!.stations.map((st) => st.label);
         expect(labels[0]).toBe('Jumping twists');
-        expect(labels.at(-1)).toBe('Step-back burpees (no jump)');
-        expect(labels).toHaveLength(16);
-        expect(s.warmup!.seconds).toBe(450); // 5 min wake-up + 5 × 30 s
+        expect(labels.at(-1)).toBe('Hindu push-ups'); // no burpees (James, Nov 7)
+        expect(labels).toHaveLength(15);
+        expect(s.warmup!.seconds).toBe(420); // 5 min wake-up + 4 × 30 s
         expect(s.items[0].section).toBe('main'); // the workout starts with the main work
         expect(s.items.some((i) => i.kind === 'routine')).toBe(false);
         expect(s.evening!.stations).toHaveLength(5);
@@ -94,10 +94,10 @@ describe('Month 1 recipes', () => {
     expect(s.items.at(-1)!.breath).toBeDefined();
   });
 
-  it('week 2: 3 sets, hike passes 5 × 5 on the 25', () => {
+  it('week 2: 3 sets, hike passes 5 × 5 on the 35', () => {
     const s = planSession(data, at(2, 'A'));
     expect(item(s, 'a-deadlift')!.stay.sets).toBe(3);
-    expect(item(s, 'a-swing')!.stay).toMatchObject({ move: 'hike-pass', sets: 5, target: 5, bell: 25 });
+    expect(item(s, 'a-swing')!.stay).toMatchObject({ move: 'hike-pass', sets: 5, target: 5, bell: 35 });
     expect(item(s, 'a-hinge-drill')).toBeDefined();
   });
 
@@ -165,11 +165,28 @@ describe('moving up', () => {
     expect(item(planSession(data, at(2, 'A', r.state)), 'a-deadlift')!.up).toBeUndefined();
   });
 
-  it('bodyweight → 25 ladder offers the bell', () => {
+  it('bodyweight → 18 ladder offers the bell', () => {
     const r = runSession(at(1, 'B'));
     const lunge = item(planSession(data, at(1, 'B', r.state)), 'b-reverse-lunge')!;
     expect(lunge.stay.bell).toBe('BW');
-    expect(lunge.up!.bell).toBe(25);
+    expect(lunge.up!.bell).toBe(18);
+  });
+
+  it("only uses James's bells: 18, 35 and 45 lb (Nov 7)", () => {
+    const used = new Set<unknown>();
+    for (const week of [1, 2, 3, 4]) {
+      for (const day of ['A', 'B', 'C'] as const) {
+        for (const i of planSession(data, at(week, day)).items) {
+          used.add(i.stay.bell);
+          if (i.up) used.add(i.up.bell);
+        }
+      }
+    }
+    used.delete(null);
+    used.delete('BW');
+    expect([...used].sort()).toEqual([18, 35, 45]);
+    expect(item(planSession(data, at(1, 'A')), 'a-press')!.stay.bell).toBe(18);
+    expect(item(planSession(data, at(1, 'A')), 'a-goblet-squat')!.stay.bell).toBe(35);
   });
 
   it('warm-up moves never touch progression', () => {

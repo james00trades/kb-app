@@ -1,4 +1,4 @@
-import { addRound, adjust, clock, fmtClock, secondsLeft, skipPhase, stopTimer, timer, togglePause } from '../lib/timer';
+import { addRound, adjust, clock, fmtClock, secondsLeft, skipPhase, skipRest, stopTimer, timer, togglePause } from '../lib/timer';
 import type { TPhase } from '../lib/timer';
 import { Icon } from './common';
 
@@ -25,7 +25,7 @@ export function RestBar() {
         <span class="rest-time">{fmtClock(left)}</span>
         <button class="rest-btn" onClick={() => adjust(-15)}>−15</button>
         <button class="rest-btn" onClick={() => adjust(15)}>+15</button>
-        <button class="rest-btn" onClick={stopTimer}>Skip</button>
+        <button class="rest-btn" onClick={skipRest}>Skip</button>
       </div>
     </div>
   );

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { chosen, isItemComplete, setChoice, type DraftItem, type SessionDraft } from '../engine/engine';
 import type { Bell } from '../engine/schema';
 import { discardWorkout, draft, finishWorkout, moveSheet, settings, updateDraft, workoutOpen } from '../lib/store';
-import { breathSpec, fmtClock, holdSpec, intervalSpec, restSpec, startTimer, stopTimer, timer } from '../lib/timer';
+import { breathSpec, fmtClock, holdSpec, intervalSpec, restSpec, startTimer, stopTimer, timer, type TimerSpec } from '../lib/timer';
 import { Icon, Sheet, Stepper, bellShort, fmtSeconds, prescText, sideText, upText } from './common';
 
 const SECTION_TITLES = { warmup: 'Warm-up', main: 'Main work', cooldown: 'Breathwork' } as const;
@@ -24,6 +24,8 @@ function patchItem(i: number, fn: (it: DraftItem) => DraftItem) {
 export function Workout() {
   const d = draft.value!;
   const [active, setActive] = useState(() => Math.max(0, firstIncomplete(d)));
+  const activeRef = useRef(active);
+  activeRef.current = active;
   const [finishing, setFinishing] = useState(false);
   const [, setNow] = useState(Date.now());
 
@@ -60,11 +62,19 @@ export function Workout() {
     const itemDone = isItemComplete(after.items[i]);
     const workoutDone = after.items.every(isItemComplete);
     const rest = chosen(it).rest;
-    if (!workoutDone && rest > 0) startTimer(restSpec(rest));
-    if (itemDone) {
-      const n = nextIncomplete(after, i);
-      if (n >= 0) setActive(n);
-    }
+    const n = itemDone ? nextIncomplete(after, i) : i;
+    if (!workoutDone && rest > 0) startTimer(restSpec(rest, undefined, (skipped) => timedSetAfterRest(n, skipped)));
+    if (itemDone && n >= 0) setActive(n);
+  };
+
+  /** When the rest ends and the next set is a timed one, start its timer (James, Nov 7). */
+  const timedSetAfterRest = (n: number, skipped: boolean): TimerSpec | null => {
+    const x = n >= 0 ? draft.value?.items[n] : undefined;
+    // Only if that move is still the one open (not if another move was opened during the rest)
+    if (!x || x.plan.kind !== 'time' || activeRef.current !== n) return null;
+    const set = x.sets.find((s) => !s.done);
+    if (!set) return null;
+    return holdSpec(chosen(x).name, set.actual, x.plan.perSide, () => completeSet(n), true, skipped);
   };
 
   const doneCount = d.items.filter(isItemComplete).length;
@@ -236,6 +246,9 @@ function ActiveItem({ it, i, onComplete }: { it: DraftItem; i: number; onComplet
           >
             <Icon name="play" /> Start {it.sets[cur].actual} s{it.plan.perSide ? ', left then right' : ''}
           </button>
+          {timer.value?.spec.then && !timer.value.done && (
+            <div class="muted small center">Starts by itself when the rest ends.</div>
+          )}
           <button class="link-btn" onClick={onComplete}>
             Mark set done without the timer
           </button>

@@ -23,8 +23,7 @@
             { "label": "Air squats", "seconds": 30, "move": "air-squat" },
             { "label": "Push-ups (knees or bench OK)", "seconds": 30, "move": "push-up" },
             { "label": "Reverse lunges (alternate legs)", "seconds": 30, "move": "reverse-lunge" },
-            { "label": "Hindu push-ups", "seconds": 30, "move": "hindu-push-up" },
-            { "label": "Step-back burpees (no jump)", "seconds": 30, "move": "step-back-burpee" }
+            { "label": "Hindu push-ups", "seconds": 30, "move": "hindu-push-up" }
           ] }
       ],
       "cooldown": [
@@ -36,15 +35,15 @@
           "items": [
             { "id": "a-hinge-drill", "move": "hip-hinge-drill", "kind": "reps", "sets": 2, "reps": 10, "rest": 45, "weeks": [1, 2], "notes": "No bell" },
             { "id": "a-deadlift", "move": "deadlift", "kind": "reps", "sets": 3, "reps": [8, 10], "bell": 45 },
-            { "id": "a-swing", "move": "hike-pass", "kind": "reps", "sets": 5, "reps": 5, "bell": 25, "weeks": [2, 4],
+            { "id": "a-swing", "move": "hike-pass", "kind": "reps", "sets": 5, "reps": 5, "bell": 35, "weeks": [2, 4],
               "notes": "Swing path",
               "byWeek": {
-                "3": { "move": "full-stop-swing", "sets": 5, "reps": 5, "bell": 25 },
+                "3": { "move": "full-stop-swing", "sets": 5, "reps": 5, "bell": 35 },
                 "4": { "move": "two-hand-swing", "sets": 5, "reps": [8, 10], "bell": 45 }
               } },
-            { "id": "a-goblet-squat", "move": "goblet-squat", "kind": "reps", "sets": 3, "reps": 8, "bell": 25,
+            { "id": "a-goblet-squat", "move": "goblet-squat", "kind": "reps", "sets": 3, "reps": 8, "bell": 35,
               "byWeek": { "3": { "reps": [8, 10] } } },
-            { "id": "a-press", "move": "single-arm-press", "kind": "reps", "sets": 3, "reps": 5, "perSide": true, "bell": 25,
+            { "id": "a-press", "move": "single-arm-press", "kind": "reps", "sets": 3, "reps": 5, "perSide": true, "bell": 18,
               "byWeek": { "3": { "reps": [5, 7] } } },
             { "id": "a-suitcase-carry", "move": "suitcase-carry", "kind": "time", "sets": 3, "seconds": 30, "perSide": true, "bell": 45 }
           ]
@@ -52,19 +51,19 @@
         "B": {
           "title": "Pull and lunge",
           "items": [
-            { "id": "b-swing", "move": "hike-pass", "kind": "reps", "sets": 5, "reps": 5, "bell": 25, "weeks": [2, 4],
+            { "id": "b-swing", "move": "hike-pass", "kind": "reps", "sets": 5, "reps": 5, "bell": 35, "weeks": [2, 4],
               "notes": "Swing path",
               "byWeek": {
-                "3": { "move": "full-stop-swing", "sets": 5, "reps": 5, "bell": 25 },
+                "3": { "move": "full-stop-swing", "sets": 5, "reps": 5, "bell": 35 },
                 "4": { "move": "two-hand-swing", "sets": 5, "reps": [8, 10], "bell": 45 }
               } },
             { "id": "b-row", "move": "bent-over-row", "kind": "reps", "sets": 3, "reps": [8, 10], "perSide": true, "bell": 45 },
             { "id": "b-reverse-lunge", "move": "reverse-lunge", "kind": "reps", "sets": 3, "reps": 6, "perSide": true, "bell": "BW",
-              "ladder": [{ "bell": "BW" }, { "bell": 25 }],
-              "notes": "When loaded, hold the 25 goblet-style" },
-            { "id": "b-floor-press", "move": "floor-press", "kind": "reps", "sets": 3, "reps": 8, "perSide": true, "bell": 25,
+              "ladder": [{ "bell": "BW" }, { "bell": 18 }],
+              "notes": "When loaded, hold the 18 goblet-style" },
+            { "id": "b-floor-press", "move": "floor-press", "kind": "reps", "sets": 3, "reps": 8, "perSide": true, "bell": 35,
               "byWeek": { "3": { "reps": [8, 10] } } },
-            { "id": "b-halo", "move": "halo", "kind": "reps", "sets": 2, "reps": 5, "perSide": true, "sideLabel": "each direction", "bell": 25,
+            { "id": "b-halo", "move": "halo", "kind": "reps", "sets": 2, "reps": 5, "perSide": true, "sideLabel": "each direction", "bell": 18,
               "byWeek": { "3": { "reps": [5, 7] } } },
             { "id": "b-dead-hang", "move": "dead-hang", "kind": "time", "sets": 3, "seconds": [15, 20] }
           ]
@@ -72,16 +71,16 @@
         "C": {
           "title": "Skill and mobility",
           "items": [
-            { "id": "c-get-up", "move": "get-up-pieces", "kind": "reps", "sets": 3, "reps": 1, "perSide": true, "bell": 25, "rest": 45,
+            { "id": "c-get-up", "move": "get-up-pieces", "kind": "reps", "sets": 3, "reps": 1, "perSide": true, "bell": 18, "rest": 45,
               "notes": "One rep per side each set" },
-            { "id": "c-arm-bar", "move": "arm-bar", "kind": "time", "sets": 2, "seconds": 30, "perSide": true, "bell": 25 },
+            { "id": "c-arm-bar", "move": "arm-bar", "kind": "time", "sets": 2, "seconds": 30, "perSide": true, "bell": 18 },
             { "id": "c-sldl", "move": "single-leg-deadlift", "kind": "reps", "sets": 3, "reps": 5, "perSide": true, "bell": "BW",
-              "ladder": [{ "bell": "BW" }, { "bell": 25 }] },
+              "ladder": [{ "bell": "BW" }, { "bell": 18 }] },
             { "id": "c-cossack", "move": "cossack-squat", "kind": "reps", "sets": 2, "reps": 5, "perSide": true,
               "byWeek": { "3": { "reps": [5, 7] } } },
-            { "id": "c-pullover", "move": "pullover", "kind": "reps", "sets": 2, "reps": 8, "bell": 25,
+            { "id": "c-pullover", "move": "pullover", "kind": "reps", "sets": 2, "reps": 8, "bell": 18,
               "byWeek": { "3": { "reps": [8, 10] } } },
-            { "id": "c-mini-flow", "move": "mini-flow", "kind": "time", "sets": 3, "seconds": 60, "bell": 25, "notes": "Slow" }
+            { "id": "c-mini-flow", "move": "mini-flow", "kind": "time", "sets": 3, "seconds": 60, "bell": 18, "notes": "Slow" }
           ]
         },
         "REST": {
@@ -120,7 +119,7 @@
       "checks": [
         "3 × 10 deadlifts (45) with clean form",
         "20 crisp two-hand swings (45)",
-        "Get-up to half-kneeling (25), each side",
+        "Get-up to half-kneeling (18), each side",
         "No joint pain the day after sessions"
       ]
     }

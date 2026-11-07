@@ -27,7 +27,7 @@ const defaultSettings = (): Settings => ({
   voice: true,
   throughSilent: false,
   defaultRest: data.plan.defaultRest,
-  bells: [25, 45],
+  bells: [18, 35, 45],
 });
 
 export type Tab = 'today' | 'timers' | 'library' | 'history' | 'settings';
@@ -101,7 +101,13 @@ export async function init() {
       db.daily.toArray(),
     ]);
     engine.value = eng ?? initialState();
-    settings.value = { ...defaultSettings(), ...set };
+    const saved = { ...defaultSettings(), ...set };
+    // James's bells are 18, 35 and 45 lb (Nov 7). Swap out the old starting list if it was never edited.
+    if (saved.bells.join() === '25,45') {
+      saved.bells = defaultSettings().bells;
+      await putKV('settings', saved);
+    }
+    settings.value = saved;
     if (met) meta.value = met;
     else await putKV('meta', meta.value);
     unlocked.value = unl ?? [];
