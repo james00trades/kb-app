@@ -176,6 +176,12 @@ export interface RoutinePlan {
   transition: number;
   /** Total length, including transitions. */
   seconds: number;
+  notes?: string;
+}
+
+function routineOf(title: string, stations: Station[], transition: number, notes?: string): RoutinePlan {
+  const seconds = stations.reduce((sum, st) => sum + st.seconds, 0) + transition * Math.max(0, stations.length - 1);
+  return { title, stations, transition, seconds, notes };
 }
 
 export interface PlannedItem {
@@ -210,7 +216,12 @@ export interface PlannedSession {
   beyondPlan: boolean;
   finalWeekOfPhase: boolean;
   checks?: string[];
+  /** The workout itself (main work, then breathwork). */
   items: PlannedItem[];
+  /** Part 1 of the day: the guided warm-up (workout days) or the wake-up routine (rest days). */
+  warmup?: RoutinePlan;
+  /** Part 3 of the day: the evening holds. */
+  evening?: RoutinePlan;
 }
 
 function planItem(
@@ -248,15 +259,13 @@ function planItem(
     const extra = r.routine ? ctx.phase[r.routine] : undefined;
     const stations = [...(extra?.stations ?? []), ...(r.stations ?? [])];
     if (!stations.length) return null;
-    const transition = r.transition ?? extra?.transition ?? 0;
-    const seconds = stations.reduce((sum, st) => sum + st.seconds, 0) + transition * (stations.length - 1);
-    const title = r.label ?? extra?.title ?? 'Routine';
+    const routine = routineOf(r.label ?? extra?.title ?? 'Routine', stations, r.transition ?? extra?.transition ?? 0, r.notes);
     return {
       ...base,
       ladderLen: 1,
       step: 0,
-      stay: { name: title, sets: 1, target: seconds, bell: null, planBell: null, rest: r.rest ?? 0, notes: r.notes },
-      routine: { title, stations, transition, seconds },
+      stay: { name: routine.title, sets: 1, target: routine.seconds, bell: null, planBell: null, rest: r.rest ?? 0, notes: r.notes },
+      routine,
     };
   }
 
@@ -282,13 +291,27 @@ export function planSession(data: AppData, state: EngineState): PlannedSession {
       if (p) items.push(p);
     }
   };
+  // A day has three parts (James, Nov 7, 2026): warm-up, workout, evening holds.
+  let warmup: RoutinePlan | undefined;
   if (day !== 'REST') {
-    add(ctx.phase.warmup, 'warmup');
+    // Guided warm-up timers are their own part, not workout moves.
+    const guided: RoutinePlan[] = [];
+    for (const it of ctx.phase.warmup) {
+      const p = planItem(it, 'warmup', ctx, data, state);
+      if (p?.routine) guided.push(p.routine);
+      else if (p) items.push(p);
+    }
+    if (guided.length === 1) warmup = guided[0];
+    else if (guided.length > 1)
+      warmup = routineOf(guided[0].title, guided.flatMap((g) => g.stations), guided[0].transition, guided[0].notes);
     add(d.items ?? [], 'main');
     add(ctx.phase.cooldown, 'cooldown');
   } else {
     add(d.items ?? [], 'main');
+    const m = ctx.phase.morning;
+    if (m) warmup = routineOf(m.title, m.stations, m.transition);
   }
+  const ev = ctx.phase.evening;
   return {
     day,
     title: d.title,
@@ -306,7 +329,20 @@ export function planSession(data: AppData, state: EngineState): PlannedSession {
     finalWeekOfPhase: ctx.finalWeekOfPhase,
     checks: ctx.phase.checks,
     items,
+    warmup,
+    evening: ev && routineOf(ev.title, ev.stations, ev.transition),
   };
+}
+
+/** The next n sessions in rotation order, starting with the current one. */
+export function upcoming(data: AppData, state: EngineState, n: number): PlannedSession[] {
+  const out: PlannedSession[] = [];
+  let pointer = state.pointer;
+  for (let i = 0; i < n; i++) {
+    out.push(planSession(data, { ...state, pointer }));
+    pointer = advance(data.plan, pointer);
+  }
+  return out;
 }
 
 // ---------- Logging a session ----------

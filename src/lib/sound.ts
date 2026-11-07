@@ -2,9 +2,16 @@
 // The voice is recorded clips bundled with the app (public/voice/), not the phone's
 // built-in speech: on iPhone, built-in speech stops music playing in other apps.
 // iOS only allows sound after a tap, so unlockAudio() runs on every touch.
+//
+// iOS can take the sound away while the app is in the background (another app such as
+// YouTube plays, or a call comes in). The old audio context then stays "interrupted" or
+// plays silence for good, so the first tap after coming back builds a fresh one.
+// Decoded clips work with any context, so they're kept.
 import { CLIPS, voicePlan } from './voiceText';
 
 let ctx: AudioContext | null = null;
+let stale = false; // the app was in the background since the last tap
+let sessionType: string | null = null;
 let voiceOn = true;
 
 const buffers = new Map<string, AudioBuffer>();
@@ -20,23 +27,52 @@ export function setVoice(on: boolean) {
 
 /** "Play through silent switch" uses the playback session (pauses music); otherwise mix with music. */
 export function setAudioSession(throughSilent: boolean) {
+  sessionType = throughSilent ? 'playback' : 'ambient';
+  applySession();
+}
+
+function applySession() {
   const session = (navigator as unknown as { audioSession?: { type: string } }).audioSession;
-  if (session) {
+  if (session && sessionType) {
     try {
-      session.type = throughSilent ? 'playback' : 'ambient';
+      session.type = sessionType;
     } catch {
       /* not supported */
     }
   }
 }
 
+/** Wake the context if it isn't running. Safe to call anytime; it may need a tap to work. */
+function wake(c: AudioContext) {
+  if (c.state !== 'running' && c.state !== 'closed') c.resume().catch(() => {});
+}
+
+/** Called when the app goes to the background (hidden) or comes back. */
+export function appHidden(hidden: boolean) {
+  if (hidden) {
+    stale = true;
+    return;
+  }
+  applySession();
+  if (ctx) wake(ctx);
+}
+
 export function unlockAudio() {
   try {
+    // "suspended" is normal before a tap; anything else ("interrupted", "closed"), or a trip
+    // to the background, means the context may be dead, so replace it inside this tap.
+    if (ctx && (stale || (ctx.state !== 'running' && ctx.state !== 'suspended'))) {
+      stopVoice();
+      ctx.close().catch(() => {});
+      ctx = null;
+    }
+    stale = false;
     if (!ctx) {
       const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       ctx = new AC();
+      applySession();
     }
-    if (ctx.state === 'suspended') void ctx.resume();
+    wake(ctx);
     const buf = ctx.createBuffer(1, 1, 22050);
     const src = ctx.createBufferSource();
     src.buffer = buf;
@@ -59,7 +95,7 @@ export function loadVoice(): Promise<void> {
         if (buffers.has(key)) return;
         const res = await fetch(base + clip.file);
         if (!res.ok) throw new Error(`voice clip ${clip.file}: ${res.status}`);
-        buffers.set(key, await c.decodeAudioData(await res.arrayBuffer()));
+        buffers.set(key, await (ctx ?? c).decodeAudioData(await res.arrayBuffer()));
       }),
     )
       .then(() => {
@@ -84,7 +120,7 @@ const BEEPS: Record<BeepKind, { freq: number; dur: number; vol: number; repeat?:
 
 export function beep(kind: BeepKind) {
   if (!ctx) return;
-  if (ctx.state === 'suspended') void ctx.resume();
+  wake(ctx);
   const b = BEEPS[kind];
   const t0 = ctx.currentTime;
   for (let i = 0; i < (b.repeat ?? 1); i++) {
@@ -126,7 +162,7 @@ export function say(text: string) {
 function play(text: string) {
   const c = ctx;
   if (!c) return;
-  if (c.state === 'suspended') void c.resume();
+  wake(c);
   let at = c.currentTime + 0.02;
   for (const key of voicePlan(text).keys) {
     const buf = buffers.get(key);

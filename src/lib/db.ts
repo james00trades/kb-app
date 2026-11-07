@@ -7,10 +7,13 @@ export interface KV {
   value: unknown;
 }
 
-/** Optional daily extras, keyed by local date. Values are completion timestamps. */
+/** The day's warm-up and evening parts, keyed by local date. Values are completion timestamps. */
 export interface Daily {
   date: string;
+  /** The wake-up routine on its own (rest days; before Nov 7, 2026 also the optional morning card). */
   morning?: number;
+  /** The guided warm-up (workout days). */
+  warmup?: number;
   evening?: number;
 }
 

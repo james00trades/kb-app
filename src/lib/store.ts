@@ -2,9 +2,10 @@
 import { computed, signal } from '@preact/signals';
 import { loadData, type AppData } from '../engine/data';
 import {
-  back, finishSession, initialState, localDate, passDay, planSession, startDraft,
+  back, finishSession, initialState, localDate, passDay, planSession, startDraft, upcoming,
   type EngineState, type PlannedSession, type SessionDraft, type SessionLog,
 } from '../engine/engine';
+import { addDays, streak } from '../engine/streak';
 import { db, getKV, putKV, type Daily } from './db';
 import { setAudioSession, setVoice } from './sound';
 
@@ -44,10 +45,41 @@ export const daily = signal<Record<string, Daily>>({});
 export const persisted = signal<boolean | null>(null);
 /** Move id whose card (cues) is open. */
 export const moveSheet = signal<string | null>(null);
+/** The workout screen is showing. Off when James backs out to the day; the workout stays in progress. */
+export const workoutOpen = signal(false);
+/** Which of the next 7 days is open (0 = today), or null for the 7-day list. */
+export const openDay = signal<number | null>(null);
+/** Today's local date. Kept current when the app comes back from the background (see refreshDate). */
+export const todayStr = signal(localDate(Date.now()));
 
-export const today = computed<PlannedSession>(() =>
-  planSession({ ...data, plan: { ...data.plan, defaultRest: settings.value.defaultRest } }, engine.value),
-);
+export function refreshDate() {
+  const d = localDate(Date.now());
+  if (d !== todayStr.value) todayStr.value = d;
+}
+
+const planData = (): AppData => ({ ...data, plan: { ...data.plan, defaultRest: settings.value.defaultRest } });
+
+export const today = computed<PlannedSession>(() => planSession(planData(), engine.value));
+
+export interface DayPlan {
+  date: string;
+  session: PlannedSession;
+  /** Today's workout or rest day, once it's logged. */
+  log?: SessionLog;
+}
+
+/** The next 7 days. Today is the next session, or the one already logged today (then the
+ * next session falls on tomorrow). */
+export const week = computed<DayPlan[]>(() => {
+  const log = sessions.value.find((s) => s.date === todayStr.value && s.status !== 'skipped');
+  const days: DayPlan[] = log ? [{ date: todayStr.value, session: log.session, log }] : [];
+  for (const session of upcoming(planData(), engine.value, 7 - days.length)) {
+    days.push({ date: addDays(todayStr.value, days.length), session });
+  }
+  return days;
+});
+
+export const currentStreak = computed(() => streak(sessions.value, daily.value, todayStr.value));
 
 export const isUnlocked = (id: string) =>
   !!data.moveById.get(id)?.unlocked || unlocked.value.includes(id);
@@ -74,6 +106,8 @@ export async function init() {
     else await putKV('meta', meta.value);
     unlocked.value = unl ?? [];
     draft.value = dr ?? null;
+    workoutOpen.value = !!dr;
+    if (dr) openDay.value = 0;
     sessions.value = sess;
     daily.value = Object.fromEntries(days.map((d) => [d.date, d]));
     setVoice(settings.value.voice);
@@ -101,6 +135,7 @@ async function saveEngine(next: EngineState) {
 export async function startWorkout() {
   const d = startDraft(today.value, uid(), Date.now());
   draft.value = d;
+  workoutOpen.value = true;
   await putKV('draft', d);
 }
 
@@ -146,9 +181,10 @@ export async function backOneDay() {
 
 // ---------- Extras, settings, library ----------
 
-export async function markExtra(kind: 'morning' | 'evening') {
+/** Mark today's wake-up, warm-up or evening holds done (or undo it). */
+export async function setPart(kind: 'morning' | 'warmup' | 'evening', done: boolean) {
   const date = localDate(Date.now());
-  const row: Daily = { ...(daily.value[date] ?? { date }), [kind]: Date.now() };
+  const row: Daily = { ...(daily.value[date] ?? { date }), [kind]: done ? Date.now() : undefined };
   daily.value = { ...daily.value, [date]: row };
   await db.daily.put(row);
 }
@@ -172,11 +208,6 @@ export async function markBackedUp() {
   meta.value = { ...meta.value, lastBackupAt: Date.now() };
   await putKV('meta', meta.value);
 }
-
-export const trainedToday = computed(() => {
-  const d = localDate(Date.now());
-  return sessions.value.some((s) => s.date === d && (s.status === 'done' || s.status === 'partial'));
-});
 
 export const backupDue = computed(() => {
   const last = meta.value.lastBackupAt;

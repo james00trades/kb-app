@@ -59,33 +59,39 @@ describe('Month 1 recipes', () => {
     expect(item(s, 'a-hinge-drill')!.stay.sets).toBe(2);
     expect(item(s, 'a-deadlift')!.stay).toMatchObject({ sets: 2, target: 8, bell: 45, range: [8, 10] });
     expect(item(s, 'a-swing')).toBeUndefined();
-    expect(s.items.filter((i) => i.section === 'warmup')).toHaveLength(1);
+    expect(s.items.filter((i) => i.section === 'warmup')).toHaveLength(0); // the warm-up is its own part
     expect(s.items.filter((i) => i.section === 'cooldown')[0].breath).toBeDefined();
   });
 
-  it('every workout warm-up is one guided timer: wake-up routine, then bodyweight moves', () => {
+  it('every day has three parts: warm-up, workout, evening holds (James, Nov 7)', () => {
     for (const day of ['A', 'B', 'C'] as const) {
       for (const week of [1, 4]) {
-        const first = planSession(data, at(week, day)).items[0];
-        expect(first.kind).toBe('routine');
-        expect(first.section).toBe('warmup');
-        const labels = first.routine!.stations.map((s) => s.label);
+        const s = planSession(data, at(week, day));
+        const labels = s.warmup!.stations.map((st) => st.label);
         expect(labels[0]).toBe('Jumping twists');
         expect(labels.at(-1)).toBe('Step-back burpees (no jump)');
         expect(labels).toHaveLength(16);
-        expect(first.routine!.seconds).toBe(450); // 5 min wake-up + 5 × 30 s
-        expect(first.stay.rest).toBe(0);
+        expect(s.warmup!.seconds).toBe(450); // 5 min wake-up + 5 × 30 s
+        expect(s.items[0].section).toBe('main'); // the workout starts with the main work
+        expect(s.items.some((i) => i.kind === 'routine')).toBe(false);
+        expect(s.evening!.stations).toHaveLength(5);
+        expect(s.evening!.seconds).toBe(5 * 120 + 4 * 10);
       }
     }
-    expect(planSession(data, at(1, 'REST')).items.some((i) => i.kind === 'routine')).toBe(false);
   });
 
-  it('the routine is one tap to complete and never progresses', () => {
-    const r = runSession(at(1, 'A'));
-    const routine = r.log.items.find((i) => i.plan.kind === 'routine')!;
-    expect(routine.sets).toHaveLength(1);
-    expect(routine.sets[0].done).toBe(true);
-    expect(r.state.progress['wu-guided']).toBeUndefined();
+  it('a rest day has the wake-up routine on its own, then the evening holds', () => {
+    const s = planSession(data, at(1, 'REST'));
+    expect(s.warmup!.title).toBe('Morning wake-up');
+    expect(s.warmup!.stations).toHaveLength(11);
+    expect(s.warmup!.seconds).toBe(300);
+    expect(s.evening).toBeDefined();
+  });
+
+  it('the breathing stays at the end of the workout', () => {
+    const s = planSession(data, at(1, 'A'));
+    expect(s.items.at(-1)!.section).toBe('cooldown');
+    expect(s.items.at(-1)!.breath).toBeDefined();
   });
 
   it('week 2: 3 sets, hike passes 5 × 5 on the 25', () => {

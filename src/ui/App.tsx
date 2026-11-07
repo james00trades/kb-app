@@ -1,6 +1,7 @@
 import { useEffect } from 'preact/hooks';
 import { applyUpdate, updateReady } from '../lib/pwa';
-import { draft, loadError, ready, tab, type Tab } from '../lib/store';
+import { partsDone } from '../engine/streak';
+import { currentStreak, draft, loadError, ready, tab, type Tab } from '../lib/store';
 import { timer } from '../lib/timer';
 import { setAwake } from '../lib/wakelock';
 import { Icon } from './common';
@@ -37,6 +38,7 @@ export function App() {
   const t = tab.value;
   return (
     <>
+      <StreakBar />
       <main class="main">
         {updateReady.value && !draft.value && (
           <button class="note good note-btn" onClick={applyUpdate}>
@@ -68,5 +70,42 @@ export function App() {
       <MoveSheet />
       <TimerOverlay />
     </>
+  );
+}
+
+/** Always at the top: days in a row kept (all three parts of the day done). */
+function StreakBar() {
+  const { current, best, todayKept, today } = currentStreak.value;
+  const doneToday = partsDone(today);
+  const bestEver = current > 1 && current >= best;
+  return (
+    <header class="topbar">
+      <div class={`streak ${todayKept ? '' : 'cold'}`} aria-label={`${current} day streak. Best ${best}.`}>
+        <span class="flame">
+          <Icon name="flame" size={26} filled={todayKept} />
+        </span>
+        {current === 0 && best === 0 ? (
+          <span class="streak-label">Start your streak today</span>
+        ) : (
+          <>
+            <span class="streak-n">{current}</span>
+            <span class="streak-label">day streak</span>
+          </>
+        )}
+        <span class="streak-side">
+          {todayKept ? (
+            <span class="good-text">✓ Today done</span>
+          ) : doneToday > 0 ? (
+            `${doneToday} of 3 done today`
+          ) : current > 0 ? (
+            'Keep it going today'
+          ) : best > 0 ? (
+            'New streak starts today'
+          ) : null}
+          {best > 0 && <br />}
+          {best > 0 && (bestEver ? <span class="good-text">Your best ever!</span> : `Best: ${best} day${best === 1 ? '' : 's'}`)}
+        </span>
+      </div>
+    </header>
   );
 }

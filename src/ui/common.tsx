@@ -126,12 +126,18 @@ const ICONS: Record<string, string> = {
   pause: 'M7 4h4v16H7zM13 4h4v16h-4z',
   close: 'M6 6l12 12M18 6L6 18',
   up: 'M12 19V5M5 12l7-7 7 7',
+  back: 'M15 18l-6-6 6-6',
+  next: 'M9 6l6 6-6 6',
+  circle: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z',
+  // Flame, from Lucide (ISC license)
+  flame:
+    'M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z',
 };
 
-export function Icon(props: { name: keyof typeof ICONS | string; size?: number }) {
+export function Icon(props: { name: keyof typeof ICONS | string; size?: number; filled?: boolean }) {
   const s = props.size ?? 24;
   return (
-    <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <svg width={s} height={s} viewBox="0 0 24 24" fill={props.filled ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
       <path d={ICONS[props.name]} />
     </svg>
   );

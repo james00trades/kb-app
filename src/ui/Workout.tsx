@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { chosen, isItemComplete, setChoice, type DraftItem, type SessionDraft } from '../engine/engine';
 import type { Bell } from '../engine/schema';
-import { discardWorkout, draft, finishWorkout, moveSheet, settings, updateDraft } from '../lib/store';
+import { discardWorkout, draft, finishWorkout, moveSheet, settings, updateDraft, workoutOpen } from '../lib/store';
 import { breathSpec, fmtClock, holdSpec, intervalSpec, restSpec, startTimer, stopTimer, timer } from '../lib/timer';
 import { Icon, Sheet, Stepper, bellShort, fmtSeconds, prescText, sideText, upText } from './common';
 
@@ -75,13 +75,23 @@ export function Workout() {
   return (
     <div class="screen workout">
       <header class="workout-head">
-        <div>
+        <button
+          class="back-btn"
+          aria-label="Back to today. The workout stays in progress."
+          onClick={() => {
+            workoutOpen.value = false;
+            window.scrollTo(0, 0);
+          }}
+        >
+          <Icon name="back" size={22} />
+          Back
+        </button>
+        <div class="workout-head-text">
           <div class="eyebrow">
-            Week {d.session.week} · Day {d.session.day}
+            Week {d.session.week} · Day {d.session.day} <span class="workout-clock">{fmtClock(elapsed)}</span>
           </div>
           <div class="workout-title">{d.session.title}</div>
         </div>
-        <div class="workout-clock">{fmtClock(elapsed)}</div>
         <button class="pill-btn" onClick={() => setFinishing(true)}>
           Finish
         </button>
