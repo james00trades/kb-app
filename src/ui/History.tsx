@@ -1,11 +1,33 @@
+import { signal } from '@preact/signals';
 import { useState } from 'preact/hooks';
 import { chosen, type SessionLog } from '../engine/engine';
 import { engine, sessions } from '../lib/store';
+import { BodyView } from './Body';
 import { Sheet, bellText, fmtDay, fmtDuration } from './common';
 
 const STATUS_TEXT = { done: 'Done', partial: 'Partial', skipped: 'Skipped', rest: 'Rest day' } as const;
 
+/** Which half of the Progress tab is showing (kept while the app is open). */
+const view = signal<'body' | 'workouts'>('body');
+
 export function History() {
+  return (
+    <div class="screen">
+      <h1>Progress</h1>
+      <div class="seg">
+        <button class={view.value === 'body' ? 'selected' : ''} onClick={() => (view.value = 'body')}>
+          Body
+        </button>
+        <button class={view.value === 'workouts' ? 'selected' : ''} onClick={() => (view.value = 'workouts')}>
+          Workouts
+        </button>
+      </div>
+      {view.value === 'body' ? <BodyView /> : <Workouts />}
+    </div>
+  );
+}
+
+function Workouts() {
   const [open, setOpen] = useState<SessionLog | null>(null);
   const week = engine.value.pointer.cycle + 1;
   const all = sessions.value;
@@ -16,8 +38,7 @@ export function History() {
   const change = lastReps > 0 ? Math.round(((thisReps - lastReps) / lastReps) * 100) : null;
 
   return (
-    <div class="screen">
-      <h1>History</h1>
+    <>
       <section class="card stats">
         <div class="stat">
           <div class="stat-num">{workouts(week).length}</div>
@@ -59,7 +80,7 @@ export function History() {
         ))}
       </div>
       {open && <SessionDetail s={open} onClose={() => setOpen(null)} />}
-    </div>
+    </>
   );
 }
 

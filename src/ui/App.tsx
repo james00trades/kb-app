@@ -1,10 +1,12 @@
 import { useEffect } from 'preact/hooks';
 import { applyUpdate, updateReady } from '../lib/pwa';
 import { partsDone } from '../engine/streak';
-import { currentStreak, draft, loadError, ready, tab, type Tab } from '../lib/store';
+import { currentStreak, draft, loadError, photoSession, ready, tab, type Tab } from '../lib/store';
 import { timer } from '../lib/timer';
 import { setAwake } from '../lib/wakelock';
+import { BodySheet } from './Body';
 import { Icon } from './common';
+import { PhotoSession } from './PhotoSession';
 import { History } from './History';
 import { Library, MoveSheet } from './Library';
 import { Settings } from './Settings';
@@ -16,12 +18,12 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'today', label: 'Today' },
   { id: 'timers', label: 'Timers' },
   { id: 'library', label: 'Library' },
-  { id: 'history', label: 'History' },
+  { id: 'history', label: 'Progress' },
   { id: 'settings', label: 'Settings' },
 ];
 
 export function App() {
-  const awake = !!draft.value || !!timer.value;
+  const awake = !!draft.value || !!timer.value || photoSession.value;
   useEffect(() => setAwake(awake), [awake]);
 
   if (loadError.value) {
@@ -68,7 +70,9 @@ export function App() {
         ))}
       </nav>
       <MoveSheet />
+      <BodySheet />
       <TimerOverlay />
+      <PhotoSession />
     </>
   );
 }

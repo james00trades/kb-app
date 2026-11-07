@@ -149,7 +149,8 @@ export function Settings() {
       {pending && (
         <Sheet onClose={() => setPending(null)} title="Restore this backup?">
           <p>
-            Backup from {new Date(pending.exportedAt).toLocaleString()} with {pending.sessions.length} logged days.
+            Backup from {new Date(pending.exportedAt).toLocaleString()} with {pending.sessions.length} logged days,{' '}
+            {pending.body.filter((b) => b.weight !== undefined).length} weigh-ins and {pending.photos.length} photos.
           </p>
           <p class="note warn">This replaces everything currently in the app on this phone.</p>
           <button

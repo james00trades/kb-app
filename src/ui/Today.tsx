@@ -6,6 +6,7 @@ import {
   week, workoutOpen, type DayPlan,
 } from '../lib/store';
 import { intervalSpec, startTimer } from '../lib/timer';
+import { BodyCheckIn } from './Body';
 import { Icon, fmtSeconds } from './common';
 import { Workout } from './Workout';
 
@@ -49,6 +50,8 @@ function Home() {
       {s.beyondPlan && (
         <div class="note">The plan data ends here, so the app repeats the final week until the next month is loaded.</div>
       )}
+
+      <BodyCheckIn />
 
       <h3 class="section-title">Next 7 days</h3>
       <section class="card week">

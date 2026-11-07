@@ -17,10 +17,41 @@ export interface Daily {
   evening?: number;
 }
 
+/** Weight and waist, one row per local date. */
+export interface BodyEntry {
+  date: string;
+  /** Pounds. */
+  weight?: number;
+  /** Inches. */
+  waist?: number;
+}
+
+export type Pose = 'front' | 'side' | 'back';
+
+/** A progress photo's details plus a small preview. The full picture is in `photoFiles`
+ * so the app can load every preview at start without loading every photo. */
+export interface PhotoMeta {
+  id: string;
+  date: string;
+  pose: Pose;
+  takenAt: number;
+  /** JPEG, about 240 × 320. */
+  thumb: ArrayBuffer;
+}
+
+export interface PhotoFile {
+  id: string;
+  /** JPEG, up to 960 × 1280 (3:4 portrait). */
+  data: ArrayBuffer;
+}
+
 class KbDb extends Dexie {
   sessions!: Table<SessionLog, string>;
   kv!: Table<KV, string>;
   daily!: Table<Daily, string>;
+  body!: Table<BodyEntry, string>;
+  photos!: Table<PhotoMeta, string>;
+  photoFiles!: Table<PhotoFile, string>;
 
   constructor() {
     super('kb-app');
@@ -28,6 +59,12 @@ class KbDb extends Dexie {
       sessions: 'id, date, startedAt',
       kv: 'key',
       daily: 'date',
+    });
+    // Nov 7, 2026: weight, waist and progress photos
+    this.version(2).stores({
+      body: 'date',
+      photos: 'id, date, pose',
+      photoFiles: 'id',
     });
   }
 }
