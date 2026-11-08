@@ -123,10 +123,6 @@
     "file": "4-7-8-breathing.wav",
     "dur": 1.8
   },
-  "air squats": {
-    "file": "air-squats.wav",
-    "dur": 0.832
-  },
   "arm circles backward": {
     "file": "arm-circles-backward.wav",
     "dur": 1.194
@@ -195,6 +191,10 @@
     "file": "hindu-push-ups.wav",
     "dur": 1.255
   },
+  "hip hinges": {
+    "file": "hip-hinges.wav",
+    "dur": 0.715
+  },
   "hold": {
     "file": "hold.wav",
     "dur": 0.399
@@ -235,6 +235,10 @@
     "file": "out.wav",
     "dur": 0.274
   },
+  "plank": {
+    "file": "plank.wav",
+    "dur": 0.485
+  },
   "pump stretch": {
     "file": "pump-stretch.wav",
     "dur": 0.793
@@ -251,10 +255,6 @@
     "file": "rest.wav",
     "dur": 0.489
   },
-  "reverse lunges": {
-    "file": "reverse-lunges.wav",
-    "dur": 0.966
-  },
   "right side": {
     "file": "right-side.wav",
     "dur": 0.639
@@ -266,10 +266,6 @@
   "side bends": {
     "file": "side-bends.wav",
     "dur": 0.842
-  },
-  "step-back burpees": {
-    "file": "step-back-burpees.wav",
-    "dur": 1.115
   },
   "straddle": {
     "file": "straddle.wav",

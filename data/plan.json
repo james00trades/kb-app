@@ -20,9 +20,9 @@
         { "id": "wu-guided", "kind": "routine", "label": "Guided warm-up", "routine": "morning", "transition": 0, "rest": 0,
           "notes": "Trevor's wake-up routine, then bodyweight moves. 30 s each, no breaks.",
           "stations": [
-            { "label": "Air squats", "seconds": 30, "move": "air-squat" },
+            { "label": "Hip hinges (wall drill)", "seconds": 30, "move": "hip-hinge-drill" },
             { "label": "Push-ups (knees or bench OK)", "seconds": 30, "move": "push-up" },
-            { "label": "Reverse lunges (alternate legs)", "seconds": 30, "move": "reverse-lunge" },
+            { "label": "Plank (knees OK)", "seconds": 30, "move": "plank" },
             { "label": "Hindu push-ups", "seconds": 30, "move": "hindu-push-up" }
           ] }
       ],

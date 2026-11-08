@@ -71,6 +71,8 @@ describe('Month 1 recipes', () => {
         expect(labels[0]).toBe('Jumping twists');
         expect(labels.at(-1)).toBe('Hindu push-ups'); // no burpees (James, Nov 7)
         expect(labels).toHaveLength(15);
+        // No repeats of the wake-up's squats and lunge reaches (James, Nov 8)
+        expect(labels.slice(-4)).toEqual(['Hip hinges (wall drill)', 'Push-ups (knees or bench OK)', 'Plank (knees OK)', 'Hindu push-ups']);
         expect(s.warmup!.seconds).toBe(420); // 5 min wake-up + 4 × 30 s
         expect(s.items[0].section).toBe('main'); // the workout starts with the main work
         expect(s.items.some((i) => i.kind === 'routine')).toBe(false);
