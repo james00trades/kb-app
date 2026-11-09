@@ -159,17 +159,25 @@
     "file": "bridge.wav",
     "dur": 0.448
   },
+  "cobra": {
+    "file": "cobra.wav",
+    "dur": 0.442
+  },
   "cossack squats": {
     "file": "cossack-squats.wav",
     "dur": 1.114
   },
-  "deep squat hold": {
-    "file": "deep-squat-hold.wav",
-    "dur": 0.91
+  "deep twist squats": {
+    "file": "deep-twist-squats.wav",
+    "dur": 1.198
   },
   "done": {
     "file": "done.wav",
     "dur": 0.394
+  },
+  "downward dog pulses": {
+    "file": "downward-dog-pulses.wav",
+    "dur": 1.349
   },
   "elbow throws": {
     "file": "elbow-throws.wav",
@@ -178,6 +186,10 @@
   "first": {
     "file": "first.wav",
     "dur": 0.495
+  },
+  "frog pose": {
+    "file": "frog-pose.wav",
+    "dur": 0.77
   },
   "get ready": {
     "file": "get-ready.wav",
@@ -207,13 +219,13 @@
     "file": "jumping-twists.wav",
     "dur": 1.033
   },
+  "left leg forward": {
+    "file": "left-leg-forward.wav",
+    "dur": 0.987
+  },
   "left side": {
     "file": "left-side.wav",
     "dur": 0.677
-  },
-  "lizard twist": {
-    "file": "lizard-twist.wav",
-    "dur": 0.848
   },
   "lunge reaches": {
     "file": "lunge-reaches.wav",
@@ -235,13 +247,13 @@
     "file": "out.wav",
     "dur": 0.274
   },
+  "pigeon pose": {
+    "file": "pigeon-pose.wav",
+    "dur": 0.805
+  },
   "plank": {
     "file": "plank.wav",
     "dur": 0.485
-  },
-  "pump stretch": {
-    "file": "pump-stretch.wav",
-    "dur": 0.793
   },
   "push-ups": {
     "file": "push-ups.wav",
@@ -254,6 +266,10 @@
   "rest": {
     "file": "rest.wav",
     "dur": 0.489
+  },
+  "right leg forward": {
+    "file": "right-leg-forward.wav",
+    "dur": 0.946
   },
   "right side": {
     "file": "right-side.wav",

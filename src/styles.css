@@ -68,17 +68,22 @@ p {
 .main {
   max-width: 680px;
   margin: 0 auto;
-  padding: 12px 16px calc(var(--tabbar-h) + var(--safe-b) + 90px);
+  padding: calc(var(--safe-t) + var(--topbar-h) + 12px) 16px calc(var(--tabbar-h) + var(--safe-b) + 90px);
 }
 
-/* ---------- Streak bar (top of every screen) ---------- */
+/* ---------- Streak bar (top of every screen) ----------
+   Fixed, full width, plain opaque background-color: iOS 26 draws a frosted blur over the top
+   edge of home-screen apps and only swaps it for a solid color when the top edge is a box like
+   this one. No backdrop-filter, opacity or mask here, or the blur comes back over the streak. */
 .topbar {
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 8;
   height: calc(var(--safe-t) + var(--topbar-h));
   padding: calc(var(--safe-t) + 6px) 16px 6px;
-  background: var(--bg);
+  background-color: var(--bg);
   border-bottom: 1px solid var(--line);
 }
 .streak {
@@ -1355,11 +1360,94 @@ p {
 }
 
 /* Reminders on the 7-day screen */
-.body-checkin {
+/* "Log it" reminders: solid amber cards with a soft pulse, hard to miss (James, Nov 9) */
+.due-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   margin-bottom: 4px;
 }
-.body-checkin .list-row > svg:first-child {
+.due-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 72px;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background-color: var(--accent);
+  color: var(--accent-ink);
+  text-align: left;
+  animation: due-pulse 2.4s ease-out infinite;
+}
+.due-icon {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background-color: rgba(21, 18, 10, 0.14);
+}
+.due-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.due-title {
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+.due-sub {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(21, 18, 10, 0.75);
+}
+.due-go {
+  flex: none;
+  padding: 7px 14px;
+  border-radius: 999px;
+  background-color: var(--accent-ink);
   color: var(--accent);
+  font-size: 15px;
+  font-weight: 800;
+}
+@keyframes due-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.6);
+  }
+  70%,
+  100% {
+    box-shadow: 0 0 0 12px rgba(245, 158, 11, 0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .due-row {
+    animation: none;
+  }
+}
+/* Count of things to log, on the Today tab */
+.tab-icon {
+  position: relative;
+  display: grid;
+}
+.tab-badge {
+  position: absolute;
+  top: -6px;
+  right: -12px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background-color: var(--warn);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  box-shadow: 0 0 0 2px var(--bg);
 }
 
 /* ---------- Progress-photo camera ---------- */

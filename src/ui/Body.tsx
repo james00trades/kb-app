@@ -543,7 +543,22 @@ function BodyEntrySheet({ kind, date: startDate }: { kind: 'weight' | 'waist'; d
   );
 }
 
-// ---------- Reminders on the 7-day screen ----------
+// ---------- Reminders on the 7-day screen: bold amber cards, hard to miss (James, Nov 9) ----------
+
+function DueRow(props: { icon: string; title: string; sub: string; action: string; onClick: () => void }) {
+  return (
+    <button class="due-row" onClick={props.onClick}>
+      <span class="due-icon">
+        <Icon name={props.icon} />
+      </span>
+      <span class="due-text">
+        <span class="due-title">{props.title}</span>
+        <span class="due-sub">{props.sub}</span>
+      </span>
+      <span class="due-go">{props.action}</span>
+    </button>
+  );
+}
 
 export function BodyCheckIn() {
   const due = bodyDue.value;
@@ -552,57 +567,46 @@ export function BodyCheckIn() {
   if (!due.weight && !due.photos && !due.waist && !checkin) return null;
   const lastWeight = weights.value[weights.value.length - 1];
   return (
-    <div class="list body-checkin">
+    <div class="due-list" role="region" aria-label="To log">
       {due.weight && (
-        <button class="list-row" onClick={() => (bodySheet.value = { kind: 'weight' })}>
-          <Icon name="weight" />
-          <span class="list-main grow">
-            <span>Log today's weight</span>
-            <span class="muted small">
-              {lastWeight ? `Last: ${fmtLb(lastWeight.weight)}, ${whenText(lastWeight.date, today)}` : 'Each morning, before breakfast'}
-            </span>
-          </span>
-          <Icon name="next" size={20} />
-        </button>
+        <DueRow
+          icon="weight"
+          title="Log today's weight"
+          sub={lastWeight ? `Last: ${fmtLb(lastWeight.weight)}, ${whenText(lastWeight.date, today)}` : 'Each morning, before breakfast'}
+          action="Log"
+          onClick={() => (bodySheet.value = { kind: 'weight' })}
+        />
       )}
       {due.photos && (
-        <button class="list-row" onClick={() => (photoSession.value = true)}>
-          <Icon name="camera" />
-          <span class="list-main grow">
-            <span>Progress photos are due</span>
-            <span class="muted small">
-              {due.lastPhoto ? `Last set ${whenText(due.lastPhoto, today)}` : 'Your first set: the "before" pictures'}
-            </span>
-          </span>
-          <Icon name="next" size={20} />
-        </button>
+        <DueRow
+          icon="camera"
+          title="Progress photos are due"
+          sub={due.lastPhoto ? `Last set ${whenText(due.lastPhoto, today)}` : 'Your first set: the "before" pictures'}
+          action="Take"
+          onClick={() => (photoSession.value = true)}
+        />
       )}
       {checkin && (
-        <button
-          class="list-row"
+        <DueRow
+          icon="check"
+          title="Weekly check-in with Claude"
+          sub="See which lever to pull this week"
+          action="Run"
           onClick={() => {
             progressView.value = 'body';
             tab.value = 'history';
             window.scrollTo(0, 0);
           }}
-        >
-          <Icon name="check" />
-          <span class="list-main grow">
-            <span>Weekly check-in with Claude</span>
-            <span class="muted small">See which lever to pull this week</span>
-          </span>
-          <Icon name="next" size={20} />
-        </button>
+        />
       )}
       {due.waist && (
-        <button class="list-row" onClick={() => (bodySheet.value = { kind: 'waist' })}>
-          <Icon name="ruler" />
-          <span class="list-main grow">
-            <span>Measure your waist</span>
-            <span class="muted small">{due.lastWaist ? `Monthly · last ${whenText(due.lastWaist, today)}` : 'Once a month'}</span>
-          </span>
-          <Icon name="next" size={20} />
-        </button>
+        <DueRow
+          icon="ruler"
+          title="Measure your waist"
+          sub={due.lastWaist ? `Monthly · last ${whenText(due.lastWaist, today)}` : 'Once a month'}
+          action="Log"
+          onClick={() => (bodySheet.value = { kind: 'waist' })}
+        />
       )}
     </div>
   );

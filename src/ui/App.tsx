@@ -1,7 +1,7 @@
 import { useEffect } from 'preact/hooks';
 import { applyUpdate, updateReady } from '../lib/pwa';
 import { partsDone } from '../engine/streak';
-import { currentStreak, draft, loadError, photoSession, ready, tab, type Tab } from '../lib/store';
+import { currentStreak, draft, loadError, logDueCount, photoSession, ready, tab, type Tab } from '../lib/store';
 import { timer } from '../lib/timer';
 import { setAwake } from '../lib/wakelock';
 import { BodySheet } from './Body';
@@ -64,7 +64,14 @@ export function App() {
               window.scrollTo(0, 0);
             }}
           >
-            <Icon name={x.id} />
+            <span class="tab-icon">
+              <Icon name={x.id} />
+              {x.id === 'today' && logDueCount.value > 0 && (
+                <span class="tab-badge" aria-label={`${logDueCount.value} to log`}>
+                  {logDueCount.value}
+                </span>
+              )}
+            </span>
             <span>{x.id === 'today' && draft.value ? 'Workout' : x.label}</span>
           </button>
         ))}

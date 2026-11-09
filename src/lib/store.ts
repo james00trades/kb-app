@@ -114,6 +114,12 @@ export const checkinDue = computed(
     (weights.value.length >= 3 || sessions.value.some((s) => s.status === 'done' || s.status === 'partial')),
 );
 
+/** How many "log it" reminders are showing (weight, photos, waist, check-in): the badge on the Today tab. */
+export const logDueCount = computed(() => {
+  const d = bodyDue.value;
+  return [d.weight, d.photos, d.waist, checkinDue.value].filter(Boolean).length;
+});
+
 export const currentStreak = computed(() => streak(sessions.value, daily.value, todayStr.value));
 
 export const isUnlocked = (id: string) =>

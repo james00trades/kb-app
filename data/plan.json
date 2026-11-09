@@ -109,11 +109,14 @@
         "title": "Evening holds",
         "transition": 10,
         "stations": [
+          { "label": "Deep twist squats", "seconds": 120, "move": "deep-twist-squat" },
+          { "label": "Downward dog pulses", "seconds": 120, "move": "downward-dog-pulse" },
+          { "label": "Pigeon pose, left leg forward", "seconds": 120, "move": "pigeon-pose" },
+          { "label": "Pigeon pose, right leg forward", "seconds": 120, "move": "pigeon-pose" },
+          { "label": "Frog pose", "seconds": 120, "move": "frog-pose" },
+          { "label": "Cobra", "seconds": 120, "move": "cobra" },
           { "label": "Straddle", "seconds": 120, "move": "straddle" },
-          { "label": "Bridge (regressed)", "seconds": 120, "move": "bridge-regressed" },
-          { "label": "Deep squat hold", "seconds": 120, "move": "deep-squat-hold" },
-          { "label": "Lizard twist", "seconds": 120, "move": "lizard-twist" },
-          { "label": "Pump stretch", "seconds": 120, "move": "pump-stretch" }
+          { "label": "Bridge (regressed)", "seconds": 120, "move": "bridge-regressed" }
         ]
       },
       "checks": [

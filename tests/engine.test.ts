@@ -76,8 +76,12 @@ describe('Month 1 recipes', () => {
         expect(s.warmup!.seconds).toBe(420); // 5 min wake-up + 4 × 30 s
         expect(s.items[0].section).toBe('main'); // the workout starts with the main work
         expect(s.items.some((i) => i.kind === 'routine')).toBe(false);
-        expect(s.evening!.stations).toHaveLength(5);
-        expect(s.evening!.seconds).toBe(5 * 120 + 4 * 10);
+        // James's 7 evening stretches (Nov 9), pigeon on each leg, 2 min each
+        expect(s.evening!.stations.map((st) => st.label)).toEqual([
+          'Deep twist squats', 'Downward dog pulses', 'Pigeon pose, left leg forward', 'Pigeon pose, right leg forward',
+          'Frog pose', 'Cobra', 'Straddle', 'Bridge (regressed)',
+        ]);
+        expect(s.evening!.seconds).toBe(8 * 120 + 7 * 10);
       }
     }
   });
