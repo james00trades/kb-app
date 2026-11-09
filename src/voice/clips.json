@@ -267,6 +267,10 @@
     "file": "rest.wav",
     "dur": 0.489
   },
+  "reverse prayer pose": {
+    "file": "reverse-prayer-pose.wav",
+    "dur": 1.116
+  },
   "right leg forward": {
     "file": "right-leg-forward.wav",
     "dur": 0.946
@@ -279,6 +283,10 @@
     "file": "round.wav",
     "dur": 0.45
   },
+  "seated spinal twist": {
+    "file": "seated-spinal-twist.wav",
+    "dur": 1.243
+  },
   "side bends": {
     "file": "side-bends.wav",
     "dur": 0.842
@@ -290,5 +298,13 @@
   "switch sides": {
     "file": "switch-sides.wav",
     "dur": 0.885
+  },
+  "turn left": {
+    "file": "turn-left.wav",
+    "dur": 0.674
+  },
+  "turn right": {
+    "file": "turn-right.wav",
+    "dur": 0.541
   }
 }

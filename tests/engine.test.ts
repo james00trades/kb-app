@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { loadData } from '../src/engine/data';
 import {
-  advance, back, finishSession, initialState, kbReps, passDay, planSession, setChoice, startDraft,
+  advance, back, completeSetAt, finishSession, initialState, kbReps, passDay, planSession, setChoice, startDraft,
   type EngineState, type PlannedSession, type SessionDraft,
 } from '../src/engine/engine';
 
@@ -76,12 +76,13 @@ describe('Month 1 recipes', () => {
         expect(s.warmup!.seconds).toBe(420); // 5 min wake-up + 4 × 30 s
         expect(s.items[0].section).toBe('main'); // the workout starts with the main work
         expect(s.items.some((i) => i.kind === 'routine')).toBe(false);
-        // James's 7 evening stretches (Nov 9), pigeon on each leg, 2 min each
+        // James's 9 evening stretches (Nov 9), pigeon and the seated twist on each side, 2 min each
         expect(s.evening!.stations.map((st) => st.label)).toEqual([
-          'Deep twist squats', 'Downward dog pulses', 'Pigeon pose, left leg forward', 'Pigeon pose, right leg forward',
-          'Frog pose', 'Cobra', 'Straddle', 'Bridge (regressed)',
+          'Reverse prayer pose', 'Deep twist squats', 'Downward dog pulses',
+          'Pigeon pose, left leg forward', 'Pigeon pose, right leg forward', 'Frog pose', 'Cobra', 'Straddle',
+          'Seated spinal twist, turn left', 'Seated spinal twist, turn right', 'Bridge (regressed)',
         ]);
-        expect(s.evening!.seconds).toBe(8 * 120 + 7 * 10);
+        expect(s.evening!.seconds).toBe(11 * 120 + 10 * 10);
       }
     }
   });
@@ -206,6 +207,89 @@ describe('moving up', () => {
     const dl = item(planSession(data, st), 'a-deadlift')!;
     expect(dl.stay.target).toBe(10);
     expect(dl.up).toBeUndefined();
+  });
+});
+
+describe('adapting to what James did (Nov 9)', () => {
+  /** Finish week 2 day A with these reps (or seconds) and bell on one item. */
+  const did = (state: EngineState, id: string, actual: number[], bell?: 18 | 35 | 45, pain = false) =>
+    runSession(state, pain, (d) => ({
+      ...d,
+      items: d.items.map((it) =>
+        it.plan.itemId === id
+          ? { ...it, bell: bell ?? it.bell, sets: it.sets.map((s, k) => ({ ...s, actual: actual[k], bell: bell ?? s.bell })) }
+          : it,
+      ),
+    }));
+
+  it('beating the target on every set: next time asks for the most hit on every set, past the range', () => {
+    const r = did(at(2, 'A'), 'a-deadlift', [12, 12, 11]);
+    expect(r.state.levels['deadlift']).toEqual({ amount: 11, bell: 45 });
+    const dl = item(planSession(data, at(2, 'A', r.state)), 'a-deadlift')!;
+    expect(dl.stay).toMatchObject({ target: 11, bell: 45, fromLast: true });
+    expect(dl.up).toBeUndefined(); // already past the plan's next step (9)
+  });
+
+  it('beating it again raises it again; doing less never lowers it', () => {
+    let st = did(at(2, 'A'), 'a-deadlift', [11, 11, 11]).state;
+    st = did(at(2, 'A', st), 'a-deadlift', [13, 12, 12]).state;
+    expect(item(planSession(data, at(2, 'A', st)), 'a-deadlift')!.stay.target).toBe(12);
+    st = did(at(2, 'A', st), 'a-deadlift', [12, 10, 9]).state;
+    expect(item(planSession(data, at(2, 'A', st)), 'a-deadlift')!.stay.target).toBe(12);
+  });
+
+  it('one short set means no change', () => {
+    const r = did(at(2, 'A'), 'a-deadlift', [12, 12, 7]);
+    expect(r.state.levels['deadlift']).toBeUndefined();
+    expect(item(planSession(data, at(2, 'A', r.state)), 'a-deadlift')!.stay.target).toBe(8);
+  });
+
+  it('a heavier bell: next time asks for what was managed with it, then builds from there', () => {
+    let st = did(at(2, 'A'), 'a-goblet-squat', [6, 6, 6], 45).state; // plan: 3 × 8 on the 35
+    let gs = item(planSession(data, at(2, 'A', st)), 'a-goblet-squat')!;
+    expect(gs.stay).toMatchObject({ target: 6, bell: 45, fromLast: true });
+    st = did(at(2, 'A', st), 'a-goblet-squat', [8, 7, 7]).state;
+    gs = item(planSession(data, at(2, 'A', st)), 'a-goblet-squat')!;
+    expect(gs.stay).toMatchObject({ target: 7, bell: 45 });
+  });
+
+  it('holds work the same, in seconds', () => {
+    const r = did(at(2, 'A'), 'a-suitcase-carry', [40, 45, 40]);
+    expect(item(planSession(data, at(2, 'A', r.state)), 'a-suitcase-carry')!.stay.target).toBe(40);
+  });
+
+  it('a session with joint pain changes nothing', () => {
+    const r = did(at(2, 'A'), 'a-deadlift', [12, 12, 12], undefined, true);
+    expect(r.state.levels['deadlift']).toBeUndefined();
+  });
+
+  it('works with state saved before levels existed', () => {
+    const { levels: _, ...old } = at(2, 'A');
+    const r = did(old as EngineState, 'a-deadlift', [10, 10, 10]);
+    expect(r.state.levels['deadlift']).toEqual({ amount: 10, bell: 45 });
+  });
+
+  it('during a workout, the next sets start at what was just done, never below the plan', () => {
+    const d = startDraft(planSession(data, at(2, 'A')), 'x', NOW);
+    let dl = d.items.find((it) => it.plan.itemId === 'a-deadlift')!; // 3 × 8
+    dl = completeSetAt({ ...dl, sets: dl.sets.map((s, k) => (k === 0 ? { ...s, actual: 10 } : s)) }, 0);
+    expect(dl.sets.map((s) => s.actual)).toEqual([10, 10, 10]);
+    dl = completeSetAt({ ...dl, sets: dl.sets.map((s, k) => (k === 1 ? { ...s, actual: 7 } : s)) }, 1);
+    expect(dl.sets.map((s) => s.actual)).toEqual([10, 7, 8]);
+    expect(dl.sets.map((s) => s.done)).toEqual([true, true, false]);
+  });
+});
+
+describe('rest between sets (James, Nov 9)', () => {
+  it('the rest setting applies to every move, hinge drill and get-ups included', () => {
+    const mine = { ...data, plan: { ...plan, defaultRest: 90 } };
+    for (const day of ['A', 'B', 'C'] as const) {
+      for (const it of planSession(mine, at(1, day)).items) {
+        if (it.kind === 'reps' || it.kind === 'time') expect([it.itemId, it.stay.rest]).toEqual([it.itemId, 90]);
+      }
+    }
+    expect(item(planSession(mine, at(1, 'A')), 'a-hinge-drill')!.stay.rest).toBe(90);
+    expect(item(planSession(mine, at(1, 'C')), 'c-get-up')!.stay.rest).toBe(90);
   });
 });
 

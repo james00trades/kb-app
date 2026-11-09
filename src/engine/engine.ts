@@ -29,11 +29,20 @@ export interface BellPref {
   planBell: Bell;
 }
 
+/** What James proved on a move last time: the most he hit on every set (reps, or seconds
+ *  for holds), and with which bell. The plan adapts to it (James, Nov 9). */
+export interface Level {
+  amount: number;
+  bell: Bell | null;
+}
+
 export interface EngineState {
   pointer: Pointer;
   hold: Hold | null;
   progress: Record<string, ProgressEntry>;
   bellPrefs: Record<string, BellPref>;
+  /** By progress key. Missing in state saved before Nov 9, 2026. */
+  levels: Record<string, Level>;
 }
 
 export const initialState = (): EngineState => ({
@@ -41,6 +50,7 @@ export const initialState = (): EngineState => ({
   hold: null,
   progress: {},
   bellPrefs: {},
+  levels: {},
 });
 
 // ---------- Pointer ----------
@@ -136,9 +146,11 @@ export interface Prescription {
   planBell: Bell | null;
   rest: number;
   notes?: string;
+  /** The target was set from what James did last time, not the plan's number. */
+  fromLast?: boolean;
 }
 
-const low = (v: number | [number, number] | undefined) => (Array.isArray(v) ? v[0] : v ?? 0);
+const low =(v: number | [number, number] | undefined) => (Array.isArray(v) ? v[0] : v ?? 0);
 
 function prescribe(
   r: Resolved,
@@ -159,9 +171,23 @@ function prescribe(
     range: Array.isArray(rangeSrc) ? rangeSrc : undefined,
     bell,
     planBell,
-    rest: r.rest ?? data.plan.defaultRest,
+    // James's rest setting applies to every move (Nov 9); the plan can't override it per move
+    rest: data.plan.defaultRest,
     notes: r.notes,
   };
+}
+
+/** Bell weight for comparing: bodyweight and no bell count as 0. */
+const heft = (b: Bell | null) => (typeof b === 'number' ? b : 0);
+
+/** Fit the target to what James did last time with this bell (Nov 9). With the plan's bell (or
+ *  a lighter one), never ask for less than he hit on every set. With a heavier bell than the
+ *  plan's, ask for what he managed with it, even if that's below the plan's number. */
+function adapt(p: Prescription, level: Level | undefined): Prescription {
+  if (!level || level.bell !== p.bell) return p;
+  const heavier = heft(p.bell) > heft(p.planBell);
+  if (heavier ? level.amount === p.target : level.amount <= p.target) return p;
+  return { ...p, target: level.amount, fromLast: true };
 }
 
 export interface BreathPlan {
@@ -273,9 +299,12 @@ function planItem(
   const progressKey = section === 'main' ? item.progressKey ?? r.move ?? item.id : undefined;
   const entry = progressKey ? state.progress[progressKey] : undefined;
   const step = Math.min(Math.max(entry?.step ?? 0, 0), ladder.length - 1);
-  const stay = prescribe(r, ladder[step], data, state.bellPrefs);
+  const level = progressKey ? state.levels?.[progressKey] : undefined;
+  const stay = adapt(prescribe(r, ladder[step], data, state.bellPrefs), level);
   const canOffer = !ctx.held && !!entry?.ready && step + 1 < ladder.length;
-  const up = canOffer ? prescribe(r, ladder[step + 1], data, state.bellPrefs) : undefined;
+  let up = canOffer ? adapt(prescribe(r, ladder[step + 1], data, state.bellPrefs), level) : undefined;
+  // Already doing more than the plan's next step? Then there's nothing to move up to.
+  if (up && up.target <= stay.target && up.bell === stay.bell && up.sets <= stay.sets) up = undefined;
   return { ...base, progressKey, ladderLen: ladder.length, step, stay, up };
 }
 
@@ -415,6 +444,16 @@ export function setChoice(it: DraftItem, choice: 'stay' | 'up'): DraftItem {
   return { ...it, choice, bell, sets: [...done, ...fresh] };
 }
 
+/** Mark set k done with the item's bell. The sets after it start at what was just done,
+ *  never below their own target (James, Nov 9). */
+export function completeSetAt(it: DraftItem, k: number): DraftItem {
+  const done = { ...it.sets[k], done: true, bell: it.bell };
+  return {
+    ...it,
+    sets: it.sets.map((s, j) => (j === k ? done : j > k && !s.done ? { ...s, actual: Math.max(s.target, done.actual) } : s)),
+  };
+}
+
 export function isItemComplete(it: DraftItem): boolean {
   return it.skipped || it.sets.every((s) => s.done);
 }
@@ -452,6 +491,7 @@ export function finishSession(
 ): FinishResult {
   const progress = { ...state.progress };
   const bellPrefs = { ...state.bellPrefs };
+  const levels = { ...(state.levels ?? {}) };
   const trained = new Set<string>();
 
   for (const it of draft.items) {
@@ -463,6 +503,15 @@ export function finishSession(
       const used = it.choice === 'up' && it.plan.up ? it.plan.step + 1 : it.plan.step;
       const allToPlan = !it.skipped && it.sets.length > 0 && it.sets.every((s) => s.done && s.actual >= s.target);
       progress[it.plan.progressKey] = { step: used, ready: allToPlan && !answers.pain };
+
+      // Adapt to what James did (Nov 9): every set done and no joint pain
+      if (!answers.pain && !it.skipped && it.sets.length > 0 && it.sets.every((s) => s.done)) {
+        const lastBell = it.sets[it.sets.length - 1].bell;
+        const best = Math.min(...it.sets.filter((s) => s.bell === lastBell).map((s) => s.actual));
+        const beat = lastBell === p.bell && best > p.target;
+        const heavier = heft(lastBell) > heft(p.bell);
+        if (beat || heavier) levels[it.plan.progressKey] = { amount: best, bell: lastBell };
+      }
     }
 
     if (p.move && p.planBell !== null && didAny) {
@@ -498,7 +547,7 @@ export function finishSession(
   return {
     log,
     trained: [...trained],
-    state: { pointer: advance(plan, state.pointer), hold, progress, bellPrefs },
+    state: { pointer: advance(plan, state.pointer), hold, progress, bellPrefs, levels },
   };
 }
 

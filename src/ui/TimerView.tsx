@@ -1,6 +1,29 @@
 import { addRound, adjust, clock, fmtClock, secondsLeft, skipPhase, skipRest, stopTimer, timer, togglePause } from '../lib/timer';
-import type { TPhase } from '../lib/timer';
+import type { ComponentChildren } from 'preact';
+import { breathProgress, type TPhase } from '../lib/timer';
 import { Icon } from './common';
+
+/** A ring that fills over the whole breathwork, with one marker per breath cycle, evenly spaced;
+ *  each marker sits where the ring will be when that cycle ends, and fills in when it does. */
+function BreathRing({ pct, sets, done, children }: { pct: number; sets: number; done: number; children: ComponentChildren }) {
+  const R = 46;
+  const marks = Array.from({ length: sets }, (_, k) => {
+    const a = ((k + 1) / sets) * 2 * Math.PI - Math.PI / 2;
+    return { x: 50 + R * Math.cos(a), y: 50 + R * Math.sin(a), on: k < done };
+  });
+  return (
+    <div class="breath-stage">
+      <svg class="breath-ring" viewBox="0 0 100 100" role="img" aria-label={`${done} of ${sets} breath sets done`}>
+        <circle class="ring-track" cx="50" cy="50" r={R} />
+        <circle class="ring-fill" cx="50" cy="50" r={R} pathLength={1} transform="rotate(-90 50 50)" style={{ strokeDashoffset: 1 - pct }} />
+        {marks.map((m, k) => (
+          <circle key={k} class={`ring-mark ${m.on ? 'on' : ''}`} cx={m.x} cy={m.y} r={m.on ? 3.4 : 2.6} />
+        ))}
+      </svg>
+      {children}
+    </div>
+  );
+}
 
 /** Breathing circle: grows on "in", shrinks on "out", stays put on "hold". */
 function breathClass(phases: TPhase[], index: number): string {
@@ -56,9 +79,17 @@ export function TimerOverlay() {
       {t.done ? (
         <div class="timer-body">
           <div class="timer-phase">Done</div>
-          <div class="timer-big">
-            <Icon name="check" size={96} />
-          </div>
+          {isBreath ? (
+            <BreathRing {...breathProgress(t, 0)}>
+              <div class="breath-wrap">
+                <Icon name="check" size={96} />
+              </div>
+            </BreathRing>
+          ) : (
+            <div class="timer-big">
+              <Icon name="check" size={96} />
+            </div>
+          )}
           {t.spec.mode === 'amrap' && <div class="timer-sub">{t.rounds} rounds</div>}
           <button class="big-btn primary" onClick={stopTimer}>Close</button>
         </div>
@@ -66,22 +97,27 @@ export function TimerOverlay() {
         <div class="timer-body">
           <div class="timer-phase">{ph.label}</div>
           {isBreath ? (
-            <div class="breath-wrap">
-              <div
-                key={t.index}
-                class={`breath-circle b-${breathClass(t.spec.phases, t.index)}`}
-                style={{ animationDuration: `${ph.seconds}s`, animationPlayState: paused ? 'paused' : 'running' }}
-              />
-              <div class="breath-count">{Math.ceil(left)}</div>
-            </div>
+            <BreathRing {...breathProgress(t, left)}>
+              <div class="breath-wrap">
+                <div
+                  key={t.index}
+                  class={`breath-circle b-${breathClass(t.spec.phases, t.index)}`}
+                  style={{ animationDuration: `${ph.seconds}s`, animationPlayState: paused ? 'paused' : 'running' }}
+                />
+                <div class="breath-count">{Math.ceil(left)}</div>
+              </div>
+            </BreathRing>
           ) : (
             <div class="timer-big">{fmtClock(left)}</div>
           )}
           {ph.sub && <div class="timer-sub">{ph.sub}</div>}
-          <div class="timer-meta muted">
-            {t.spec.mode === 'interval' && workPhases.length > 1 && `${workIndex} of ${workPhases.length} · `}
-            {fmtClock(totalLeft)} left
-          </div>
+          {/* Breathwork shows the ring instead of the total time left (James, Nov 9) */}
+          {!isBreath && (
+            <div class="timer-meta muted">
+              {t.spec.mode === 'interval' && workPhases.length > 1 && `${workIndex} of ${workPhases.length} · `}
+              {fmtClock(totalLeft)} left
+            </div>
+          )}
 
           {t.spec.mode === 'amrap' && ph.kind === 'work' && (
             <button class="amrap-btn" onClick={addRound}>

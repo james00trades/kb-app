@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { chosen, isItemComplete, setChoice, type DraftItem, type SessionDraft } from '../engine/engine';
+import { chosen, completeSetAt, isItemComplete, setChoice, type DraftItem, type SessionDraft } from '../engine/engine';
 import type { Bell } from '../engine/schema';
 import { discardWorkout, draft, finishWorkout, moveSheet, settings, updateDraft, workoutOpen } from '../lib/store';
 import { breathSpec, fmtClock, holdSpec, intervalSpec, restSpec, startTimer, stopTimer, timer, type TimerSpec } from '../lib/timer';
@@ -54,10 +54,7 @@ export function Workout() {
     const it = before.items[i];
     const s = it.sets.findIndex((x) => !x.done);
     if (s < 0) return;
-    await patchItem(i, (x) => ({
-      ...x,
-      sets: x.sets.map((set, k) => (k === s ? { ...set, done: true, bell: x.bell } : set)),
-    }));
+    await patchItem(i, (x) => completeSetAt(x, s));
     const after = draft.value!;
     const itemDone = isItemComplete(after.items[i]);
     const workoutDone = after.items.every(isItemComplete);
@@ -181,6 +178,7 @@ function ActiveItem({ it, i, onComplete }: { it: DraftItem; i: number; onComplet
         </button>
       </div>
       <div class="item-presc">{prescText(it.plan, { ...p, bell: it.bell }, false)}</div>
+      {p.fromLast && <div class="muted small">Set from what you did last time</div>}
       {p.notes && <div class="muted small">{p.notes}</div>}
 
       {it.plan.up && (
@@ -220,7 +218,7 @@ function ActiveItem({ it, i, onComplete }: { it: DraftItem; i: number; onComplet
             >
               <span class="set-n">Set {k + 1}</span>
               <span class="set-v">
-                {s.done ? `✓ ${s.actual}` : s.target}
+                {s.done ? `✓ ${s.actual}` : s.actual}
                 {it.plan.kind === 'time' ? 's' : ''}
               </span>
             </button>

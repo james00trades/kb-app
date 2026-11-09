@@ -33,7 +33,7 @@
         "A": {
           "title": "Hinge and press",
           "items": [
-            { "id": "a-hinge-drill", "move": "hip-hinge-drill", "kind": "reps", "sets": 2, "reps": 10, "rest": 45, "weeks": [1, 2], "notes": "No bell" },
+            { "id": "a-hinge-drill", "move": "hip-hinge-drill", "kind": "reps", "sets": 2, "reps": 10, "weeks": [1, 2], "notes": "No bell" },
             { "id": "a-deadlift", "move": "deadlift", "kind": "reps", "sets": 3, "reps": [8, 10], "bell": 45 },
             { "id": "a-swing", "move": "hike-pass", "kind": "reps", "sets": 5, "reps": 5, "bell": 35, "weeks": [2, 4],
               "notes": "Swing path",
@@ -71,7 +71,7 @@
         "C": {
           "title": "Skill and mobility",
           "items": [
-            { "id": "c-get-up", "move": "get-up-pieces", "kind": "reps", "sets": 3, "reps": 1, "perSide": true, "bell": 18, "rest": 45,
+            { "id": "c-get-up", "move": "get-up-pieces", "kind": "reps", "sets": 3, "reps": 1, "perSide": true, "bell": 18,
               "notes": "One rep per side each set" },
             { "id": "c-arm-bar", "move": "arm-bar", "kind": "time", "sets": 2, "seconds": 30, "perSide": true, "bell": 18 },
             { "id": "c-sldl", "move": "single-leg-deadlift", "kind": "reps", "sets": 3, "reps": 5, "perSide": true, "bell": "BW",
@@ -109,6 +109,7 @@
         "title": "Evening holds",
         "transition": 10,
         "stations": [
+          { "label": "Reverse prayer pose", "seconds": 120, "move": "reverse-prayer-pose" },
           { "label": "Deep twist squats", "seconds": 120, "move": "deep-twist-squat" },
           { "label": "Downward dog pulses", "seconds": 120, "move": "downward-dog-pulse" },
           { "label": "Pigeon pose, left leg forward", "seconds": 120, "move": "pigeon-pose" },
@@ -116,6 +117,8 @@
           { "label": "Frog pose", "seconds": 120, "move": "frog-pose" },
           { "label": "Cobra", "seconds": 120, "move": "cobra" },
           { "label": "Straddle", "seconds": 120, "move": "straddle" },
+          { "label": "Seated spinal twist, turn left", "seconds": 120, "move": "seated-spinal-twist" },
+          { "label": "Seated spinal twist, turn right", "seconds": 120, "move": "seated-spinal-twist" },
           { "label": "Bridge (regressed)", "seconds": 120, "move": "bridge-regressed" }
         ]
       },

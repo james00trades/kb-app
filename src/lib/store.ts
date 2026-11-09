@@ -147,7 +147,7 @@ export async function init() {
       getKV<string>('checkinAbout'),
       getKV<CheckIn[]>('checkins'),
     ]);
-    engine.value = eng ?? initialState();
+    engine.value = { ...initialState(), ...eng };
     const saved = { ...defaultSettings(), ...set };
     // James's bells are 18, 35 and 45 lb (Nov 7). Swap out the old starting list if it was never edited.
     if (saved.bells.join() === '25,45') {

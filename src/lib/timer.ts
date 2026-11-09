@@ -30,6 +30,8 @@ export interface TimerSpec {
   /** A timer to start as soon as this one ends (a timed set after its rest).
    *  `skipped` is true when the rest was cut short with Skip. Return null for none. */
   then?: (skipped: boolean) => TimerSpec | null;
+  /** Breathwork: phases in one full breath cycle (e.g. 4 for box: in, hold, out, hold). */
+  cycle?: number;
 }
 
 export interface TimerState {
@@ -109,6 +111,11 @@ function tick() {
 
   const ph = t.spec.phases[t.index];
   const left = Math.ceil((t.endsAt - now) / 1000);
+  // "Get ready" with 10 s left on a rest longer than 20 s, then the usual 3-2-1 (James, Nov 9)
+  if (ph.kind === 'rest' && ph.seconds > 20 && left === 10 && (lastCue.index !== t.index || lastCue.second !== left)) {
+    lastCue = { index: t.index, second: left };
+    say('Get ready');
+  }
   if (COUNTDOWN_KINDS.includes(ph.kind) && ph.seconds >= 5 && left >= 1 && left <= 3) {
     if (lastCue.index !== t.index || lastCue.second !== left) {
       lastCue = { index: t.index, second: left };
@@ -195,6 +202,21 @@ export function addRound() {
 export function secondsLeft(t: TimerState, now: number): number {
   if (t.pausedLeft !== null) return t.pausedLeft / 1000;
   return Math.max(0, (t.endsAt - now) / 1000);
+}
+
+/** Breathwork progress (James, Nov 9): how far through the whole session (0–1), how many full
+ *  breath cycles there are (one in-hold-out-hold for box), and how many are done.
+ *  "Get ready" counts as not started. */
+export function breathProgress(t: TimerState, left: number): { pct: number; sets: number; done: number } {
+  const phases = t.spec.phases.slice(1);
+  const per = t.spec.cycle ?? phases.length;
+  const sets = Math.max(1, Math.round(phases.length / per));
+  const total = phases.reduce((s, p) => s + p.seconds, 0);
+  const i = t.index - 1;
+  if (t.done) return { pct: 1, sets, done: sets };
+  if (i < 0) return { pct: 0, sets, done: 0 };
+  const elapsed = phases.slice(0, i).reduce((s, p) => s + p.seconds, 0) + Math.max(0, phases[i].seconds - left);
+  return { pct: Math.min(1, elapsed / total), sets, done: Math.floor(i / per) };
 }
 
 export function fmtClock(sec: number): string {
@@ -286,5 +308,5 @@ export function breathSpec(pattern: BreathPattern, minutes: number, onDone?: () 
       phases.push({ label: BREATH_WORDS[kind], seconds, kind, say: kind === 'hold' ? 'hold' : kind });
     }
   }
-  return { title: pattern.name, mode: 'breath', view: 'full', phases, onDone, autoClose };
+  return { title: pattern.name, mode: 'breath', view: 'full', phases, onDone, autoClose, cycle: pattern.steps.length };
 }
