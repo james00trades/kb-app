@@ -51,7 +51,8 @@ export const body = signal<Record<string, BodyEntry>>({});
 /** Progress photo details and previews, newest first. */
 export const photos = signal<PhotoMeta[]>([]);
 /** The weight or waist entry sheet that's open (any screen). */
-export const bodySheet = signal<{ kind: 'weight' | 'waist'; date?: string } | null>(null);
+/** The weight/waist entry sheet. `then` runs after a save (e.g. start the warm-up after weighing in). */
+export const bodySheet = signal<{ kind: 'weight' | 'waist'; date?: string; then?: () => void } | null>(null);
 /** Which half of the Progress tab is showing. */
 export const progressView = signal<'body' | 'workouts'>('body');
 /** The progress-photo camera is open. */

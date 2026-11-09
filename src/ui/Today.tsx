@@ -2,7 +2,7 @@ import type { ComponentChildren } from 'preact';
 import { useState } from 'preact/hooks';
 import { isItemComplete, type PlannedSession, type RoutinePlan } from '../engine/engine';
 import {
-  backOneDay, backupDue, currentStreak, data, draft, meta, openDay, passToday, setPart, startWorkout, tab, today,
+  backOneDay, backupDue, bodyDue, bodySheet, currentStreak, data, draft, meta, openDay, passToday, setPart, startWorkout, tab, today,
   week, workoutOpen, type DayPlan,
 } from '../lib/store';
 import { intervalSpec, startTimer } from '../lib/timer';
@@ -265,6 +265,10 @@ const START_LABEL = { warmup: 'Start warm-up', morning: 'Start wake-up', evening
 /** A guided timer part: the warm-up, the rest-day wake-up, or the evening holds. */
 function RoutinePart(props: { n: number; r: RoutinePlan; kind: 'warmup' | 'morning' | 'evening'; done: boolean; live: boolean }) {
   const { r, kind, done, live } = props;
+  const [weighFirst, setWeighFirst] = useState(false);
+  const start = () => startTimer(intervalSpec(r.title, r.stations, r.transition, () => void setPart(kind, true), kind === 'warmup'));
+  // Part 1 of the day with no weigh-in yet: ask first (James, Nov 9)
+  const onStart = () => (kind !== 'evening' && bodyDue.value.weight ? setWeighFirst(true) : start());
   const each = r.stations[0].seconds;
   const meta =
     kind === 'evening' && r.stations.every((st) => st.seconds === each)
@@ -276,10 +280,7 @@ function RoutinePart(props: { n: number; r: RoutinePlan; kind: 'warmup' | 'morni
       <div class="muted small">{r.stations.map((st) => shortName(st.label)).join(' · ')}</div>
       {live && !done && (
         <>
-          <button
-            class="big-btn primary"
-            onClick={() => startTimer(intervalSpec(r.title, r.stations, r.transition, () => void setPart(kind, true), kind === 'warmup'))}
-          >
+          <button class="big-btn primary" onClick={onStart}>
             <Icon name="play" /> {START_LABEL[kind]} · {fmtSeconds(r.seconds)}
           </button>
           <button class="link-btn" onClick={() => void setPart(kind, true)}>
@@ -291,6 +292,35 @@ function RoutinePart(props: { n: number; r: RoutinePlan; kind: 'warmup' | 'morni
         <button class="link-btn" onClick={() => void setPart(kind, false)}>
           Done. Tap to undo.
         </button>
+      )}
+      {weighFirst && (
+        <div class="lightbox" onClick={() => setWeighFirst(false)}>
+          <div class="lightbox-card" role="alertdialog" aria-labelledby="weigh-first-title" onClick={(e) => e.stopPropagation()}>
+            <span class="lightbox-icon">
+              <Icon name="weight" size={30} />
+            </span>
+            <h2 id="weigh-first-title">Weigh in first?</h2>
+            <p>You haven't logged today's weight. Step on the scale before you start.</p>
+            <button
+              class="big-btn primary"
+              onClick={() => {
+                setWeighFirst(false);
+                bodySheet.value = { kind: 'weight', then: start };
+              }}
+            >
+              <Icon name="weight" /> Log my weight
+            </button>
+            <button
+              class="link-btn"
+              onClick={() => {
+                setWeighFirst(false);
+                start();
+              }}
+            >
+              Start without it
+            </button>
+          </div>
+        </div>
       )}
     </PartCard>
   );

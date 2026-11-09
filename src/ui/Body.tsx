@@ -463,10 +463,10 @@ const KINDS = {
 export function BodySheet() {
   const open = bodySheet.value;
   if (!open) return null;
-  return <BodyEntrySheet key={`${open.kind}-${open.date ?? ''}`} kind={open.kind} date={open.date} />;
+  return <BodyEntrySheet key={`${open.kind}-${open.date ?? ''}`} kind={open.kind} date={open.date} then={open.then} />;
 }
 
-function BodyEntrySheet({ kind, date: startDate }: { kind: 'weight' | 'waist'; date?: string }) {
+function BodyEntrySheet({ kind, date: startDate, then }: { kind: 'weight' | 'waist'; date?: string; then?: () => void }) {
   const k = KINDS[kind];
   const today = todayStr.value;
   const [date, setDate] = useState(startDate ?? today);
@@ -523,9 +523,10 @@ function BodyEntrySheet({ kind, date: startDate }: { kind: 'weight' | 'waist'; d
         onClick={async () => {
           await setBody(date, { [kind]: Number(value.toFixed(k.digits)) });
           close();
+          then?.();
         }}
       >
-        <Icon name="check" /> Save
+        <Icon name="check" /> {then ? 'Save and start' : 'Save'}
       </button>
       {existing !== undefined && (
         <button

@@ -5,6 +5,9 @@ import { initPWA } from './lib/pwa';
 import { appHidden, unlockAudio } from './lib/sound';
 import './styles.css';
 
+// Installed on the iPhone home screen: iOS 26 blurs the top edge, so the layout clears it (see .ios-app in styles.css).
+if ((navigator as Navigator & { standalone?: boolean }).standalone) document.documentElement.classList.add('ios-app');
+
 // iOS only allows sound after a touch; every tap keeps audio ready.
 document.addEventListener('pointerdown', unlockAudio, { passive: true });
 document.addEventListener('visibilitychange', () => {

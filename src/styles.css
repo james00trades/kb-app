@@ -16,6 +16,12 @@
   --safe-t: env(safe-area-inset-top, 0px);
   color-scheme: dark;
 }
+/* Home-screen app on iOS 26: the system draws a blur-and-fade from the status bar down to about
+   32 pt below it, over whatever is there, and it can't be turned off from a web page. Everything
+   that sits at the top (streak bar, timer, photo viewer, camera) starts below it instead. */
+:root.ios-app {
+  --safe-t: calc(env(safe-area-inset-top, 0px) + 36px);
+}
 
 * {
   box-sizing: border-box;
@@ -72,9 +78,8 @@ p {
 }
 
 /* ---------- Streak bar (top of every screen) ----------
-   Fixed, full width, plain opaque background-color: iOS 26 draws a frosted blur over the top
-   edge of home-screen apps and only swaps it for a solid color when the top edge is a box like
-   this one. No backdrop-filter, opacity or mask here, or the blur comes back over the streak. */
+   Fixed and opaque, so in the installed app it also covers the blurred band above it
+   (see :root.ios-app) and nothing scrolls through that band. */
 .topbar {
   position: fixed;
   top: 0;
@@ -1425,6 +1430,68 @@ p {
 }
 @media (prefers-reduced-motion: reduce) {
   .due-row {
+    animation: none;
+  }
+}
+/* Pop-up before the warm-up when today's weight isn't logged (James, Nov 9) */
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  display: grid;
+  place-items: center;
+  padding: calc(var(--safe-t) + 16px) 20px calc(var(--safe-b) + 16px);
+  background: rgba(0, 0, 0, 0.72);
+  animation: lightbox-in 0.18s ease-out;
+}
+.lightbox-card {
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 24px 20px 14px;
+  border-radius: 22px;
+  border: 2px solid var(--accent);
+  background-color: var(--surface);
+  text-align: center;
+  animation: lightbox-pop 0.22s ease-out;
+}
+.lightbox-card h2 {
+  margin: 0;
+  font-size: 24px;
+}
+.lightbox-card p {
+  margin: 0 0 4px;
+  color: var(--muted);
+}
+.lightbox-card .big-btn {
+  width: 100%;
+}
+.lightbox-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background-color: var(--accent);
+  color: var(--accent-ink);
+}
+@keyframes lightbox-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes lightbox-pop {
+  from {
+    transform: scale(0.92);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lightbox,
+  .lightbox-card {
     animation: none;
   }
 }
