@@ -6,10 +6,10 @@ import { addDays, streak, type DayExtras } from '../src/engine/streak';
 const log = (date: string, status: SessionStatus) => ({ date, status });
 const TODAY = '2026-11-07';
 
-/** Days with all three parts done: warm-up, the workout (or rest day), and evening holds. */
+/** Kept days: warm-up and the workout (or rest day) done. The evening holds don't count (Nov 10). */
 function full(dates: string[], status: SessionStatus = 'done') {
   const sessions = dates.map((d) => log(d, status));
-  const daily: Record<string, DayExtras> = Object.fromEntries(dates.map((d) => [d, { date: d, warmup: 1, evening: 1 }]));
+  const daily: Record<string, DayExtras> = Object.fromEntries(dates.map((d) => [d, { date: d, warmup: 1 }]));
   return { sessions, daily };
 }
 
@@ -18,20 +18,22 @@ describe('streak', () => {
     expect(streak([], {}, TODAY)).toMatchObject({ current: 0, best: 0, todayKept: false });
   });
 
-  it('counts days where all three parts were done, including today', () => {
+  it('counts days where the warm-up and full workout were done, including today', () => {
     const { sessions, daily } = full(['2026-11-05', '2026-11-06', TODAY]);
     expect(streak(sessions, daily, TODAY)).toMatchObject({ current: 3, best: 3, todayKept: true });
   });
 
-  it('a rest day counts with the wake-up, Done, and evening holds', () => {
-    const daily = { [TODAY]: { date: TODAY, morning: 1, evening: 1 } };
+  it('a rest day counts with the wake-up and Done', () => {
+    const daily = { [TODAY]: { date: TODAY, morning: 1 } };
     expect(streak([log(TODAY, 'rest')], daily, TODAY).todayKept).toBe(true);
   });
 
-  it('a missing part means the day does not count (James: all three)', () => {
-    const noEvening = { [TODAY]: { date: TODAY, warmup: 1 } };
+  it('the evening holds no longer count toward it (James, Nov 10)', () => {
+    expect(streak([log(TODAY, 'done')], { [TODAY]: { date: TODAY, warmup: 1 } }, TODAY).todayKept).toBe(true);
+  });
+
+  it('a missing warm-up or workout means the day does not count', () => {
     const noWarmup = { [TODAY]: { date: TODAY, evening: 1 } };
-    expect(streak([log(TODAY, 'done')], noEvening, TODAY).todayKept).toBe(false);
     expect(streak([log(TODAY, 'done')], noWarmup, TODAY).todayKept).toBe(false);
     expect(streak([], { [TODAY]: { date: TODAY, warmup: 1, evening: 1 } }, TODAY).todayKept).toBe(false);
   });
@@ -70,6 +72,31 @@ describe('streak', () => {
     expect(addDays('2026-03-01', -1)).toBe('2026-02-28');
     const { sessions, daily } = full(['2026-10-31', '2026-11-01']);
     expect(streak(sessions, daily, '2026-11-01').current).toBe(2);
+  });
+});
+
+describe("James's own streak count (Nov 10)", () => {
+  const YESTERDAY = addDays(TODAY, -1);
+  const done = full([TODAY]);
+
+  it('4 days before today: shows 4, then 5 once today is done', () => {
+    const fix = { through: YESTERDAY, count: 4 };
+    expect(streak([], {}, TODAY, fix)).toMatchObject({ current: 4, best: 4, todayKept: false });
+    expect(streak(done.sessions, done.daily, TODAY, fix)).toMatchObject({ current: 5, best: 5, todayKept: true });
+  });
+
+  it('replaces whatever the app had recorded up to that day', () => {
+    const { sessions, daily } = full(['2026-10-30', '2026-10-31', '2026-11-04', '2026-11-05', YESTERDAY, TODAY]);
+    expect(streak(sessions, daily, TODAY, { through: YESTERDAY, count: 4 }).current).toBe(5);
+    expect(streak(sessions, daily, TODAY, { through: YESTERDAY, count: 0 }).current).toBe(1);
+  });
+
+  it('keeps counting on later days, and a missed day still breaks it', () => {
+    const fix = { through: '2026-11-04', count: 4 };
+    const { sessions, daily } = full(['2026-11-05', '2026-11-06']);
+    expect(streak(sessions, daily, TODAY, fix)).toMatchObject({ current: 6, best: 6 });
+    const missed = full(['2026-11-06']);
+    expect(streak(missed.sessions, missed.daily, TODAY, fix)).toMatchObject({ current: 1, best: 4 });
   });
 });
 

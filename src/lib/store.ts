@@ -5,7 +5,7 @@ import {
   back, finishSession, initialState, localDate, passDay, planSession, startDraft, upcoming,
   type EngineState, type PlannedSession, type SessionDraft, type SessionLog,
 } from '../engine/engine';
-import { addDays, streak } from '../engine/streak';
+import { addDays, streak, type StreakFix } from '../engine/streak';
 import { bodyDue as dueNow, weightSummary, weightTrend } from '../engine/body';
 import { db, getKV, putKV, type BodyEntry, type Daily, type PhotoMeta, type Pose } from './db';
 import { setAudioSession, setVoice } from './sound';
@@ -63,6 +63,8 @@ export const apiKey = signal<string | null>(null);
 export const checkinAbout = signal('');
 /** Weekly check-ins with Claude, newest first. */
 export const checkins = signal<CheckIn[]>([]);
+/** James's own streak count up to a day (Settings → Streak), or null. */
+export const streakFix = signal<StreakFix | null>(null);
 export const checkinRunning = signal(false);
 export const checkinError = signal<string | null>(null);
 /** Move id whose card (cues) is open. */
@@ -121,7 +123,7 @@ export const logDueCount = computed(() => {
   return [d.weight, d.photos, d.waist, checkinDue.value].filter(Boolean).length;
 });
 
-export const currentStreak = computed(() => streak(sessions.value, daily.value, todayStr.value));
+export const currentStreak = computed(() => streak(sessions.value, daily.value, todayStr.value, streakFix.value));
 
 export const isUnlocked = (id: string) =>
   !!data.moveById.get(id)?.unlocked || unlocked.value.includes(id);
@@ -133,7 +135,7 @@ const uid = () =>
 
 export async function init() {
   try {
-    const [eng, set, met, unl, dr, sess, days, bodyRows, photoRows, key, about, cks] = await Promise.all([
+    const [eng, set, met, unl, dr, sess, days, bodyRows, photoRows, key, about, cks, fix] = await Promise.all([
       getKV<EngineState>('engine'),
       getKV<Settings>('settings'),
       getKV<Meta>('meta'),
@@ -146,6 +148,7 @@ export async function init() {
       getKV<string>('apiKey'),
       getKV<string>('checkinAbout'),
       getKV<CheckIn[]>('checkins'),
+      getKV<StreakFix>('streakFix'),
     ]);
     engine.value = { ...initialState(), ...eng };
     const saved = { ...defaultSettings(), ...set };
@@ -168,6 +171,7 @@ export async function init() {
     apiKey.value = key ?? null;
     checkinAbout.value = about ?? '';
     checkins.value = cks ?? [];
+    streakFix.value = fix ?? null;
     setVoice(settings.value.voice);
     setAudioSession(settings.value.throughSilent);
     ready.value = true;
@@ -245,6 +249,14 @@ export async function setPart(kind: 'morning' | 'warmup' | 'evening', done: bool
   const row: Daily = { ...(daily.value[date] ?? { date }), [kind]: done ? Date.now() : undefined };
   daily.value = { ...daily.value, [date]: row };
   await db.daily.put(row);
+}
+
+/** Settings → Streak: "I'd kept this many days in a row before today" (James, Nov 10).
+ *  Anchored at yesterday, so today still adds to it once it's done. */
+export async function setStreakBeforeToday(count: number) {
+  const fix: StreakFix = { through: addDays(todayStr.value, -1), count: Math.max(0, Math.round(count)) };
+  streakFix.value = fix;
+  await putKV('streakFix', fix);
 }
 
 export async function updateSettings(patch: Partial<Settings>) {

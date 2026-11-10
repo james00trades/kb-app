@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { say } from '../src/lib/sound';
+import { refreshOnNextTap, say } from '../src/lib/sound';
 import {
   adjust, breathProgress, breathSpec, holdSpec, intervalSpec, restSpec, roundsSpec, secondsLeft, skipPhase, skipRest, startTimer, stopTimer, timer, togglePause,
 } from '../src/lib/timer';
 
-vi.mock('../src/lib/sound', () => ({ beep: vi.fn(), say: vi.fn(), stopVoice: vi.fn() }));
+vi.mock('../src/lib/sound', () => ({ beep: vi.fn(), say: vi.fn(), stopVoice: vi.fn(), refreshOnNextTap: vi.fn() }));
 
 beforeEach(() => {
   vi.mocked(say).mockClear();
@@ -142,6 +142,27 @@ describe('"Get ready" near the end of a rest (James, Nov 9)', () => {
     startTimer(restSpec(45));
     vi.advanceTimersByTime(36_000);
     expect(spoken().filter((w) => w === 'Get ready')).toHaveLength(1);
+  });
+});
+
+describe('fresh sound between timers, so AirPods connected meanwhile stay in time (James, Nov 10)', () => {
+  beforeEach(() => vi.mocked(refreshOnNextTap).mockClear());
+
+  it('a timer that ends or is closed asks for a fresh sound engine at the next tap', () => {
+    startTimer(restSpec(30));
+    expect(refreshOnNextTap).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(30_500);
+    expect(refreshOnNextTap).toHaveBeenCalledOnce();
+    startTimer(restSpec(30));
+    stopTimer();
+    expect(refreshOnNextTap).toHaveBeenCalledTimes(2);
+  });
+
+  it('a rest that flows straight into a timed set keeps the same engine (no tap in between)', () => {
+    startTimer(restSpec(30, undefined, () => holdSpec('Carry', 30, false, undefined, true, false)));
+    vi.advanceTimersByTime(30_500);
+    expect(timer.value!.spec.title).toBe('Carry');
+    expect(refreshOnNextTap).not.toHaveBeenCalled();
   });
 });
 

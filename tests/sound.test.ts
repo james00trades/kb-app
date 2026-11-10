@@ -81,6 +81,26 @@ describe('sound keeps working after iPhone takes the audio away', () => {
     expect(now.played).toBeGreaterThanOrEqual(1 + 1 + 4); // silent unlock + beep + 4 clips
   });
 
+  it('after a timer ends, the next tap builds a fresh engine for whatever is connected now (AirPods, Nov 10)', () => {
+    const before = FakeCtx.made.length;
+    sound.unlockAudio();
+    expect(FakeCtx.made).toHaveLength(before); // nothing changed: same engine
+    sound.refreshOnNextTap();
+    sound.unlockAudio();
+    expect(FakeCtx.made).toHaveLength(before + 1);
+    expect(last().state).toBe('running');
+  });
+
+  it('an engine iPhone interrupts (audio route change) is rebuilt at the next tap, even if it recovers', () => {
+    const before = FakeCtx.made.length;
+    const c = last() as FakeCtx & { onstatechange?: () => void };
+    c.state = 'interrupted';
+    c.onstatechange?.();
+    c.state = 'running';
+    sound.unlockAudio();
+    expect(FakeCtx.made).toHaveLength(before + 1);
+  });
+
   it('coming back to the app tries to wake an interrupted engine right away', () => {
     last().state = 'interrupted';
     sound.appHidden(false);

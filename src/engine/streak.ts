@@ -1,10 +1,10 @@
 // The streak: calendar days in a row that were "kept".
-// James's rule (Nov 7, 2026): a day is kept when all three parts of it are done:
+// James's rule (Nov 10, 2026): a day is kept when both of these are done:
 //   1. the warm-up (workout days) or wake-up routine (rest days),
-//   2. a full workout (every move done) or the rest day marked done,
-//   3. the evening holds.
-// A workout ended early, a skipped day, or a missing part breaks it. Today doesn't break it
-// until the day is over.
+//   2. a full workout (every move done) or the rest day marked done.
+// The evening holds are still part of the day but no longer count toward the streak
+// (until Nov 10 they did). A workout ended early, a skipped day, or a missing part breaks it.
+// Today doesn't break it until the day is over.
 import type { SessionLog } from './engine';
 
 /** The day's warm-up and evening parts (see Daily in lib/db.ts). */
@@ -44,7 +44,16 @@ export function dayParts(logs: Log[], extras: DayExtras | undefined): DayParts {
   };
 }
 
-export const partsDone = (p: DayParts) => Number(p.warmup) + Number(p.main) + Number(p.evening);
+/** How many of the day's streak parts (warm-up, workout) are done: 0, 1 or 2. */
+export const streakPartsDone = (p: DayParts) => Number(p.warmup) + Number(p.main);
+export const STREAK_PARTS = 2;
+
+/** James's own correction (Nov 10): "as of `through`, I'd kept `count` days in a row".
+ *  Days the app didn't see (or saw wrongly) before then don't matter. */
+export interface StreakFix {
+  through: string;
+  count: number;
+}
 
 /** "2026-11-07" + 1 → "2026-11-08", in local calendar days. */
 export function addDays(date: string, n: number): string {
@@ -54,7 +63,7 @@ export function addDays(date: string, n: number): string {
   return `${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}`;
 }
 
-export function streak(sessions: Log[], daily: Record<string, DayExtras>, today: string): Streak {
+export function streak(sessions: Log[], daily: Record<string, DayExtras>, today: string, fix?: StreakFix | null): Streak {
   const byDate = new Map<string, Log[]>();
   for (const s of sessions) {
     const list = byDate.get(s.date);
@@ -62,16 +71,25 @@ export function streak(sessions: Log[], daily: Record<string, DayExtras>, today:
     else byDate.set(s.date, [s]);
   }
   const kept = new Set<string>();
-  for (const [date, logs] of byDate) if (partsDone(dayParts(logs, daily[date])) === 3) kept.add(date);
+  for (const [date, logs] of byDate) if (streakPartsDone(dayParts(logs, daily[date])) === STREAK_PARTS) kept.add(date);
 
   const todayKept = kept.has(today);
   let current = 0;
-  for (let d = todayKept ? today : addDays(today, -1); kept.has(d); d = addDays(d, -1)) current++;
+  for (let d = todayKept ? today : addDays(today, -1); ; d = addDays(d, -1)) {
+    if (fix && d === fix.through) {
+      current += fix.count; // James's own count up to that day; nothing before it matters
+      break;
+    }
+    if (!kept.has(d)) break;
+    current++;
+  }
   let best = 0;
   let run = 0;
   let prev = '';
-  for (const d of [...kept].sort()) {
-    run = prev && addDays(prev, 1) === d ? run + 1 : 1;
+  const days = new Set(kept);
+  if (fix) days.add(fix.through);
+  for (const d of [...days].sort()) {
+    run = fix && d === fix.through ? fix.count : prev && addDays(prev, 1) === d ? run + 1 : 1;
     best = Math.max(best, run);
     prev = d;
   }

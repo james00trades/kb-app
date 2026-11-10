@@ -1,7 +1,7 @@
 // One timer engine for every timer type. Driven by clock timestamps, not tick counting,
 // so it stays accurate if the phone stutters or the app is briefly in the background.
 import { signal } from '@preact/signals';
-import { beep, say, stopVoice } from './sound';
+import { beep, refreshOnNextTap, say, stopVoice } from './sound';
 import type { BreathPattern } from '../engine/schema';
 
 export type PhaseKind = 'prep' | 'work' | 'rest' | 'switch' | 'in' | 'hold' | 'out';
@@ -80,6 +80,7 @@ function finish(t: TimerState) {
   const done = { ...t, done: true, pausedLeft: 0 };
   timer.value = done;
   stopLoop();
+  refreshOnNextTap(); // pick up AirPods etc. connected meanwhile, at the next tap (Nov 10)
   t.spec.onDone?.();
   if (t.spec.autoClose) {
     setTimeout(() => {
@@ -147,6 +148,7 @@ export function stopTimer() {
   stopLoop();
   stopVoice();
   timer.value = null;
+  refreshOnNextTap();
 }
 
 /** Rest bar "Skip": end the rest now. A timed set waiting on it starts right away. */

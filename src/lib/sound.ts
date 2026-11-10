@@ -42,6 +42,14 @@ function applySession() {
   }
 }
 
+/** Build a fresh sound engine on the next tap (James, Nov 10). AirPods connected while the app
+ *  was open left the old engine speaking about 3 s behind the timer until the app was restarted.
+ *  Called when a timer ends or stops, and when the phone's audio devices change, so the tap that
+ *  starts the next timer picks up whatever is connected now. Decoded clips are kept, so it's quick. */
+export function refreshOnNextTap() {
+  stale = true;
+}
+
 /** Wake the context if it isn't running. Safe to call anytime; it may need a tap to work. */
 function wake(c: AudioContext) {
   if (c.state !== 'running' && c.state !== 'closed') c.resume().catch(() => {});
@@ -69,7 +77,12 @@ export function unlockAudio() {
     stale = false;
     if (!ctx) {
       const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      ctx = new AC();
+      const c = new AC();
+      // iOS interrupts the engine when the audio route changes (e.g. AirPods connect); rebuild then too
+      c.onstatechange = () => {
+        if ((c.state as string) === 'interrupted' && ctx === c) stale = true;
+      };
+      ctx = c;
       applySession();
     }
     wake(ctx);

@@ -1,6 +1,6 @@
 import { useEffect } from 'preact/hooks';
 import { applyUpdate, updateReady } from '../lib/pwa';
-import { partsDone } from '../engine/streak';
+import { STREAK_PARTS, streakPartsDone } from '../engine/streak';
 import { currentStreak, draft, loadError, logDueCount, photoSession, ready, tab, type Tab } from '../lib/store';
 import { timer } from '../lib/timer';
 import { setAwake } from '../lib/wakelock';
@@ -84,10 +84,10 @@ export function App() {
   );
 }
 
-/** Always at the top: days in a row kept (all three parts of the day done). */
+/** Always at the top: days in a row kept (warm-up and full workout done; Nov 10). */
 function StreakBar() {
   const { current, best, todayKept, today } = currentStreak.value;
-  const doneToday = partsDone(today);
+  const doneToday = streakPartsDone(today);
   const bestEver = current > 1 && current >= best;
   return (
     <header class="topbar">
@@ -107,7 +107,7 @@ function StreakBar() {
           {todayKept ? (
             <span class="good-text">✓ Today done</span>
           ) : doneToday > 0 ? (
-            `${doneToday} of 3 done today`
+            `${doneToday} of ${STREAK_PARTS} done today`
           ) : current > 0 ? (
             'Keep it going today'
           ) : best > 0 ? (

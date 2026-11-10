@@ -1,10 +1,26 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { buildBackupFile, readBackupFile, restoreBackup, saveBackupFile, type Backup } from '../lib/backup';
 import { beep, loadVoice, say, unlockAudio } from '../lib/sound';
-import { markBackedUp, meta, persisted, sessions, settings, updateSettings } from '../lib/store';
+import { currentStreak, markBackedUp, meta, persisted, sessions, setStreakBeforeToday, settings, updateSettings } from '../lib/store';
 import { wakeLockSupported } from '../lib/wakelock';
 import { CheckInSettings } from './CheckIn';
 import { Sheet, Stepper, Toggle, daysAgo } from './common';
+
+/** Fix the streak when the app missed days James did (James, Nov 10). Today adds to it once done. */
+function StreakSettings() {
+  const { current, todayKept } = currentStreak.value;
+  const before = current - (todayKept ? 1 : 0);
+  return (
+    <>
+      <h3 class="section-title">Streak</h3>
+      <div class="card">
+        <div class="mini-label">Days in a row before today</div>
+        <Stepper value={before} onChange={(v) => void setStreakBeforeToday(v)} unit={before === 1 ? ' day' : ' days'} />
+        <p class="muted small">If the app missed days you did, set the right number here. Today adds one once its warm-up and workout are done.</p>
+      </div>
+    </>
+  );
+}
 
 export function Settings() {
   const s = settings.value;
@@ -93,6 +109,8 @@ export function Settings() {
           </button>
         </div>
       </div>
+
+      <StreakSettings />
 
       <CheckInSettings />
 

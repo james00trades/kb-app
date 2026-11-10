@@ -228,7 +228,7 @@ export function buildReport(r: ReportInput): string {
   out.push(`About the user: ${r.about.trim() || 'not given'}`);
   out.push(`User's note this week: ${r.note.trim() || 'none'}`);
   out.push(
-    `Streak: ${r.streak.current} day(s) in a row (best ${r.streak.best}). A day counts only when the warm-up, the full workout (or rest-day walk) and the evening holds are all done.`,
+    `Streak: ${r.streak.current} day(s) in a row (best ${r.streak.best}). A day counts only when the warm-up and the full workout (or rest-day wake-up and walk) are both done; the evening holds don't count toward it (since Nov 10, 2026).`,
   );
 
   // Where they started and where they are

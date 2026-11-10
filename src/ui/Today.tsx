@@ -226,8 +226,8 @@ function DayScreen({ day, index }: { day: DayPlan; index: number }) {
       {rest ? <RestPart n={2} day={day} live={live} /> : <WorkoutPart n={2} day={day} live={live} />}
       {s.evening && <RoutinePart n={3} r={s.evening} kind="evening" done={p.evening} live={live} />}
 
-      {live && p.warmup && p.main && p.evening && (
-        <div class="note good">All three done. Today counts toward your streak.</div>
+      {live && p.warmup && p.main && (
+        <div class="note good">{rest ? 'Wake-up and walk' : 'Warm-up and workout'} done. Today counts toward your streak.</div>
       )}
 
       {!rest && s.finalWeekOfPhase && s.checks && (
