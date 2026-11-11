@@ -5,7 +5,7 @@ import {
   back, finishSession, initialState, localDate, passDay, planSession, startDraft, upcoming,
   type EngineState, type PlannedSession, type SessionDraft, type SessionLog,
 } from '../engine/engine';
-import { addDays, streak, type StreakFix } from '../engine/streak';
+import { addDays, seededFix, streak, type StreakFix } from '../engine/streak';
 import { bodyDue as dueNow, weightSummary, weightTrend } from '../engine/body';
 import { db, getKV, putKV, type BodyEntry, type Daily, type PhotoMeta, type Pose } from './db';
 import { setAudioSession, setVoice } from './sound';
@@ -65,6 +65,9 @@ export const checkinAbout = signal('');
 export const checkins = signal<CheckIn[]>([]);
 /** James's own streak count up to a day (Settings → Streak), or null. */
 export const streakFix = signal<StreakFix | null>(null);
+/** Set for James in an update (he asked on Nov 10, 2026): 5 days in a row, Nov 10 included. Applied once. */
+const STREAK_SEED: StreakFix = { through: '2026-11-10', count: 5 };
+const STREAK_SEED_KEY = 'streakSeed-2026-11-10';
 export const checkinRunning = signal(false);
 export const checkinError = signal<string | null>(null);
 /** Move id whose card (cues) is open. */
@@ -135,7 +138,7 @@ const uid = () =>
 
 export async function init() {
   try {
-    const [eng, set, met, unl, dr, sess, days, bodyRows, photoRows, key, about, cks, fix] = await Promise.all([
+    const [eng, set, met, unl, dr, sess, days, bodyRows, photoRows, key, about, cks, fix, seeded] = await Promise.all([
       getKV<EngineState>('engine'),
       getKV<Settings>('settings'),
       getKV<Meta>('meta'),
@@ -149,6 +152,7 @@ export async function init() {
       getKV<string>('checkinAbout'),
       getKV<CheckIn[]>('checkins'),
       getKV<StreakFix>('streakFix'),
+      getKV<boolean>(STREAK_SEED_KEY),
     ]);
     engine.value = { ...initialState(), ...eng };
     const saved = { ...defaultSettings(), ...set };
@@ -172,6 +176,11 @@ export async function init() {
     checkinAbout.value = about ?? '';
     checkins.value = cks ?? [];
     streakFix.value = fix ?? null;
+    if (!seeded) {
+      streakFix.value = seededFix(fix ?? null, STREAK_SEED);
+      await putKV('streakFix', streakFix.value);
+      await putKV(STREAK_SEED_KEY, true);
+    }
     setVoice(settings.value.voice);
     setAudioSession(settings.value.throughSilent);
     ready.value = true;

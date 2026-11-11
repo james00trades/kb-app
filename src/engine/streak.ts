@@ -55,6 +55,10 @@ export interface StreakFix {
   count: number;
 }
 
+/** A correction shipped in an update and applied once. Skipped if James has since set a later one himself. */
+export const seededFix = (saved: StreakFix | null, seed: StreakFix): StreakFix =>
+  saved && saved.through > seed.through ? saved : seed;
+
 /** "2026-11-07" + 1 → "2026-11-08", in local calendar days. */
 export function addDays(date: string, n: number): string {
   const [y, m, d] = date.split('-').map(Number);
@@ -72,6 +76,7 @@ export function streak(sessions: Log[], daily: Record<string, DayExtras>, today:
   }
   const kept = new Set<string>();
   for (const [date, logs] of byDate) if (streakPartsDone(dayParts(logs, daily[date])) === STREAK_PARTS) kept.add(date);
+  if (fix) kept.add(fix.through); // James's count includes that day, so it was kept
 
   const todayKept = kept.has(today);
   let current = 0;

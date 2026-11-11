@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { loadData } from '../src/engine/data';
 import { initialState, upcoming, type SessionStatus } from '../src/engine/engine';
-import { addDays, streak, type DayExtras } from '../src/engine/streak';
+import { addDays, seededFix, streak, type DayExtras } from '../src/engine/streak';
 
 const log = (date: string, status: SessionStatus) => ({ date, status });
 const TODAY = '2026-11-07';
@@ -97,6 +97,25 @@ describe("James's own streak count (Nov 10)", () => {
     expect(streak(sessions, daily, TODAY, fix)).toMatchObject({ current: 6, best: 6 });
     const missed = full(['2026-11-06']);
     expect(streak(missed.sessions, missed.daily, TODAY, fix)).toMatchObject({ current: 1, best: 4 });
+  });
+
+  it('a count through today shows today as done, even if the app missed part of it', () => {
+    const fix = { through: TODAY, count: 5 };
+    expect(streak([], {}, TODAY, fix)).toMatchObject({ current: 5, best: 5, todayKept: true });
+    expect(streak(done.sessions, done.daily, TODAY, fix)).toMatchObject({ current: 5, best: 5, todayKept: true });
+    // The next day: 5 while it's pending, 6 once it's done.
+    const next = addDays(TODAY, 1);
+    expect(streak([], {}, next, fix)).toMatchObject({ current: 5, todayKept: false });
+    const nextDone = full([next]);
+    expect(streak(nextDone.sessions, nextDone.daily, next, fix)).toMatchObject({ current: 6, best: 6 });
+  });
+
+  it('the count set in an update replaces an older one, not one James set later', () => {
+    const seed = { through: '2026-11-10', count: 5 };
+    expect(seededFix(null, seed)).toBe(seed);
+    expect(seededFix({ through: '2026-11-09', count: 4 }, seed)).toBe(seed);
+    const later = { through: '2026-11-11', count: 6 };
+    expect(seededFix(later, seed)).toBe(later);
   });
 });
 
