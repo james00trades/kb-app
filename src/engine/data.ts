@@ -21,6 +21,7 @@ export function crossCheck(plan: PlanFile, movements: Movement[]): string[] {
   }
   for (const m of movements) {
     for (const p of m.prereqs ?? []) if (!ids.has(p)) problems.push(`${m.id}: unknown prerequisite ${p}`);
+    for (const r of m.related ?? []) if (!ids.has(r)) problems.push(`${m.id}: unknown related move ${r}`);
   }
 
   for (const phase of plan.phases) {

@@ -36,6 +36,32 @@ describe('data files', () => {
     }
   });
 
+  it('Frame of David additions (James, Nov 10): 14 moves + the supported row, with his flags and start bells', () => {
+    const { moveById, movements } = loadData();
+    const added = ['tactical-crossover', 'front-to-back-raise', 'gravedigger', 'uppercut', 'curl-to-press', 'woodchop', 'clean-to-squat',
+      'side-to-front-raise', 'pullover-to-side-pull', 'hammer-curl', 'around-the-world-to-curl', 'curl-to-pullover', 'hand-to-hand-curl',
+      'over-shoulder-pull', 'supported-row'];
+    expect(movements).toHaveLength(107);
+    for (const id of added) expect(moveById.get(id)?.cues?.length, id).toBeGreaterThan(0);
+    // Shoulder hold: the ⚠ moves from his notes
+    expect(movements.filter((m) => m.shoulder).map((m) => m.id).sort()).toEqual(
+      ['curl-to-press', 'curl-to-pullover', 'front-to-back-raise', 'over-shoulder-pull', 'pullover-to-side-pull', 'side-to-front-raise']);
+    // Best guesses: the medium-confidence moves, so he can find and check them
+    expect(movements.filter((m) => m.guess).map((m) => m.id).sort()).toEqual(
+      ['curl-to-press', 'gravedigger', 'over-shoulder-pull', 'pullover-to-side-pull', 'side-to-front-raise', 'tactical-crossover']);
+    // His pick: 35 lb for the leg-driven ones, 18 lb for the rest
+    expect(added.filter((id) => moveById.get(id)!.startBell === 35).sort()).toEqual(['clean-to-squat', 'gravedigger', 'woodchop']);
+    expect(added.filter((id) => moveById.get(id)!.startBell === 18)).toHaveLength(11);
+    // None of them goes into the current plan: only the easier row variation starts unlocked
+    expect(added.filter((id) => moveById.get(id)!.unlocked)).toEqual(['supported-row']);
+  });
+
+  it('flags an unknown related move', () => {
+    const moves = parseMovements(structuredClone(movementsJson));
+    moves[0].related = ['not-a-move'];
+    expect(crossCheck(parsePlan(planJson), moves).join()).toContain('unknown related move not-a-move');
+  });
+
   it('flags an unknown move id', () => {
     const plan = parsePlan(structuredClone(planJson));
     plan.phases[0].days.A.items![0].move = 'not-a-move';

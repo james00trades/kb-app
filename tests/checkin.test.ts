@@ -150,6 +150,15 @@ describe('check-in report', () => {
     expect(text).toContain('- none yet');
     expect(text).toContain("User's note this week: none");
   });
+
+  it('the copy for pasting into a chat with Claude (James, Nov 10): rest setting, workout-only minutes, no pictures', () => {
+    const text = buildReport(input({ photoSets: [], copyPhotoDates: ['2026-11-07', '2026-11-14'], restSeconds: 45 }));
+    expect(text.split('\n')[0]).toBe(`Stats copied from the kettlebell app on ${TODAY}.`);
+    expect(text).toContain('Rest between sets: 45 s');
+    expect(text).toContain('warm-up not included');
+    expect(text).toContain('- not included in this copy. Days with photos: 2026-11-07, 2026-11-14');
+    expect(text).not.toContain('attached above');
+  });
 });
 
 describe('long-run helpers', () => {

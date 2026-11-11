@@ -1034,6 +1034,31 @@ p {
   color: var(--muted);
   flex: none;
 }
+/* Progress: "Copy my stats for Claude" */
+.copy-stats {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+/* Small labels on library rows: "Shoulder hold", "Best guess" */
+.tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 650;
+  vertical-align: 1px;
+}
+.tag.hold {
+  background: var(--warn);
+  color: #1b0b0b;
+}
+.tag.guess {
+  border: 1px solid var(--accent);
+  color: var(--accent);
+}
 .pain-flag {
   background: var(--warn);
   color: #1b0b0b;

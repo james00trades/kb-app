@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks';
 import { chosen, type SessionLog } from '../engine/engine';
-import { engine, progressView as view, sessions } from '../lib/store';
+import { copyStatsForClaude, engine, progressView as view, sessions } from '../lib/store';
 import { BodyView } from './Body';
 import { Sheet, bellText, fmtDay, fmtDuration } from './common';
 
@@ -18,7 +18,27 @@ export function History() {
           Workouts
         </button>
       </div>
+      <CopyStats />
       {view.value === 'body' ? <BodyView /> : <Workouts />}
+    </div>
+  );
+}
+
+/** One tap copies workouts, weight and waist as text, for James to paste into his chat with Claude (James, Nov 10). */
+function CopyStats() {
+  const [state, setState] = useState<'' | 'copied' | 'shared' | 'failed'>('');
+  const hint = {
+    '': 'Workouts, weight and waist as text, to paste into your chat with Claude. No photos.',
+    copied: 'Copied. Now paste it into your chat with Claude.',
+    shared: 'Sent from the share sheet.',
+    failed: "Couldn't copy. Try again.",
+  }[state];
+  return (
+    <div class="copy-stats">
+      <button class="pill-btn" onClick={async () => setState(await copyStatsForClaude())}>
+        {state === 'copied' ? 'Copied' : 'Copy my stats for Claude'}
+      </button>
+      <span class="muted small">{hint}</span>
     </div>
   );
 }

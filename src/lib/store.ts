@@ -10,7 +10,7 @@ import { bodyDue as dueNow, weightSummary, weightTrend } from '../engine/body';
 import { db, getKV, putKV, type BodyEntry, type Daily, type PhotoMeta, type Pose } from './db';
 import { setAudioSession, setVoice } from './sound';
 import { toBase64 } from './backup';
-import { buildReport, checkInDue, pickPhotoDates, type CheckIn, type CheckInImage } from './checkin';
+import { buildReport, checkInDue, pickPhotoDates, type CheckIn, type CheckInImage, type ReportInput } from './checkin';
 
 export const data: AppData = loadData();
 
@@ -368,33 +368,60 @@ async function checkinPhotos(): Promise<{ sets: { label: string; date: string; p
   return { sets, images };
 }
 
+/** Everything the report needs except the photos. */
+function reportInput(note: string): Omit<ReportInput, 'photoSets'> {
+  const plan = today.value;
+  return {
+    today: todayStr.value,
+    program: {
+      name: plan.phaseName,
+      week: plan.week,
+      effort: plan.effort,
+      rotation: data.plan.rotation,
+      phases: data.plan.phases.map((p) => ({ name: p.name, weeks: p.weeks as [number, number], effort: p.effort })),
+    },
+    about: checkinAbout.value,
+    note,
+    streak: { current: currentStreak.value.current, best: currentStreak.value.best },
+    weights: weights.value,
+    body: Object.values(body.value),
+    sessions: sessions.value,
+    daily: daily.value,
+    checkins: checkins.value,
+    restSeconds: settings.value.defaultRest,
+  };
+}
+
+/** The same report the check-in sends, without pictures, for James to paste into a chat with Claude (James, Nov 10). */
+export function statsForClaude(): string {
+  const photoDates = [...new Set(photos.value.map((p) => p.date))].sort();
+  return buildReport({ ...reportInput(''), photoSets: [], copyPhotoDates: photoDates });
+}
+
+/** Copies the stats (built before any await, so iOS still counts it as the tap). Falls back to the share sheet. */
+export async function copyStatsForClaude(): Promise<'copied' | 'shared' | 'failed'> {
+  const text = statsForClaude();
+  try {
+    await navigator.clipboard.writeText(text);
+    return 'copied';
+  } catch {
+    try {
+      await navigator.share({ text });
+      return 'shared';
+    } catch {
+      return 'failed';
+    }
+  }
+}
+
 export async function runCheckIn(note: string) {
   const key = apiKey.value;
   if (!key || checkinRunning.value) return;
   checkinRunning.value = true;
   checkinError.value = null;
   try {
-    const plan = today.value;
     const { sets, images } = await checkinPhotos();
-    const report = buildReport({
-      today: todayStr.value,
-      program: {
-        name: plan.phaseName,
-        week: plan.week,
-        effort: plan.effort,
-        rotation: data.plan.rotation,
-        phases: data.plan.phases.map((p) => ({ name: p.name, weeks: p.weeks as [number, number], effort: p.effort })),
-      },
-      about: checkinAbout.value,
-      note,
-      streak: { current: currentStreak.value.current, best: currentStreak.value.best },
-      weights: weights.value,
-      body: Object.values(body.value),
-      sessions: sessions.value,
-      daily: daily.value,
-      checkins: checkins.value,
-      photoSets: sets,
-    });
+    const report = buildReport({ ...reportInput(note), photoSets: sets });
     const { requestCheckIn } = await import('./checkin-api');
     const r = await requestCheckIn({ apiKey: key, report, images });
     const entry: CheckIn = {

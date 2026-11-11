@@ -135,6 +135,10 @@ export interface ReportInput {
   /** Every earlier check-in, newest first. */
   checkins: CheckIn[];
   photoSets: { label: string; date: string; poses: Pose[] }[];
+  /** Rest between sets from Settings (one setting for every move). */
+  restSeconds?: number;
+  /** Set for the copy James pastes into a chat with Claude: no pictures, only the days photos were taken. */
+  copyPhotoDates?: string[];
 }
 
 const STATUS_WORD = { done: 'done (every move)', partial: 'ended early', skipped: 'skipped', rest: 'rest day' } as const;
@@ -217,7 +221,7 @@ export function buildReport(r: ReportInput): string {
   const start = firsts.length ? firsts.sort()[0] : r.today;
   const weeksIn = Math.floor(daysBetween(start, r.today) / 7) + 1;
 
-  out.push(`Check-in date: ${r.today}`);
+  out.push(r.copyPhotoDates ? `Stats copied from the kettlebell app on ${r.today}.` : `Check-in date: ${r.today}`);
   out.push(`Journey started: ${start} (week ${weeksIn} of the journey).`);
   out.push(
     `Program: now in "${r.program.name}", program week ${r.program.week}${r.program.effort ? `, target effort ${r.program.effort}` : ''}. Rotation: ${r.program.rotation.join(', ')} (missed days don't skip workouts; the rotation picks up where it left off).`,
@@ -225,6 +229,7 @@ export function buildReport(r: ReportInput): string {
   out.push(
     `Program phases loaded so far: ${r.program.phases.map((p) => `${p.name} (weeks ${p.weeks[0]}–${p.weeks[1]}${p.effort ? `, effort ${p.effort}` : ''})`).join('; ')}. More phases get added as the journey goes on.`,
   );
+  if (r.restSeconds !== undefined) out.push(`Rest between sets: ${r.restSeconds} s (one setting for every move).`);
   out.push(`About the user: ${r.about.trim() || 'not given'}`);
   out.push(`User's note this week: ${r.note.trim() || 'none'}`);
   out.push(
@@ -286,7 +291,7 @@ export function buildReport(r: ReportInput): string {
   for (const p of recentW) out.push(`- ${p.date}: ${p.weight.toFixed(1)} / ${p.avg.toFixed(1)}`);
 
   const fromT = addDays(r.today, -(DETAIL_TRAINING_DAYS - 1));
-  out.push('', `TRAINING, LAST ${DETAIL_TRAINING_DAYS} DAYS (oldest first)`);
+  out.push('', `TRAINING, LAST ${DETAIL_TRAINING_DAYS} DAYS (oldest first; minutes = the workout itself with its breathwork, warm-up not included)`);
   const recent = r.sessions.filter((s) => s.date >= fromT).sort((a, b) => a.startedAt - b.startedAt);
   if (!recent.length) out.push('- nothing logged');
   for (const s of recent) out.push(sessionLine(s, r.daily[s.date]));
@@ -305,6 +310,10 @@ export function buildReport(r: ReportInput): string {
   }
 
   out.push('', 'PHOTOS');
+  if (r.copyPhotoDates) {
+    out.push(`- not included in this copy. Days with photos: ${r.copyPhotoDates.join(', ') || 'none yet'}`);
+    return out.join('\n');
+  }
   if (!r.photoSets.length) out.push('- none yet');
   for (const s of r.photoSets) out.push(`- ${s.label} (${s.date}): ${s.poses.join(', ')}, attached above in that order`);
   return out.join('\n');

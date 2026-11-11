@@ -1,10 +1,12 @@
 import { useState } from 'preact/hooks';
-import type { Pattern } from '../engine/schema';
+import type { Movement, Pattern } from '../engine/schema';
 import { data, isUnlocked, moveSheet, unlockMove } from '../lib/store';
 import { Icon, Sheet } from './common';
 
 const TIER_NAMES = ['Tier 0 · Prep and mobility', 'Tier 1 · Slow strength', 'Tier 2 · Fast / explosive', 'Tier 3 · Compound and flow'];
 const PATTERNS: Pattern[] = ['hinge', 'squat', 'lunge', 'push', 'pull', 'carry', 'rotation', 'mobility', 'compound'];
+/** Name plus badge words, so "best guess" or "shoulder" in the search lists those moves. */
+const searchText = (m: Movement) => [m.name, m.shoulder && 'shoulder hold', m.guess && 'best guess'].filter(Boolean).join(' ').toLowerCase();
 
 export function Library() {
   const [q, setQ] = useState('');
@@ -16,7 +18,7 @@ export function Library() {
     (m) =>
       (tier === null || m.tier === tier) &&
       (pattern === null || m.pattern === pattern) &&
-      (!query || m.name.toLowerCase().includes(query)),
+      (!query || searchText(m).includes(query)),
   );
 
   return (
@@ -58,7 +60,11 @@ export function Library() {
                   <button key={m.id} class="list-row" onClick={() => (moveSheet.value = m.id)}>
                     <span class="list-main">
                       <span class={open ? '' : 'muted'}>{m.name}</span>
-                      <span class="muted small">{m.pattern}</span>
+                      <span class="muted small">
+                        {m.pattern}
+                        {m.shoulder && <span class="tag hold">Shoulder hold</span>}
+                        {m.guess && <span class="tag guess">Best guess</span>}
+                      </span>
                     </span>
                     {!open && <Icon name="lock" size={18} />}
                   </button>
@@ -80,11 +86,23 @@ export function MoveSheet() {
   if (!m) return null;
   const open = isUnlocked(m.id);
   const close = () => (moveSheet.value = null);
+  const related = [...new Set([...(m.related ?? []), ...data.movements.filter((x) => x.related?.includes(m.id)).map((x) => x.id)])];
   return (
     <Sheet onClose={close} title={m.name}>
       <div class="muted">
         Tier {m.tier} · {m.pattern} · {open ? 'Unlocked' : 'Locked'}
+        {m.startBell ? ` · Start with the ${m.startBell} lb` : ''}
       </div>
+      {m.shoulder && (
+        <div class="note warn">
+          <b>Shoulder hold.</b> Hard on the shoulders. With a shoulder that's sore or unsteady, use the good arm only, or skip it, until it's been checked.
+        </div>
+      )}
+      {m.guess && (
+        <div class="note">
+          <b>Best guess.</b> The path and cues were read from the video frames. Check them against the video and say what's off.
+        </div>
+      )}
       {m.cues?.length ? (
         <ul class="cues">
           {m.cues.map((c) => (
@@ -102,6 +120,18 @@ export function MoveSheet() {
             {m.prereqs.map((p) => (
               <button key={p} class={`chip ${isUnlocked(p) ? '' : 'locked'}`} onClick={() => (moveSheet.value = p)}>
                 {!isUnlocked(p) && <Icon name="lock" size={14} />} {data.moveById.get(p)?.name ?? p}
+              </button>
+            ))}
+          </div>
+        </>
+      ) : null}
+      {related.length ? (
+        <>
+          <h3>Related moves</h3>
+          <div class="chips wrap">
+            {related.map((r) => (
+              <button key={r} class={`chip ${isUnlocked(r) ? '' : 'locked'}`} onClick={() => (moveSheet.value = r)}>
+                {!isUnlocked(r) && <Icon name="lock" size={14} />} {data.moveById.get(r)?.name ?? r}
               </button>
             ))}
           </div>

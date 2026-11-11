@@ -24,6 +24,14 @@ export const Movement = z.object({
   cues: z.array(z.string()).optional(),
   prereqs: z.array(z.string()).optional(),
   unlockNote: z.string().optional(),
+  /** Bell (lb) to start the move with when it first goes into a routine. */
+  startBell: z.number().positive().optional(),
+  /** Hard on the shoulders: shows a "Shoulder hold" label (good arm only, or skip). */
+  shoulder: z.boolean().optional(),
+  /** Path and cues are a best guess from a video; James to check them. */
+  guess: z.boolean().optional(),
+  /** Variations and close cousins (shown both ways in the library). */
+  related: z.array(z.string()).optional(),
 });
 export type Movement = z.infer<typeof Movement>;
 
