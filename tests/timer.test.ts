@@ -37,6 +37,18 @@ describe('timer engine', () => {
     expect(Math.round(secondsLeft(timer.value!, Date.now()))).toBe(45);
   });
 
+  it('±15 on a workout rest reports its new full length, to remember it (Nov 13)', () => {
+    const seen: number[] = [];
+    startTimer({ ...restSpec(60), onAdjust: (s) => seen.push(s) });
+    adjust(15);
+    adjust(15);
+    adjust(-15);
+    expect(seen).toEqual([75, 90, 75]);
+    expect(timer.value!.added).toBe(15);
+    for (let i = 0; i < 6; i++) adjust(-15);
+    expect(seen.at(-1)).toBe(15); // never below 15 s
+  });
+
   it('per-side hold runs get ready → left → switch → right', () => {
     const done = vi.fn();
     startTimer(holdSpec('Carry', 30, true, done));

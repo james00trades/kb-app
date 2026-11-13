@@ -159,6 +159,11 @@ describe('check-in report', () => {
     expect(text).toContain('- not included in this copy. Days with photos: 2026-11-07, 2026-11-14');
     expect(text).not.toContain('attached above');
   });
+
+  it("lists the moves with James's own rest (Nov 13)", () => {
+    const text = buildReport(input({ photoSets: [], restSeconds: 60, restByMove: [{ name: 'Deadlift', seconds: 90 }] }));
+    expect(text).toContain('Rest between sets: 60 s by default; their own pick for Deadlift 90 s.');
+  });
 });
 
 describe('long-run helpers', () => {

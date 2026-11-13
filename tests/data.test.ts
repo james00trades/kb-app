@@ -62,6 +62,21 @@ describe('data files', () => {
     expect(crossCheck(parsePlan(planJson), moves).join()).toContain('unknown related move not-a-move');
   });
 
+  it('flags any set of more than 10 reps (James, Nov 13: add sets instead)', () => {
+    const moves = parseMovements(movementsJson);
+    for (const change of [
+      (it: Record<string, unknown>) => (it.reps = 12),
+      (it: Record<string, unknown>) => (it.reps = [8, 12]),
+      (it: Record<string, unknown>) => (it.byWeek = { 3: { reps: [10, 15] } }),
+    ]) {
+      const plan = parsePlan(structuredClone(planJson));
+      const dl = plan.phases[0].days.A.items!.find((i) => i.id === 'a-deadlift')!;
+      change(dl as unknown as Record<string, unknown>);
+      expect(crossCheck(plan, moves).join()).toContain('a-deadlift: ');
+      expect(crossCheck(plan, moves).join()).toContain('add sets instead');
+    }
+  });
+
   it('flags an unknown move id', () => {
     const plan = parsePlan(structuredClone(planJson));
     plan.phases[0].days.A.items![0].move = 'not-a-move';

@@ -18,6 +18,8 @@ export interface Settings {
   voice: boolean;
   throughSilent: boolean;
   defaultRest: number;
+  /** Rest James set for a move by changing it during a workout (Nov 13), by move id. */
+  restByMove: Record<string, number>;
   bells: number[];
 }
 
@@ -30,6 +32,7 @@ const defaultSettings = (): Settings => ({
   voice: true,
   throughSilent: false,
   defaultRest: data.plan.defaultRest,
+  restByMove: {},
   bells: [18, 35, 45],
 });
 
@@ -277,6 +280,17 @@ export async function updateSettings(patch: Partial<Settings>) {
   await putKV('settings', next);
 }
 
+/** Remember the rest James picked for a move. Back at the default, the move follows the default again. */
+export async function setMoveRest(key: string, seconds: number) {
+  const { [key]: _, ...others } = settings.value.restByMove;
+  await updateSettings({ restByMove: seconds === settings.value.defaultRest ? others : { ...others, [key]: seconds } });
+}
+
+export async function clearMoveRest(key: string) {
+  const { [key]: _, ...others } = settings.value.restByMove;
+  await updateSettings({ restByMove: others });
+}
+
 export async function unlockMove(id: string) {
   if (isUnlocked(id)) return;
   unlocked.value = [...unlocked.value, id];
@@ -398,6 +412,7 @@ function reportInput(note: string): Omit<ReportInput, 'photoSets'> {
     daily: daily.value,
     checkins: checkins.value,
     restSeconds: settings.value.defaultRest,
+    restByMove: Object.entries(settings.value.restByMove).map(([k, seconds]) => ({ name: data.moveById.get(k)?.name ?? k, seconds })),
   };
 }
 

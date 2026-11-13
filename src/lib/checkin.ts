@@ -108,7 +108,8 @@ Choosing the lever:
 - "both" when both are clearly lagging. "stay" when the trend is moving at a good pace: say so plainly and encourage them.
 
 Rules:
-- Intensity suggestions must fit the program: move up one dial at a time (harder variation, heavier bell, faster tempo, or more volume); weekly kettlebell volume up no more than 10 to 15 percent; if joint pain was reported, hold volume rather than increase it. Do not invent a new program or change its overall structure.
+- Intensity suggestions must fit the program: move up one dial at a time (harder variation, heavier bell, faster tempo, or more sets); weekly kettlebell volume up no more than 10 to 15 percent; if joint pain was reported, hold volume rather than increase it. Do not invent a new program or change its overall structure.
+- Never suggest more than 10 reps in a set. To add work, add sets of 10 or fewer.
 - Diet suggestions should be simple, specific habits they can start this week. No crash diets or extreme restriction.
 - If you see something that could be a health concern (very fast unexplained weight loss, pain that keeps coming back), say they should check with a doctor.
 - If the data is thin (few weigh-ins, no photos, few workouts, early in the journey), say so in dataGaps and keep the call tentative.
@@ -135,8 +136,10 @@ export interface ReportInput {
   /** Every earlier check-in, newest first. */
   checkins: CheckIn[];
   photoSets: { label: string; date: string; poses: Pose[] }[];
-  /** Rest between sets from Settings (one setting for every move). */
+  /** Default rest between sets (Settings). */
   restSeconds?: number;
+  /** Moves where James set his own rest during a workout (Nov 13). */
+  restByMove?: { name: string; seconds: number }[];
   /** Set for the copy James pastes into a chat with Claude: no pictures, only the days photos were taken. */
   copyPhotoDates?: string[];
 }
@@ -229,7 +232,10 @@ export function buildReport(r: ReportInput): string {
   out.push(
     `Program phases loaded so far: ${r.program.phases.map((p) => `${p.name} (weeks ${p.weeks[0]}–${p.weeks[1]}${p.effort ? `, effort ${p.effort}` : ''})`).join('; ')}. More phases get added as the journey goes on.`,
   );
-  if (r.restSeconds !== undefined) out.push(`Rest between sets: ${r.restSeconds} s (one setting for every move).`);
+  if (r.restSeconds !== undefined) {
+    const own = (r.restByMove ?? []).map((m) => `${m.name} ${m.seconds} s`);
+    out.push(`Rest between sets: ${r.restSeconds} s by default${own.length ? `; their own pick for ${own.join(', ')}` : ''}.`);
+  }
   out.push(`About the user: ${r.about.trim() || 'not given'}`);
   out.push(`User's note this week: ${r.note.trim() || 'none'}`);
   out.push(

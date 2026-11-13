@@ -8,6 +8,9 @@ export type Bell = z.infer<typeof Bell>;
 const Range = z.tuple([z.number().positive(), z.number().positive()]);
 const NumOrRange = z.union([z.number().positive(), Range]);
 
+/** The most reps the app asks for in one set. More work means more sets, not more reps (James, Nov 13, 2026). */
+export const MAX_REPS = 10;
+
 export const Pattern = z.enum([
   'hinge', 'squat', 'lunge', 'push', 'pull', 'carry', 'rotation', 'mobility', 'compound',
 ]);

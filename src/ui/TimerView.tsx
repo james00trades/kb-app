@@ -44,7 +44,7 @@ export function RestBar() {
     <div class="rest-bar">
       <div class="rest-fill" style={{ width: `${pct}%` }} />
       <div class="rest-content">
-        <span class="rest-label">{t.done ? 'Go!' : 'Rest'}</span>
+        <span class="rest-label">{t.done ? 'Go!' : 'Rest'}{!t.done && t.added !== 0 && t.spec.onAdjust && <span class="rest-saved">Saved</span>}</span>
         <span class="rest-time">{fmtClock(left)}</span>
         <button class="rest-btn" onClick={() => adjust(-15)}>−15</button>
         <button class="rest-btn" onClick={() => adjust(15)}>+15</button>

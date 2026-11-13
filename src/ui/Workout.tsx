@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { chosen, completeSetAt, isItemComplete, setChoice, type DraftItem, type SessionDraft } from '../engine/engine';
+import { chosen, completeSetAt, isItemComplete, restAfter, restKey, setChoice, type DraftItem, type SessionDraft } from '../engine/engine';
 import type { Bell } from '../engine/schema';
-import { discardWorkout, draft, finishWorkout, moveSheet, settings, updateDraft, workoutOpen } from '../lib/store';
+import { discardWorkout, draft, finishWorkout, moveSheet, setMoveRest, settings, updateDraft, workoutOpen } from '../lib/store';
 import { breathSpec, fmtClock, holdSpec, intervalSpec, restSpec, startTimer, stopTimer, timer, type TimerSpec } from '../lib/timer';
 import { Icon, Sheet, Stepper, bellShort, fmtSeconds, prescText, sideText, upText } from './common';
 
@@ -58,9 +58,14 @@ export function Workout() {
     const after = draft.value!;
     const itemDone = isItemComplete(after.items[i]);
     const workoutDone = after.items.every(isItemComplete);
-    const rest = chosen(it).rest;
+    const rest = restAfter(it, settings.value.restByMove);
     const n = itemDone ? nextIncomplete(after, i) : i;
-    if (!workoutDone && rest > 0) startTimer(restSpec(rest, undefined, (skipped) => timedSetAfterRest(n, skipped)));
+    if (!workoutDone && rest > 0) {
+      // A ±15 tap on this rest is remembered for this move (James, Nov 13)
+      const key = restKey(it);
+      const spec = restSpec(rest, undefined, (skipped) => timedSetAfterRest(n, skipped));
+      startTimer({ ...spec, onAdjust: (s) => void setMoveRest(key, s) });
+    }
     if (itemDone && n >= 0) setActive(n);
   };
 
@@ -178,7 +183,11 @@ function ActiveItem({ it, i, onComplete }: { it: DraftItem; i: number; onComplet
         </button>
       </div>
       <div class="item-presc">{prescText(it.plan, { ...p, bell: it.bell }, false)}</div>
-      {p.fromLast && <div class="muted small">Set from what you did last time</div>}
+      {p.fromLast && (
+        <div class="muted small">
+          {p.moreSets ? 'Set from what you did last time: 10 reps a set at most, so extra sets instead' : 'Set from what you did last time'}
+        </div>
+      )}
       {p.notes && <div class="muted small">{p.notes}</div>}
 
       {it.plan.up && (

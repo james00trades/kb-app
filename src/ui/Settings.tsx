@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { buildBackupFile, readBackupFile, restoreBackup, saveBackupFile, type Backup } from '../lib/backup';
 import { beep, loadVoice, say, unlockAudio } from '../lib/sound';
-import { currentStreak, markBackedUp, meta, persisted, sessions, setStreakBeforeToday, settings, updateSettings } from '../lib/store';
+import { clearMoveRest, currentStreak, data, markBackedUp, meta, persisted, sessions, setStreakBeforeToday, settings, updateSettings } from '../lib/store';
 import { wakeLockSupported } from '../lib/wakelock';
 import { CheckInSettings } from './CheckIn';
 import { Sheet, Stepper, Toggle, daysAgo } from './common';
@@ -73,6 +73,18 @@ export function Settings() {
       <div class="card">
         <div class="mini-label">Default rest between sets</div>
         <Stepper value={s.defaultRest} onChange={(v) => void updateSettings({ defaultRest: v })} step={15} min={15} unit=" s" />
+        <p class="muted small">Change a rest with −15 or +15 during a workout and that exercise keeps it next time.</p>
+        {Object.keys(s.restByMove).length > 0 && (
+          <div class="list">
+            {Object.entries(s.restByMove).map(([k, sec]) => (
+              <div key={k} class="row">
+                <span class="row-label">{data.moveById.get(k)?.name ?? k}</span>
+                <span class="row-value">{sec} s</span>
+                <button class="pill-btn" onClick={() => void clearMoveRest(k)}>Use default</button>
+              </div>
+            ))}
+          </div>
+        )}
         <div class="mini-label">Bells I own (lb)</div>
         <div class="chips wrap">
           {s.bells.map((b) => (

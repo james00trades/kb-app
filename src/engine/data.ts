@@ -1,7 +1,7 @@
 // Loads and validates the bundled data files, plus cross-file checks.
 import movementsJson from '../../data/movements.json';
 import planJson from '../../data/plan.json';
-import { MovementFile, PlanFile, type Movement, type Item } from './schema';
+import { MAX_REPS, MovementFile, PlanFile, type Movement, type Item } from './schema';
 
 export function parseMovements(raw: unknown): Movement[] {
   return MovementFile.parse(raw).movements;
@@ -38,6 +38,11 @@ export function crossCheck(plan: PlanFile, movements: Movement[]): string[] {
         for (const s of item.stations ?? []) if (s.move && !ids.has(s.move)) problems.push(`${where} ${item.id}: unknown station move ${s.move}`);
       }
       if (item.kind === 'reps' && item.reps === undefined) problems.push(`${where} ${item.id}: reps missing`);
+      if (item.kind === 'reps') {
+        const reps = [item.reps, ...Object.values(item.byWeek ?? {}).map((o) => o.reps), ...(item.ladder ?? []).map((s) => s.reps)];
+        const most = Math.max(0, ...reps.flat().filter((n): n is number => typeof n === 'number'));
+        if (most > MAX_REPS) problems.push(`${where} ${item.id}: ${most} reps in a set (most is ${MAX_REPS}; add sets instead)`);
+      }
       if (item.kind === 'time' && item.seconds === undefined) problems.push(`${where} ${item.id}: seconds missing`);
       if (item.kind === 'breath') {
         if (!item.minutes) problems.push(`${where} ${item.id}: minutes missing`);

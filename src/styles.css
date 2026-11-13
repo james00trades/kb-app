@@ -776,6 +776,12 @@ p {
 .rest-label {
   font-weight: 700;
 }
+.rest-saved {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
 .rest-time {
   flex: 1;
   font-size: 30px;

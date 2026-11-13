@@ -32,6 +32,8 @@ export interface TimerSpec {
   then?: (skipped: boolean) => TimerSpec | null;
   /** Breathwork: phases in one full breath cycle (e.g. 4 for box: in, hold, out, hold). */
   cycle?: number;
+  /** Called after a ±15 tap with the phase's new full length, so a workout can remember it (Nov 13). */
+  onAdjust?: (seconds: number) => void;
 }
 
 export interface TimerState {
@@ -43,6 +45,8 @@ export interface TimerState {
   startedAt: number;
   done: boolean;
   rounds: number;
+  /** Seconds added (or taken off, below 0) with ±15 on the current phase. */
+  added: number;
 }
 
 export const timer = signal<TimerState | null>(null);
@@ -63,7 +67,7 @@ function startPhase(t: TimerState, index: number, at: number, announce: boolean)
     say(words);
   }
   lastCue = { index, second: -1 };
-  return { ...t, index, endsAt: at + ph.seconds * 1000 };
+  return { ...t, index, endsAt: at + ph.seconds * 1000, added: 0 };
 }
 
 function finish(t: TimerState) {
@@ -138,7 +142,7 @@ function stopLoop() {
 
 export function startTimer(spec: TimerSpec) {
   const now = Date.now();
-  const base: TimerState = { spec, index: 0, endsAt: now, pausedLeft: null, startedAt: now, done: false, rounds: 0 };
+  const base: TimerState = { spec, index: 0, endsAt: now, pausedLeft: null, startedAt: now, done: false, rounds: 0, added: 0 };
   timer.value = startPhase(base, 0, now, true);
   clock.value = now;
   startLoop();
@@ -176,11 +180,13 @@ export function togglePause() {
 export function adjust(seconds: number) {
   const t = timer.value;
   if (!t || t.done) return;
+  const added = t.added + seconds;
   if (t.pausedLeft !== null) {
-    timer.value = { ...t, pausedLeft: Math.max(1000, t.pausedLeft + seconds * 1000) };
+    timer.value = { ...t, added, pausedLeft: Math.max(1000, t.pausedLeft + seconds * 1000) };
   } else {
-    timer.value = { ...t, endsAt: Math.max(Date.now() + 1000, t.endsAt + seconds * 1000) };
+    timer.value = { ...t, added, endsAt: Math.max(Date.now() + 1000, t.endsAt + seconds * 1000) };
   }
+  t.spec.onAdjust?.(Math.max(15, t.spec.phases[t.index].seconds + added));
 }
 
 /** Jump to the next phase (or finish). */

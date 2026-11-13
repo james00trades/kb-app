@@ -1,7 +1,7 @@
 // The plan engine: turns plan data + saved state into today's session,
 // and folds a finished session back into state. Pure functions only.
 import type { AppData } from './data';
-import type { Bell, BreathPattern, DayKey, Item, LadderStep, Phase, PlanFile, Station } from './schema';
+import { MAX_REPS, type Bell, type BreathPattern, type DayKey, type Item, type LadderStep, type Phase, type PlanFile, type Station } from './schema';
 
 // ---------- State ----------
 
@@ -34,6 +34,8 @@ export interface BellPref {
 export interface Level {
   amount: number;
   bell: Bell | null;
+  /** How many sets he did at that amount. Missing in state saved before Nov 13, 2026. */
+  sets?: number;
 }
 
 export interface EngineState {
@@ -148,6 +150,8 @@ export interface Prescription {
   notes?: string;
   /** The target was set from what James did last time, not the plan's number. */
   fromLast?: boolean;
+  /** He did more than 10 reps a set last time, so the extra work became extra sets (Nov 13). */
+  moreSets?: boolean;
 }
 
 const low =(v: number | [number, number] | undefined) => (Array.isArray(v) ? v[0] : v ?? 0);
@@ -171,7 +175,8 @@ function prescribe(
     range: Array.isArray(rangeSrc) ? rangeSrc : undefined,
     bell,
     planBell,
-    // James's rest setting applies to every move (Nov 9); the plan can't override it per move
+    // James's default rest (Settings). The plan can't set a rest per move (Nov 9); James can, by
+    // changing it during a workout (Nov 13, see restAfter)
     rest: data.plan.defaultRest,
     notes: r.notes,
   };
@@ -182,11 +187,16 @@ const heft = (b: Bell | null) => (typeof b === 'number' ? b : 0);
 
 /** Fit the target to what James did last time with this bell (Nov 9). With the plan's bell (or
  *  a lighter one), never ask for less than he hit on every set. With a heavier bell than the
- *  plan's, ask for what he managed with it, even if that's below the plan's number. */
-function adapt(p: Prescription, level: Level | undefined): Prescription {
+ *  plan's, ask for what he managed with it, even if that's below the plan's number.
+ *  Never more than 10 reps a set (Nov 13): past that, the same work comes as more sets of 10. */
+function adapt(p: Prescription, level: Level | undefined, kind: Item['kind']): Prescription {
   if (!level || level.bell !== p.bell) return p;
   const heavier = heft(p.bell) > heft(p.planBell);
   if (heavier ? level.amount === p.target : level.amount <= p.target) return p;
+  if (kind === 'reps' && level.amount > MAX_REPS) {
+    const sets = Math.max(p.sets, Math.ceil(((level.sets ?? p.sets) * level.amount) / MAX_REPS));
+    return { ...p, target: MAX_REPS, sets, fromLast: true, moreSets: sets > p.sets };
+  }
   return { ...p, target: level.amount, fromLast: true };
 }
 
@@ -300,9 +310,9 @@ function planItem(
   const entry = progressKey ? state.progress[progressKey] : undefined;
   const step = Math.min(Math.max(entry?.step ?? 0, 0), ladder.length - 1);
   const level = progressKey ? state.levels?.[progressKey] : undefined;
-  const stay = adapt(prescribe(r, ladder[step], data, state.bellPrefs), level);
+  const stay = adapt(prescribe(r, ladder[step], data, state.bellPrefs), level, r.kind);
   const canOffer = !ctx.held && !!entry?.ready && step + 1 < ladder.length;
-  let up = canOffer ? adapt(prescribe(r, ladder[step + 1], data, state.bellPrefs), level) : undefined;
+  let up = canOffer ? adapt(prescribe(r, ladder[step + 1], data, state.bellPrefs), level, r.kind) : undefined;
   // Already doing more than the plan's next step? Then there's nothing to move up to.
   if (up && up.target <= stay.target && up.bell === stay.bell && up.sets <= stay.sets) up = undefined;
   return { ...base, progressKey, ladderLen: ladder.length, step, stay, up };
@@ -454,6 +464,16 @@ export function completeSetAt(it: DraftItem, k: number): DraftItem {
   };
 }
 
+/** Which move a rest belongs to (an item without a move uses its own id). */
+export const restKey = (it: DraftItem) => chosen(it).move ?? it.plan.itemId;
+
+/** Rest after a set: the rest James last set for this move during a workout, else the default (Nov 13). */
+export function restAfter(it: DraftItem, restByMove: Record<string, number>): number {
+  const p = chosen(it);
+  if (p.rest <= 0) return p.rest;
+  return restByMove[restKey(it)] ?? p.rest;
+}
+
 export function isItemComplete(it: DraftItem): boolean {
   return it.skipped || it.sets.every((s) => s.done);
 }
@@ -507,10 +527,11 @@ export function finishSession(
       // Adapt to what James did (Nov 9): every set done and no joint pain
       if (!answers.pain && !it.skipped && it.sets.length > 0 && it.sets.every((s) => s.done)) {
         const lastBell = it.sets[it.sets.length - 1].bell;
-        const best = Math.min(...it.sets.filter((s) => s.bell === lastBell).map((s) => s.actual));
+        const withBell = it.sets.filter((s) => s.bell === lastBell);
+        const best = Math.min(...withBell.map((s) => s.actual));
         const beat = lastBell === p.bell && best > p.target;
         const heavier = heft(lastBell) > heft(p.bell);
-        if (beat || heavier) levels[it.plan.progressKey] = { amount: best, bell: lastBell };
+        if (beat || heavier) levels[it.plan.progressKey] = { amount: best, bell: lastBell, sets: withBell.length };
       }
     }
 
