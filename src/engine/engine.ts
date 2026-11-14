@@ -254,7 +254,7 @@ export interface PlannedSession {
   checks?: string[];
   /** The workout itself (main work, then breathwork). */
   items: PlannedItem[];
-  /** Part 1 of the day: the guided warm-up (workout days) or the wake-up routine (rest days). */
+  /** Part 1 of a workout day: the guided warm-up. Walking days have none (Nov 14). */
   warmup?: RoutinePlan;
   /** Part 3 of the day: the evening holds. */
   evening?: RoutinePlan;

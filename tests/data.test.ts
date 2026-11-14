@@ -26,6 +26,7 @@ describe('data files', () => {
       for (const it of items) {
         if (it.move) used.add(it.move);
         for (const o of Object.values(it.byWeek ?? {})) if (o.move) used.add(o.move);
+        for (const st of it.stations ?? []) if (st.move) used.add(st.move);
       }
       for (const s of [...(ph.morning?.stations ?? []), ...(ph.evening?.stations ?? [])]) if (s.move) used.add(s.move);
     }
@@ -41,7 +42,7 @@ describe('data files', () => {
     const added = ['tactical-crossover', 'front-to-back-raise', 'gravedigger', 'uppercut', 'curl-to-press', 'woodchop', 'clean-to-squat',
       'side-to-front-raise', 'pullover-to-side-pull', 'hammer-curl', 'around-the-world-to-curl', 'curl-to-pullover', 'hand-to-hand-curl',
       'over-shoulder-pull', 'supported-row'];
-    expect(movements).toHaveLength(107);
+    expect(movements).toHaveLength(109); // 107 + the standing push-out and the couch stretch (Nov 14)
     for (const id of added) expect(moveById.get(id)?.cues?.length, id).toBeGreaterThan(0);
     // Shoulder hold: the ⚠ moves from his notes
     expect(movements.filter((m) => m.shoulder).map((m) => m.id).sort()).toEqual(
@@ -54,6 +55,12 @@ describe('data files', () => {
     expect(added.filter((id) => moveById.get(id)!.startBell === 18)).toHaveLength(11);
     // None of them goes into the current plan: only the easier row variation starts unlocked
     expect(added.filter((id) => moveById.get(id)!.unlocked)).toEqual(['supported-row']);
+  });
+
+  it("standing push-out (James, Nov 14): in the library, not in the plan, light bell", () => {
+    const m = loadData().moveById.get('standing-push-out')!;
+    expect(m).toMatchObject({ name: 'Standing push-out', pattern: 'push', unlocked: false, startBell: 18 });
+    expect(m.cues!.join(' ')).toContain('straight out at chest height');
   });
 
   it('flags an unknown related move', () => {

@@ -68,21 +68,28 @@ describe('Month 1 recipes', () => {
       for (const week of [1, 4]) {
         const s = planSession(data, at(week, day));
         const labels = s.warmup!.stations.map((st) => st.label);
-        expect(labels[0]).toBe('Jumping twists');
-        expect(labels.at(-1)).toBe('Hindu push-ups'); // no burpees (James, Nov 7)
-        expect(labels).toHaveLength(15);
-        // No repeats of the wake-up's squats and lunge reaches (James, Nov 8)
-        expect(labels.slice(-4)).toEqual(['Hip hinges (wall drill)', 'Push-ups (knees or bench OK)', 'Plank (knees OK)', 'Hindu push-ups']);
-        expect(s.warmup!.seconds).toBe(420); // 5 min wake-up + 4 × 30 s
+        // Trevor's wake-up mixed in with the bodyweight moves, so the leg moves are spread out (James, Nov 14)
+        expect(labels).toEqual([
+          'Arm circles forward', 'Arm circles backward', 'Jumping twists', 'Arm swings', 'Lunge reaches', 'Elbow throws',
+          'Monk squats', 'Push-ups (knees or bench OK)', 'Ragdoll twists', 'Cossack squats', 'Body waves', 'Plank (knees OK)',
+          'Side bends', 'Hindu push-ups', 'Hip hinges (wall drill)',
+        ]);
+        const legs = ['Jumping twists', 'Lunge reaches', 'Monk squats', 'Cossack squats', 'Hip hinges (wall drill)'];
+        labels.forEach((l, k) => expect(legs.includes(l) && legs.includes(labels[k + 1]), `${l} then ${labels[k + 1]}`).toBe(false));
+        expect(labels.some((l) => /burpee/i.test(l))).toBe(false); // no burpees (James, Nov 7)
+        expect(new Set(labels).size).toBe(labels.length); // no repeats (James, Nov 8)
+        expect(s.warmup!.seconds).toBe(420); // 7 min: 5 min wake-up + 4 × 30 s
         expect(s.items[0].section).toBe('main'); // the workout starts with the main work
         expect(s.items.some((i) => i.kind === 'routine')).toBe(false);
-        // James's 9 evening stretches (Nov 9), pigeon and the seated twist on each side, 2 min each
+        // James's 9 evening stretches (Nov 9) + a deep quad stretch (Nov 14); pigeon, couch and the seated twist on each side
         expect(s.evening!.stations.map((st) => st.label)).toEqual([
           'Reverse prayer pose', 'Deep twist squats', 'Downward dog pulses',
-          'Pigeon pose, left leg forward', 'Pigeon pose, right leg forward', 'Frog pose', 'Cobra', 'Straddle',
+          'Pigeon pose, left leg forward', 'Pigeon pose, right leg forward',
+          'Couch stretch, left leg back', 'Couch stretch, right leg back', 'Frog pose', 'Cobra', 'Straddle',
           'Seated spinal twist, turn left', 'Seated spinal twist, turn right', 'Bridge (regressed)',
         ]);
-        expect(s.evening!.seconds).toBe(11 * 120 + 10 * 10);
+        expect(s.evening!.stations.every((st) => st.seconds === 60)).toBe(true); // 60 s holds (James, Nov 14)
+        expect(s.evening!.seconds).toBe(13 * 60 + 12 * 10);
       }
     }
   });

@@ -17,13 +17,24 @@
       "minutes": "20–25 min",
       "setCapInWeek": { "1": 2 },
       "warmup": [
-        { "id": "wu-guided", "kind": "routine", "label": "Guided warm-up", "routine": "morning", "transition": 0, "rest": 0,
-          "notes": "Trevor's wake-up routine, then bodyweight moves. 30 s each, no breaks.",
+        { "id": "wu-guided", "kind": "routine", "label": "Guided warm-up", "transition": 0, "rest": 0,
+          "notes": "Trevor's wake-up routine mixed in with bodyweight moves: never two leg moves in a row. 30 s each, no breaks.",
           "stations": [
-            { "label": "Hip hinges (wall drill)", "seconds": 30, "move": "hip-hinge-drill" },
+            { "label": "Arm circles forward", "seconds": 15 },
+            { "label": "Arm circles backward", "seconds": 15 },
+            { "label": "Jumping twists", "seconds": 30 },
+            { "label": "Arm swings", "seconds": 30 },
+            { "label": "Lunge reaches", "seconds": 30 },
+            { "label": "Elbow throws", "seconds": 30 },
+            { "label": "Monk squats", "seconds": 30, "move": "monk-squat" },
             { "label": "Push-ups (knees or bench OK)", "seconds": 30, "move": "push-up" },
+            { "label": "Ragdoll twists", "seconds": 30 },
+            { "label": "Cossack squats", "seconds": 30, "move": "cossack-squat" },
+            { "label": "Body waves", "seconds": 30 },
             { "label": "Plank (knees OK)", "seconds": 30, "move": "plank" },
-            { "label": "Hindu push-ups", "seconds": 30, "move": "hindu-push-up" }
+            { "label": "Side bends", "seconds": 30 },
+            { "label": "Hindu push-ups", "seconds": 30, "move": "hindu-push-up" },
+            { "label": "Hip hinges (wall drill)", "seconds": 30, "move": "hip-hinge-drill" }
           ] }
       ],
       "cooldown": [
@@ -88,38 +99,23 @@
           "notes": "Trail walk if you can. Evening holds whenever you like."
         }
       },
-      "morning": {
-        "title": "Morning wake-up",
-        "transition": 0,
-        "stations": [
-          { "label": "Jumping twists", "seconds": 30 },
-          { "label": "Arm circles forward", "seconds": 15 },
-          { "label": "Arm circles backward", "seconds": 15 },
-          { "label": "Arm swings", "seconds": 30 },
-          { "label": "Elbow throws", "seconds": 30 },
-          { "label": "Ragdoll twists", "seconds": 30 },
-          { "label": "Body waves", "seconds": 30 },
-          { "label": "Side bends", "seconds": 30 },
-          { "label": "Lunge reaches", "seconds": 30 },
-          { "label": "Monk squats", "seconds": 30, "move": "monk-squat" },
-          { "label": "Cossack squats", "seconds": 30, "move": "cossack-squat" }
-        ]
-      },
       "evening": {
         "title": "Evening holds",
         "transition": 10,
         "stations": [
-          { "label": "Reverse prayer pose", "seconds": 120, "move": "reverse-prayer-pose" },
-          { "label": "Deep twist squats", "seconds": 120, "move": "deep-twist-squat" },
-          { "label": "Downward dog pulses", "seconds": 120, "move": "downward-dog-pulse" },
-          { "label": "Pigeon pose, left leg forward", "seconds": 120, "move": "pigeon-pose" },
-          { "label": "Pigeon pose, right leg forward", "seconds": 120, "move": "pigeon-pose" },
-          { "label": "Frog pose", "seconds": 120, "move": "frog-pose" },
-          { "label": "Cobra", "seconds": 120, "move": "cobra" },
-          { "label": "Straddle", "seconds": 120, "move": "straddle" },
-          { "label": "Seated spinal twist, turn left", "seconds": 120, "move": "seated-spinal-twist" },
-          { "label": "Seated spinal twist, turn right", "seconds": 120, "move": "seated-spinal-twist" },
-          { "label": "Bridge (regressed)", "seconds": 120, "move": "bridge-regressed" }
+          { "label": "Reverse prayer pose", "seconds": 60, "move": "reverse-prayer-pose" },
+          { "label": "Deep twist squats", "seconds": 60, "move": "deep-twist-squat" },
+          { "label": "Downward dog pulses", "seconds": 60, "move": "downward-dog-pulse" },
+          { "label": "Pigeon pose, left leg forward", "seconds": 60, "move": "pigeon-pose" },
+          { "label": "Pigeon pose, right leg forward", "seconds": 60, "move": "pigeon-pose" },
+          { "label": "Couch stretch, left leg back", "seconds": 60, "move": "couch-stretch" },
+          { "label": "Couch stretch, right leg back", "seconds": 60, "move": "couch-stretch" },
+          { "label": "Frog pose", "seconds": 60, "move": "frog-pose" },
+          { "label": "Cobra", "seconds": 60, "move": "cobra" },
+          { "label": "Straddle", "seconds": 60, "move": "straddle" },
+          { "label": "Seated spinal twist, turn left", "seconds": 60, "move": "seated-spinal-twist" },
+          { "label": "Seated spinal twist, turn right", "seconds": 60, "move": "seated-spinal-twist" },
+          { "label": "Bridge (regressed)", "seconds": 60, "move": "bridge-regressed" }
         ]
       },
       "checks": [

@@ -167,6 +167,10 @@
     "file": "cossack-squats.wav",
     "dur": 1.114
   },
+  "couch stretch": {
+    "file": "couch-stretch.wav",
+    "dur": 0.854
+  },
   "deep twist squats": {
     "file": "deep-twist-squats.wav",
     "dur": 1.198
@@ -219,6 +223,10 @@
     "file": "jumping-twists.wav",
     "dur": 1.033
   },
+  "left leg back": {
+    "file": "left-leg-back.wav",
+    "dur": 0.863
+  },
   "left leg forward": {
     "file": "left-leg-forward.wav",
     "dur": 0.987
@@ -270,6 +278,10 @@
   "reverse prayer pose": {
     "file": "reverse-prayer-pose.wav",
     "dur": 1.116
+  },
+  "right leg back": {
+    "file": "right-leg-back.wav",
+    "dur": 0.827
   },
   "right leg forward": {
     "file": "right-leg-forward.wav",
