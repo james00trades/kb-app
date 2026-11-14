@@ -168,8 +168,8 @@ function sessionLine(s: SessionLog, daily?: Daily): string {
     parts.push(s.pain ? 'JOINT PAIN reported' : 'no joint pain');
   }
   if (s.status === 'rest') parts.push(s.walk ? 'walked' : 'no walk logged');
-  const warm = daily?.warmup || daily?.morning;
-  parts.push(`warm-up ${warm ? 'done' : 'not done'}`, `evening holds ${daily?.evening ? 'done' : 'not done'}`);
+  else parts.push(`warm-up ${daily?.warmup || daily?.morning ? 'done' : 'not done'}`); // walking days have none (Nov 14)
+  parts.push(`evening holds ${daily?.evening ? 'done' : 'not done'}`);
   let line = `- ${parts.join(' · ')}`;
   const moves = s.items
     .filter((it) => it.plan.section === 'main' && !it.skipped)
@@ -239,7 +239,7 @@ export function buildReport(r: ReportInput): string {
   out.push(`About the user: ${r.about.trim() || 'not given'}`);
   out.push(`User's note this week: ${r.note.trim() || 'none'}`);
   out.push(
-    `Streak: ${r.streak.current} day(s) in a row (best ${r.streak.best}). A day counts only when the warm-up and the full workout (or rest-day wake-up and walk) are both done; the evening holds don't count toward it (since Nov 10, 2026).`,
+    `Streak: ${r.streak.current} day(s) in a row (best ${r.streak.best}). A workout day counts only when the warm-up and the full workout are both done; a walking day counts when it's marked done (no warm-up on walking days since Nov 14, 2026). Stretching doesn't count toward it: not the evening holds (since Nov 10) or the wake-up routine (since Nov 14).`,
   );
 
   // Where they started and where they are
@@ -269,9 +269,9 @@ export function buildReport(r: ReportInput): string {
     const ss = r.sessions.filter((s) => s.date >= b.from && s.date <= b.to);
     const count = (st: SessionLog['status']) => ss.filter((s) => s.status === st).length;
     const efforts = ss.filter((s) => trained(s) && typeof s.effort === 'number').map((s) => s.effort!);
-    const allThree = new Set(
+    const allParts = new Set(
       ss
-        .filter((s) => (s.status === 'done' || s.status === 'rest') && r.daily[s.date]?.evening && (r.daily[s.date]?.warmup || r.daily[s.date]?.morning))
+        .filter((s) => (s.status === 'rest' || (s.status === 'done' && (r.daily[s.date]?.warmup || r.daily[s.date]?.morning))) && r.daily[s.date]?.evening)
         .map((s) => s.date),
     ).size;
     const weight = ws.length
@@ -279,7 +279,7 @@ export function buildReport(r: ReportInput): string {
       : 'no weigh-ins';
     const pain = ss.filter((s) => s.pain).length;
     out.push(
-      `- Week ${b.n} (${b.from} to ${b.to}): ${weight}${wx.length ? `; waist ${wx.join(', ')} in` : ''}; ${count('done')} full workouts, ${count('partial')} ended early, ${count('skipped')} skipped, ${count('rest')} rest days; ${ss.reduce((n, s) => n + s.kbReps, 0)} kettlebell reps${efforts.length ? `; effort avg ${round1(avg(efforts))}` : ''}${pain ? `; JOINT PAIN ${pain}×` : ''}; ${allThree} day(s) with all three parts done`,
+      `- Week ${b.n} (${b.from} to ${b.to}): ${weight}${wx.length ? `; waist ${wx.join(', ')} in` : ''}; ${count('done')} full workouts, ${count('partial')} ended early, ${count('skipped')} skipped, ${count('rest')} rest days; ${ss.reduce((n, s) => n + s.kbReps, 0)} kettlebell reps${efforts.length ? `; effort avg ${round1(avg(efforts))}` : ''}${pain ? `; JOINT PAIN ${pain}×` : ''}; ${allParts} day(s) with every part done`,
     );
   }
 

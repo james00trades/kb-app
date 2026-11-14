@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { loadData } from '../src/engine/data';
 import { initialState, upcoming, type SessionStatus } from '../src/engine/engine';
-import { addDays, seededFix, streak, type DayExtras } from '../src/engine/streak';
+import { addDays, seededFix, streak, streakParts, streakPartsDone, type DayExtras } from '../src/engine/streak';
 
 const log = (date: string, status: SessionStatus) => ({ date, status });
 const TODAY = '2026-11-07';
 
-/** Kept days: warm-up and the workout (or rest day) done. The evening holds don't count (Nov 10). */
+/** Kept days: warm-up and the workout done. The evening holds don't count (Nov 10). */
 function full(dates: string[], status: SessionStatus = 'done') {
   const sessions = dates.map((d) => log(d, status));
   const daily: Record<string, DayExtras> = Object.fromEntries(dates.map((d) => [d, { date: d, warmup: 1 }]));
@@ -23,9 +23,34 @@ describe('streak', () => {
     expect(streak(sessions, daily, TODAY)).toMatchObject({ current: 3, best: 3, todayKept: true });
   });
 
-  it('a rest day counts with the wake-up and Done', () => {
-    const daily = { [TODAY]: { date: TODAY, morning: 1 } };
-    expect(streak([log(TODAY, 'rest')], daily, TODAY).todayKept).toBe(true);
+  it('a walking day counts with just Done: no warm-up needed (James, Nov 14)', () => {
+    expect(streak([log(TODAY, 'rest')], {}, TODAY).todayKept).toBe(true);
+    const { sessions, daily } = full(['2026-11-05', '2026-11-06']);
+    expect(streak([...sessions, log(TODAY, 'rest')], daily, TODAY)).toMatchObject({ current: 3, todayKept: true });
+  });
+
+  it('stretching never counts: the wake-up and evening holds alone keep nothing (James, Nov 14)', () => {
+    const stretched = { [TODAY]: { date: TODAY, morning: 1, evening: 1 } };
+    expect(streak([], stretched, TODAY, null, true).todayKept).toBe(false);
+    expect(streak([], stretched, TODAY).todayKept).toBe(false);
+    // On a workout day the wake-up isn't the warm-up
+    expect(streak([log(TODAY, 'done')], stretched, TODAY).todayKept).toBe(false);
+  });
+
+  it('a walking day shows 0 of 1 done until it is marked done', () => {
+    const s = streak([], {}, TODAY, null, true);
+    expect(s.today).toEqual({ rest: true, warmup: false, main: false, evening: false });
+    expect(streakParts(s.today)).toBe(1);
+    expect(streakPartsDone(s.today)).toBe(0);
+  });
+
+  it("finishing a workout keeps workout-day rules, even when tomorrow's plan is a walking day", () => {
+    // After Day C the plan moves on to the walking day, but today was still a workout day.
+    const s = streak([log(TODAY, 'done')], {}, TODAY, null, true);
+    expect(s.today.rest).toBe(false);
+    expect(s.todayKept).toBe(false); // the warm-up is still needed
+    expect(streakPartsDone(s.today)).toBe(1);
+    expect(streakParts(s.today)).toBe(2);
   });
 
   it('the evening holds no longer count toward it (James, Nov 10)', () => {
@@ -40,7 +65,7 @@ describe('streak', () => {
 
   it('reports what is done today', () => {
     const s = streak([log(TODAY, 'done')], { [TODAY]: { date: TODAY, warmup: 1 } }, TODAY);
-    expect(s.today).toEqual({ warmup: true, main: true, evening: false });
+    expect(s.today).toEqual({ rest: false, warmup: true, main: true, evening: false });
   });
 
   it('does not break before today is over', () => {

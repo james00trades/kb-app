@@ -1,10 +1,10 @@
 // The streak: calendar days in a row that were "kept".
-// James's rule (Nov 10, 2026): a day is kept when both of these are done:
-//   1. the warm-up (workout days) or wake-up routine (rest days),
-//   2. a full workout (every move done) or the rest day marked done.
-// The evening holds are still part of the day but no longer count toward the streak
-// (until Nov 10 they did). A workout ended early, a skipped day, or a missing part breaks it.
-// Today doesn't break it until the day is over.
+// James's rule (Nov 10, 2026; walking days changed Nov 14):
+//   - a workout day is kept when the warm-up and a full workout (every move done) are both done;
+//   - a walking (rest) day is kept when it's marked done. No warm-up needed.
+// Stretching doesn't count toward the streak: not the evening holds (since Nov 10),
+// and not the wake-up routine (since Nov 14). A workout ended early, a skipped day,
+// or a missing part breaks it. Today doesn't break it until the day is over.
 import type { SessionLog } from './engine';
 
 /** The day's warm-up and evening parts (see Daily in lib/db.ts). */
@@ -18,6 +18,8 @@ export interface DayExtras {
 type Log = Pick<SessionLog, 'date' | 'status'> & { items?: { plan: { section: string } }[] };
 
 export interface DayParts {
+  /** A walking (rest) day: only the walk counts. */
+  rest: boolean;
   warmup: boolean;
   main: boolean;
   evening: boolean;
@@ -34,19 +36,23 @@ export interface Streak {
 
 export const keeps = (s: Pick<SessionLog, 'status'>) => s.status === 'done' || s.status === 'rest';
 
-export function dayParts(logs: Log[], extras: DayExtras | undefined): DayParts {
+/** `restDay`: what today's plan is, until something is logged (the plan moves on once a day is done). */
+export function dayParts(logs: Log[], extras: DayExtras | undefined, restDay = false): DayParts {
   // Before Nov 7, 2026 the warm-up was inside the workout, so a full workout then included it.
   const oldWarmup = logs.some((l) => l.status === 'done' && l.items?.some((i) => i.plan.section === 'warmup'));
   return {
-    warmup: !!(extras?.warmup || extras?.morning) || oldWarmup,
+    rest: logs.length ? logs.some((l) => l.status === 'rest') : restDay,
+    warmup: !!extras?.warmup || oldWarmup,
     main: logs.some(keeps),
     evening: !!extras?.evening,
   };
 }
 
-/** How many of the day's streak parts (warm-up, workout) are done: 0, 1 or 2. */
-export const streakPartsDone = (p: DayParts) => Number(p.warmup) + Number(p.main);
-export const STREAK_PARTS = 2;
+/** The parts that count toward the streak: warm-up and workout, or just the walk. */
+export const streakParts = (p: DayParts) => (p.rest ? 1 : 2);
+/** How many of them are done. */
+export const streakPartsDone = (p: DayParts) => (p.rest ? Number(p.main) : Number(p.warmup) + Number(p.main));
+export const dayKept = (p: DayParts) => streakPartsDone(p) === streakParts(p);
 
 /** James's own correction (Nov 10): "as of `through`, I'd kept `count` days in a row".
  *  Days the app didn't see (or saw wrongly) before then don't matter. */
@@ -67,7 +73,13 @@ export function addDays(date: string, n: number): string {
   return `${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}`;
 }
 
-export function streak(sessions: Log[], daily: Record<string, DayExtras>, today: string, fix?: StreakFix | null): Streak {
+export function streak(
+  sessions: Log[],
+  daily: Record<string, DayExtras>,
+  today: string,
+  fix?: StreakFix | null,
+  todayRest = false,
+): Streak {
   const byDate = new Map<string, Log[]>();
   for (const s of sessions) {
     const list = byDate.get(s.date);
@@ -75,7 +87,7 @@ export function streak(sessions: Log[], daily: Record<string, DayExtras>, today:
     else byDate.set(s.date, [s]);
   }
   const kept = new Set<string>();
-  for (const [date, logs] of byDate) if (streakPartsDone(dayParts(logs, daily[date])) === STREAK_PARTS) kept.add(date);
+  for (const [date, logs] of byDate) if (dayKept(dayParts(logs, daily[date]))) kept.add(date);
   if (fix) kept.add(fix.through); // James's count includes that day, so it was kept
 
   const todayKept = kept.has(today);
@@ -98,5 +110,5 @@ export function streak(sessions: Log[], daily: Record<string, DayExtras>, today:
     best = Math.max(best, run);
     prev = d;
   }
-  return { current, best, todayKept, today: dayParts(byDate.get(today) ?? [], daily[today]) };
+  return { current, best, todayKept, today: dayParts(byDate.get(today) ?? [], daily[today], todayRest) };
 }

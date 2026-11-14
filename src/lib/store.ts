@@ -129,7 +129,9 @@ export const logDueCount = computed(() => {
   return [d.weight, d.photos, d.waist, checkinDue.value].filter(Boolean).length;
 });
 
-export const currentStreak = computed(() => streak(sessions.value, daily.value, todayStr.value, streakFix.value));
+export const currentStreak = computed(() =>
+  streak(sessions.value, daily.value, todayStr.value, streakFix.value, today.value.day === 'REST'),
+);
 
 export const isUnlocked = (id: string) =>
   !!data.moveById.get(id)?.unlocked || unlocked.value.includes(id);

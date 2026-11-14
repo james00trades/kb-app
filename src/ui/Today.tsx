@@ -1,6 +1,7 @@
 import type { ComponentChildren } from 'preact';
 import { useState } from 'preact/hooks';
 import { isItemComplete, type PlannedSession, type RoutinePlan } from '../engine/engine';
+import { dayKept } from '../engine/streak';
 import {
   backOneDay, backupDue, bodyDue, bodySheet, currentStreak, data, draft, meta, openDay, passToday, setPart, startWorkout, tab, today,
   week, workoutOpen, type DayPlan,
@@ -98,13 +99,13 @@ function Home() {
   );
 }
 
-const partLabels = (s: PlannedSession) =>
-  s.day === 'REST' ? ['Wake-up', 'Walk', 'Evening holds'] : ['Warm-up', 'Workout', 'Evening holds'];
+// Walking days have no warm-up (James, Nov 14).
+const partLabels = (s: PlannedSession) => (s.day === 'REST' ? ['Walk', 'Evening holds'] : ['Warm-up', 'Workout', 'Evening holds']);
 
 function TodayRow({ day }: { day: DayPlan }) {
   const s = day.session;
   const p = currentStreak.value.today;
-  const status = [p.warmup, p.main, p.evening];
+  const status = s.day === 'REST' ? [p.main, p.evening] : [p.warmup, p.main, p.evening];
   const all = status.every(Boolean);
   return (
     <div class="day-row up-next">
@@ -202,7 +203,7 @@ function DayScreen({ day, index }: { day: DayPlan; index: number }) {
   const s = day.session;
   const rest = s.day === 'REST';
   const live = index === 0; // only today can be started; other days are a look ahead
-  const p = live ? currentStreak.value.today : { warmup: false, main: false, evening: false };
+  const p = live ? currentStreak.value.today : { rest, warmup: false, main: false, evening: false };
   return (
     <div class="screen">
       <header class="workout-head">
@@ -221,13 +222,13 @@ function DayScreen({ day, index }: { day: DayPlan; index: number }) {
       {!live && <div class="note">A look ahead. You can start these on {longDate(day.date)}.</div>}
 
       {s.warmup && (
-        <RoutinePart n={1} r={s.warmup} kind={rest ? 'morning' : 'warmup'} done={p.warmup} live={live} />
+        <RoutinePart n={1} r={s.warmup} kind="warmup" done={p.warmup} live={live} />
       )}
-      {rest ? <RestPart n={2} day={day} live={live} /> : <WorkoutPart n={2} day={day} live={live} />}
-      {s.evening && <RoutinePart n={3} r={s.evening} kind="evening" done={p.evening} live={live} />}
+      {rest ? <RestPart n={1} day={day} live={live} /> : <WorkoutPart n={2} day={day} live={live} />}
+      {s.evening && <RoutinePart n={rest ? 2 : 3} r={s.evening} kind="evening" done={p.evening} live={live} />}
 
-      {live && p.warmup && p.main && (
-        <div class="note good">{rest ? 'Wake-up and walk' : 'Warm-up and workout'} done. Today counts toward your streak.</div>
+      {live && dayKept(p) && (
+        <div class="note good">{rest ? 'Walk day' : 'Warm-up and workout'} done. Today counts toward your streak.</div>
       )}
 
       {!rest && s.finalWeekOfPhase && s.checks && (

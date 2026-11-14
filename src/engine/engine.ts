@@ -330,7 +330,8 @@ export function planSession(data: AppData, state: EngineState): PlannedSession {
       if (p) items.push(p);
     }
   };
-  // A day has three parts (James, Nov 7, 2026): warm-up, workout, evening holds.
+  // A workout day has three parts (James, Nov 7, 2026): warm-up, workout, evening holds.
+  // A walking day has two: the walk and the evening holds. No warm-up needed (James, Nov 14).
   let warmup: RoutinePlan | undefined;
   if (day !== 'REST') {
     // Guided warm-up timers are their own part, not workout moves.
@@ -347,8 +348,6 @@ export function planSession(data: AppData, state: EngineState): PlannedSession {
     add(ctx.phase.cooldown, 'cooldown');
   } else {
     add(d.items ?? [], 'main');
-    const m = ctx.phase.morning;
-    if (m) warmup = routineOf(m.title, m.stations, m.transition);
   }
   const ev = ctx.phase.evening;
   return {

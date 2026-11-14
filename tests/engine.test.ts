@@ -63,7 +63,7 @@ describe('Month 1 recipes', () => {
     expect(s.items.filter((i) => i.section === 'cooldown')[0].breath).toBeDefined();
   });
 
-  it('every day has three parts: warm-up, workout, evening holds (James, Nov 7)', () => {
+  it('every workout day has three parts: warm-up, workout, evening holds (James, Nov 7)', () => {
     for (const day of ['A', 'B', 'C'] as const) {
       for (const week of [1, 4]) {
         const s = planSession(data, at(week, day));
@@ -87,12 +87,12 @@ describe('Month 1 recipes', () => {
     }
   });
 
-  it('a rest day has the wake-up routine on its own, then the evening holds', () => {
-    const s = planSession(data, at(1, 'REST'));
-    expect(s.warmup!.title).toBe('Morning wake-up');
-    expect(s.warmup!.stations).toHaveLength(11);
-    expect(s.warmup!.seconds).toBe(300);
-    expect(s.evening).toBeDefined();
+  it('a walking day has no warm-up: just the walk, then the evening holds (James, Nov 14)', () => {
+    for (const week of [1, 4]) {
+      const s = planSession(data, at(week, 'REST'));
+      expect(s.warmup).toBeUndefined();
+      expect(s.evening).toBeDefined();
+    }
   });
 
   it('the breathing stays at the end of the workout', () => {
