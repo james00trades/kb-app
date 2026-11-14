@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { loadData } from '../src/engine/data';
 import {
-  advance, back, completeSetAt, finishSession, initialState, kbReps, passDay, planSession, restAfter, restKey, setChoice, startDraft,
+  advance, back, completeSetAt, finishSession, initialState, kbReps, passDay, planSession, restAfter, restKey, setChoice, startDraft, withLatestEvening,
   type EngineState, type PlannedSession, type SessionDraft,
 } from '../src/engine/engine';
 
@@ -100,6 +100,17 @@ describe('Month 1 recipes', () => {
       expect(s.warmup).toBeUndefined();
       expect(s.evening).toBeDefined();
     }
+  });
+
+  it('a day already logged shows the latest evening holds, not the ones saved with it (James, Nov 14)', () => {
+    const now = planSession(data, at(2, 'B'));
+    const oldHolds = { ...now.evening!, stations: now.evening!.stations.slice(0, 11).map((st) => ({ ...st, seconds: 120 })), seconds: 1420 };
+    const saved: PlannedSession = { ...now, evening: oldHolds, items: now.items.slice(0, 1) };
+    const shown = withLatestEvening(plan, saved);
+    expect(shown.evening).toEqual(now.evening);
+    expect(shown.evening!.seconds).toBe(13 * 60 + 12 * 10);
+    expect(shown.items).toBe(saved.items); // the workout itself stays as saved
+    expect(withLatestEvening(plan, { ...saved, phaseId: 'gone' }).evening).toBe(oldHolds); // unknown month: keep it
   });
 
   it('the breathing stays at the end of the workout', () => {

@@ -2,7 +2,7 @@
 import { computed, signal } from '@preact/signals';
 import { loadData, type AppData } from '../engine/data';
 import {
-  back, finishSession, initialState, localDate, passDay, planSession, startDraft, upcoming,
+  back, finishSession, initialState, localDate, passDay, planSession, startDraft, upcoming, withLatestEvening,
   type EngineState, type PlannedSession, type SessionDraft, type SessionLog,
 } from '../engine/engine';
 import { addDays, seededFix, streak, type StreakFix } from '../engine/streak';
@@ -102,7 +102,7 @@ export interface DayPlan {
  * next session falls on tomorrow). */
 export const week = computed<DayPlan[]>(() => {
   const log = sessions.value.find((s) => s.date === todayStr.value && s.status !== 'skipped');
-  const days: DayPlan[] = log ? [{ date: todayStr.value, session: log.session, log }] : [];
+  const days: DayPlan[] = log ? [{ date: todayStr.value, session: withLatestEvening(data.plan, log.session), log }] : [];
   for (const session of upcoming(planData(), engine.value, 7 - days.length)) {
     days.push({ date: addDays(todayStr.value, days.length), session });
   }

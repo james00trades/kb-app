@@ -349,7 +349,6 @@ export function planSession(data: AppData, state: EngineState): PlannedSession {
   } else {
     add(d.items ?? [], 'main');
   }
-  const ev = ctx.phase.evening;
   return {
     day,
     title: d.title,
@@ -368,8 +367,20 @@ export function planSession(data: AppData, state: EngineState): PlannedSession {
     checks: ctx.phase.checks,
     items,
     warmup,
-    evening: ev && routineOf(ev.title, ev.stations, ev.transition),
+    evening: eveningOf(ctx.phase),
   };
+}
+
+function eveningOf(phase: Phase): RoutinePlan | undefined {
+  const ev = phase.evening;
+  return ev && routineOf(ev.title, ev.stations, ev.transition);
+}
+
+/** A logged day keeps the plan from when it was saved, but its evening holds follow the
+ * latest plan, so a change shows the same day (James, Nov 14). */
+export function withLatestEvening(plan: PlanFile, session: PlannedSession): PlannedSession {
+  const phase = plan.phases.find((p) => p.id === session.phaseId);
+  return phase ? { ...session, evening: eveningOf(phase) } : session;
 }
 
 /** The next n sessions in rotation order, starting with the current one. */
