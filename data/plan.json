@@ -44,7 +44,7 @@
         "A": {
           "title": "Hinge and press",
           "items": [
-            { "id": "a-hinge-drill", "move": "hip-hinge-drill", "kind": "reps", "sets": 2, "reps": 10, "weeks": [1, 2], "notes": "No bell" },
+            { "id": "a-hinge-drill", "move": "hip-hinge-drill", "kind": "reps", "sets": 2, "reps": 10, "weeks": [1, 2], "bell": 45 },
             { "id": "a-deadlift", "move": "deadlift", "kind": "reps", "sets": 3, "reps": [8, 10], "bell": 45 },
             { "id": "a-swing", "move": "hike-pass", "kind": "reps", "sets": 5, "reps": 5, "bell": 35, "weeks": [2, 4],
               "notes": "Swing path",
@@ -113,8 +113,8 @@
           { "label": "Frog pose", "seconds": 60, "move": "frog-pose" },
           { "label": "Cobra", "seconds": 60, "move": "cobra" },
           { "label": "Straddle", "seconds": 60, "move": "straddle" },
-          { "label": "Seated spinal twist, turn left", "seconds": 60, "move": "seated-spinal-twist" },
-          { "label": "Seated spinal twist, turn right", "seconds": 60, "move": "seated-spinal-twist" },
+          { "label": "Lying spinal twist, knee to the left", "seconds": 60, "move": "lying-spinal-twist" },
+          { "label": "Lying spinal twist, knee to the right", "seconds": 60, "move": "lying-spinal-twist" },
           { "label": "Bridge (regressed)", "seconds": 60, "move": "bridge-regressed" }
         ]
       },

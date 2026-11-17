@@ -57,6 +57,8 @@ describe('Month 1 recipes', () => {
     const s = planSession(data, at(1, 'A'));
     expect(s.title).toBe('Hinge and press');
     expect(item(s, 'a-hinge-drill')!.stay.sets).toBe(2);
+    expect(item(s, 'a-hinge-drill')!.stay).toMatchObject({ bell: 45, planBell: 45, target: 10 }); // James does it with the 45 (Nov 16)
+    expect(item(s, 'a-hinge-drill')!.stay.notes).toBeUndefined();
     expect(item(s, 'a-deadlift')!.stay).toMatchObject({ sets: 2, target: 8, bell: 45, range: [8, 10] });
     expect(item(s, 'a-swing')).toBeUndefined();
     expect(s.items.filter((i) => i.section === 'warmup')).toHaveLength(0); // the warm-up is its own part
@@ -81,12 +83,12 @@ describe('Month 1 recipes', () => {
         expect(s.warmup!.seconds).toBe(420); // 7 min: 5 min wake-up + 4 × 30 s
         expect(s.items[0].section).toBe('main'); // the workout starts with the main work
         expect(s.items.some((i) => i.kind === 'routine')).toBe(false);
-        // James's 9 evening stretches (Nov 9) + a deep quad stretch (Nov 14); pigeon, couch and the seated twist on each side
+        // James's 9 evening stretches (Nov 9) + a deep quad stretch (Nov 14); pigeon, couch and the lying twist on each side
         expect(s.evening!.stations.map((st) => st.label)).toEqual([
           'Reverse prayer pose', 'Deep twist squats', 'Downward dog pulses',
           'Pigeon pose, left leg forward', 'Pigeon pose, right leg forward',
           'Couch stretch, left leg back', 'Couch stretch, right leg back', 'Frog pose', 'Cobra', 'Straddle',
-          'Seated spinal twist, turn left', 'Seated spinal twist, turn right', 'Bridge (regressed)',
+          'Lying spinal twist, knee to the left', 'Lying spinal twist, knee to the right', 'Bridge (regressed)', // lying, not seated (Nov 16)
         ]);
         expect(s.evening!.stations.every((st) => st.seconds === 60)).toBe(true); // 60 s holds (James, Nov 14)
         expect(s.evening!.seconds).toBe(13 * 60 + 12 * 10);

@@ -223,6 +223,14 @@
     "file": "jumping-twists.wav",
     "dur": 1.033
   },
+  "knee to the left": {
+    "file": "knee-to-the-left.wav",
+    "dur": 0.859
+  },
+  "knee to the right": {
+    "file": "knee-to-the-right.wav",
+    "dur": 0.709
+  },
   "left leg back": {
     "file": "left-leg-back.wav",
     "dur": 0.863
@@ -238,6 +246,10 @@
   "lunge reaches": {
     "file": "lunge-reaches.wav",
     "dur": 0.855
+  },
+  "lying spinal twist": {
+    "file": "lying-spinal-twist.wav",
+    "dur": 1.235
   },
   "minute": {
     "file": "minute.wav",
@@ -295,10 +307,6 @@
     "file": "round.wav",
     "dur": 0.45
   },
-  "seated spinal twist": {
-    "file": "seated-spinal-twist.wav",
-    "dur": 1.243
-  },
   "side bends": {
     "file": "side-bends.wav",
     "dur": 0.842
@@ -310,13 +318,5 @@
   "switch sides": {
     "file": "switch-sides.wav",
     "dur": 0.885
-  },
-  "turn left": {
-    "file": "turn-left.wav",
-    "dur": 0.674
-  },
-  "turn right": {
-    "file": "turn-right.wav",
-    "dur": 0.541
   }
 }

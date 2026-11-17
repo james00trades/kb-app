@@ -42,7 +42,7 @@ describe('data files', () => {
     const added = ['tactical-crossover', 'front-to-back-raise', 'gravedigger', 'uppercut', 'curl-to-press', 'woodchop', 'clean-to-squat',
       'side-to-front-raise', 'pullover-to-side-pull', 'hammer-curl', 'around-the-world-to-curl', 'curl-to-pullover', 'hand-to-hand-curl',
       'over-shoulder-pull', 'supported-row'];
-    expect(movements).toHaveLength(109); // 107 + the standing push-out and the couch stretch (Nov 14)
+    expect(movements).toHaveLength(110); // 107 + standing push-out, couch stretch (Nov 14), lying spinal twist (Nov 16)
     for (const id of added) expect(moveById.get(id)?.cues?.length, id).toBeGreaterThan(0);
     // Shoulder hold: the ⚠ moves from his notes
     expect(movements.filter((m) => m.shoulder).map((m) => m.id).sort()).toEqual(

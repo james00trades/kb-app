@@ -39,6 +39,8 @@
       "cues": ["Hands behind your back, palms together, fingers pointing up", "Roll the shoulders back and open the chest", "Palms won't meet? Hold opposite elbows instead", "Ease the hands lower if the wrists complain"] },
     { "id": "seated-spinal-twist", "name": "Seated spinal twist", "tier": 0, "pattern": "mobility", "bell": false, "unlocked": true, "firstClips": true,
       "cues": ["Sit tall; plant one foot outside the other knee", "Turn toward the raised knee; hook the opposite elbow outside it", "Back hand on the floor behind you", "Breathe in to sit taller, breathe out to twist deeper"] },
+    { "id": "lying-spinal-twist", "name": "Lying spinal twist", "tier": 0, "pattern": "mobility", "bell": false, "unlocked": true,
+      "cues": ["Lie on your back, arms out wide in a T", "Hug one knee to your chest; the other leg stays long", "Let the bent knee drop across your body to the side the timer says", "Both shoulders stay heavy on the floor; look the other way if your neck likes it", "Knee doesn't reach the floor? Rest it on a cushion", "Don't push the knee down; breathe out and let it sink"] },
     { "id": "morning-routine", "name": "Morning routine (10 moves)", "tier": 0, "pattern": "mobility", "bell": false, "unlocked": true,
       "cues": ["Jumping twists, arm circles, arm swings, elbow throws, ragdoll twists", "Body waves, side bends, lunge reaches, monk squats, Cossack squats", "30 s each, done continuously"] },
     { "id": "air-squat", "name": "Air squat", "tier": 0, "pattern": "squat", "bell": false, "unlocked": true,
