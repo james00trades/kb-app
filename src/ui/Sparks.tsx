@@ -21,6 +21,11 @@ export const SPARKS: Record<number, SparkSet> = {
   12: { kind: 'ember', count: 12, dur: [0.75, 1.15], reach: [26, 38], spread: 15 }, // campfire at its most intense
   14: { kind: 'weld', count: 16, dur: [0.35, 0.7], reach: [18, 34], spread: 80 }, // welding: a hard, fast spray
 };
+SPARKS[16] = SPARKS[14]; // 16+: the same welding sparks, with a supernova behind the flame
+
+/** From 16 days, a supernova behind the welding flame (James, Nov 19): a glow, turning light rays,
+ *  shockwave rings and a flashing core. Pure CSS (.nova in styles.css). */
+const NOVA_FROM = 16;
 
 /** Repeatable "random" in [0, 1), so the sparks look scattered but don't jump on every redraw. */
 const rand = (i: number, salt: number) => {
@@ -55,10 +60,21 @@ export function Sparks({ heat }: { heat: number }) {
   const set = SPARKS[heat];
   if (!set) return null;
   return (
-    <span class={`sparks ${set.kind}`} aria-hidden="true">
-      {Array.from({ length: set.count }, (_, i) => (
-        <i key={i} style={sparkVars(set, i)} />
-      ))}
-    </span>
+    <>
+      {heat >= NOVA_FROM && (
+        <span class="nova" aria-hidden="true">
+          <i class="nova-haze" />
+          <i class="nova-rays" />
+          <i class="nova-ring" />
+          <i class="nova-ring late" />
+          <i class="nova-core" />
+        </span>
+      )}
+      <span class={`sparks ${set.kind}`} aria-hidden="true">
+        {Array.from({ length: set.count }, (_, i) => (
+          <i key={i} style={sparkVars(set, i)} />
+        ))}
+      </span>
+    </>
   );
 }

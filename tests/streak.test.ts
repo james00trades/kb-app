@@ -4,9 +4,9 @@ import { initialState, upcoming, type SessionStatus } from '../src/engine/engine
 import { addDays, seededFix, streak, streakHeat, streakParts, streakPartsDone, type DayExtras } from '../src/engine/streak';
 
 describe('the flame heats up with the streak (James, Nov 19)', () => {
-  it('steps at 2, 4, 6, 8, 10, 12 and 14 days, and stays at the top after 14', () => {
+  it('steps at 2, 4, 6, 8, 10, 12, 14 and 16 days, and stays at the top after 16', () => {
     const at = (days: number[]) => days.map(streakHeat);
-    expect(at([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 40])).toEqual([0, 0, 2, 2, 4, 4, 6, 6, 8, 8, 10, 10, 12, 12, 14, 14, 14]);
+    expect(at([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 40])).toEqual([0, 0, 2, 2, 4, 4, 6, 6, 8, 8, 10, 10, 12, 12, 14, 14, 16, 16, 16]);
   });
 });
 
@@ -171,7 +171,8 @@ describe('next 7 days', () => {
 describe('sparks off the flame (James, Nov 19)', () => {
   it('none below 6 days; campfire embers that grow in number and speed up to 12; welding sparks at 14', async () => {
     const { SPARKS, sparkVars } = await import('../src/ui/Sparks');
-    expect(Object.keys(SPARKS).map(Number)).toEqual([6, 8, 10, 12, 14]);
+    expect(Object.keys(SPARKS).map(Number)).toEqual([6, 8, 10, 12, 14, 16]);
+    expect(SPARKS[16]).toEqual(SPARKS[14]); // 16 keeps the welding sparks and adds the supernova
     expect([6, 8, 10, 12].map((h) => SPARKS[h].kind)).toEqual(['ember', 'ember', 'ember', 'ember']);
     expect(SPARKS[14].kind).toBe('weld');
     const counts = [6, 8, 10, 12, 14].map((h) => SPARKS[h].count);

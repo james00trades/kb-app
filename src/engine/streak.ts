@@ -56,9 +56,10 @@ export const dayKept = (p: DayParts) => streakPartsDone(p) === streakParts(p);
 
 /** The flame heats up with the streak (James, Nov 19): 2 dim red, 4 brighter red, 6 orange with a
  *  slight flicker, 8 orange more intense, 10 yellow more intense, 12 sky blue with more intense
- *  campfire sparks, 14+ white-hot blue with welding sparks. Returns the step reached (0 below 2 days);
- *  the look for each step is in styles.css (.heat-N), the sparks in ui/Sparks.tsx. */
-export const HEAT_STEPS = [2, 4, 6, 8, 10, 12, 14] as const;
+ *  campfire sparks, 14 white-hot blue with welding sparks, 16+ the same with a supernova behind it.
+ *  Returns the step reached (0 below 2 days); the look for each step is in styles.css (.heat-N), the
+ *  sparks and the supernova in ui/Sparks.tsx. */
+export const HEAT_STEPS = [2, 4, 6, 8, 10, 12, 14, 16] as const;
 export function streakHeat(days: number): number {
   let heat = 0;
   for (const step of HEAT_STEPS) if (days >= step) heat = step;

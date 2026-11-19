@@ -163,19 +163,124 @@ p {
 .streak .flame.heat-12 svg {
   animation: flame-flicker 0.6s ease-in-out infinite, glow-sky 0.6s ease-in-out infinite;
 }
-.streak .flame.heat-14 {
+.streak .flame.heat-14,
+.streak .flame.heat-16 {
   color: #e0f2fe;
 }
-.streak .flame.heat-14 svg {
+.streak .flame.heat-14 svg,
+.streak .flame.heat-16 svg {
   animation: flame-roar 0.5s ease-in-out infinite, glow-white-hot 0.7s ease-in-out infinite;
 }
-.streak .flame.heat-14::before {
+.streak .flame.heat-14::before,
+.streak .flame.heat-16::before {
   content: '';
   position: absolute;
   inset: -9px;
   border-radius: 50%;
   background: radial-gradient(circle, rgba(125, 211, 252, 0.6), rgba(56, 189, 248, 0.15) 50%, transparent 70%);
   animation: weld-flash 0.9s linear infinite;
+}
+
+/* 16+ days: a supernova behind the welding flame (Sparks.tsx). z-index -1 puts it under the flame and
+   the streak text but over the bar's own background; the bar clips it at its bottom edge. */
+.topbar {
+  overflow: hidden;
+}
+.nova {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 120px;
+  height: 120px;
+  margin: -60px 0 0 -60px;
+  z-index: -1;
+  pointer-events: none;
+}
+.nova i {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+}
+.nova-haze {
+  background: radial-gradient(circle, rgba(167, 139, 250, 0.5) 0%, rgba(236, 72, 153, 0.25) 32%, rgba(56, 189, 248, 0.12) 52%, transparent 70%);
+  animation: nova-breathe 3s ease-in-out infinite;
+}
+.nova-rays {
+  background: repeating-conic-gradient(from 0deg, rgba(224, 242, 254, 0.6) 0deg 1.5deg, transparent 1.5deg 12deg);
+  -webkit-mask-image: radial-gradient(circle, #000 12%, transparent 66%);
+  mask-image: radial-gradient(circle, #000 12%, transparent 66%);
+  animation: nova-spin 10s linear infinite, nova-pulse 1.8s ease-in-out infinite;
+}
+.nova .nova-ring {
+  inset: 38%;
+  border: 2px solid rgba(186, 230, 253, 0.95);
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.9), inset 0 0 6px rgba(167, 139, 250, 0.8);
+  animation: nova-shock 1.8s cubic-bezier(0.15, 0.6, 0.3, 1) infinite;
+}
+.nova .nova-ring.late {
+  border-color: rgba(244, 114, 182, 0.85);
+  box-shadow: 0 0 8px rgba(236, 72, 153, 0.8), inset 0 0 6px rgba(56, 189, 248, 0.7);
+  animation-delay: -0.9s;
+}
+.nova .nova-core {
+  inset: 32%;
+  background: radial-gradient(circle, #fff 0%, rgba(224, 242, 254, 0.9) 25%, rgba(56, 189, 248, 0.5) 50%, transparent 72%);
+  animation: nova-core 1.8s ease-out infinite;
+}
+@keyframes nova-shock {
+  0% {
+    scale: 0.3;
+    opacity: 1;
+  }
+  80% {
+    opacity: 0.25;
+  }
+  100% {
+    scale: 3.4;
+    opacity: 0;
+  }
+}
+@keyframes nova-core {
+  0%,
+  100% {
+    scale: 0.6;
+    opacity: 0.7;
+  }
+  8% {
+    scale: 1.6;
+    opacity: 1;
+  }
+  40% {
+    scale: 1;
+    opacity: 0.85;
+  }
+}
+@keyframes nova-breathe {
+  0%,
+  100% {
+    scale: 0.9;
+    opacity: 0.7;
+  }
+  50% {
+    scale: 1.15;
+    opacity: 1;
+  }
+}
+@keyframes nova-spin {
+  to {
+    rotate: 360deg;
+  }
+}
+@keyframes nova-pulse {
+  0%,
+  100% {
+    scale: 0.85;
+    opacity: 0.55;
+  }
+  8% {
+    scale: 1.2;
+    opacity: 1;
+  }
 }
 
 /* Sparks (Sparks.tsx): campfire embers drifting up from 6 days, more and faster at 8, 10 and 12,
@@ -370,16 +475,20 @@ p {
 }
 @media (prefers-reduced-motion: reduce) {
   .streak .flame svg,
-  .streak .flame.heat-14::before {
+  .streak .flame.heat-14::before,
+  .streak .flame.heat-16::before,
+  .nova i {
     animation: none;
   }
-  .sparks {
+  .sparks,
+  .nova .nova-ring {
     display: none;
   }
   .streak .flame.heat-8 svg,
   .streak .flame.heat-10 svg,
   .streak .flame.heat-12 svg,
-  .streak .flame.heat-14 svg {
+  .streak .flame.heat-14 svg,
+  .streak .flame.heat-16 svg {
     filter: drop-shadow(0 0 6px currentColor);
   }
 }
