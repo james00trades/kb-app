@@ -417,6 +417,8 @@ export interface SetLog {
   actual: number;
   done: boolean;
   bell: Bell | null;
+  /** When the set was logged (Nov 19, 2026). Missing before. */
+  at?: number;
 }
 
 export interface DraftItem {
@@ -425,6 +427,10 @@ export interface DraftItem {
   bell: Bell | null;
   sets: SetLog[];
   skipped?: boolean;
+  /** Each move is timed (James, Nov 19: "time them and keep track"): its clock starts when it becomes
+   *  the move being done with no rest running, and stops when its last set is logged. */
+  startedAt?: number;
+  endedAt?: number;
 }
 
 export interface SessionDraft {
@@ -544,6 +550,66 @@ export function isItemComplete(it: DraftItem): boolean {
   if (it.skipped) return true;
   const total = chosen(it).total;
   return total !== undefined ? repsDone(it.sets) >= total : it.sets.every((s) => s.done);
+}
+
+// ---------- Move times (Nov 19) ----------
+
+/** Moves that get a clock: counted and timed sets (not the breathing or guided routines). */
+export const isTimedMove = (it: DraftItem) => it.plan.kind === 'reps' || it.plan.kind === 'time';
+
+/** After a change to a move: newly logged sets get `now`; finishing the move stops its clock; undoing
+ *  a set reopens it. A move logged without its clock running starts it at that first set. */
+export function stampTimes(after: DraftItem, now: number): DraftItem {
+  const sets = after.sets.map((s) => (s.done && s.at === undefined ? { ...s, at: now } : s));
+  const next = { ...after, sets };
+  const anyDone = sets.some((s) => s.done);
+  const finished = !after.skipped && anyDone && isItemComplete(next);
+  return {
+    ...next,
+    startedAt: after.startedAt ?? (anyDone ? now : undefined),
+    endedAt: finished ? after.endedAt ?? now : undefined,
+  };
+}
+
+/** How long the move took, in ms (its clock, rests between its sets included). */
+export function moveTime(it: Pick<DraftItem, 'startedAt' | 'endedAt'>): number | undefined {
+  if (it.startedAt === undefined || it.endedAt === undefined || it.endedAt < it.startedAt) return undefined;
+  return it.endedAt - it.startedAt;
+}
+
+/** The work a time was for, so times are only compared like for like: "24 reps @45", "3 × 30 s @45". */
+export function workOf(it: DraftItem): string {
+  const p = chosen(it);
+  const side = it.plan.perSide ? ` ${it.plan.sideLabel ?? 'per side'}` : '';
+  const amount = p.total !== undefined ? `${p.total} reps${side}` : it.plan.kind === 'time' ? `${p.sets} × ${p.target} s${side}` : `${p.sets} × ${p.target}${side}`;
+  const bell = it.bell === null ? '' : it.bell === 'BW' ? ' bodyweight' : ` @${it.bell}`;
+  return amount + bell;
+}
+
+export interface MoveTime {
+  date: string;
+  startedAt: number;
+  ms: number;
+  work: string;
+}
+
+/** Every saved time for a move, newest first. */
+export function timesFor(sessions: Pick<SessionLog, 'date' | 'startedAt' | 'items'>[], move: string): MoveTime[] {
+  const out: MoveTime[] = [];
+  for (const s of sessions) {
+    for (const it of s.items) {
+      const ms = moveTime(it);
+      if (ms !== undefined && chosen(it).move === move) out.push({ date: s.date, startedAt: s.startedAt, ms, work: workOf(it) });
+    }
+  }
+  return out.sort((a, b) => b.startedAt - a.startedAt);
+}
+
+/** Last and best time for the same work (bell and total) as this move today. */
+export function lastAndBest(times: MoveTime[], work: string): { last?: MoveTime; best?: MoveTime; lastAny?: MoveTime } {
+  const same = times.filter((t) => t.work === work);
+  const best = same.reduce<MoveTime | undefined>((b, t) => (!b || t.ms < b.ms ? t : b), undefined);
+  return { last: same[0], best, lastAny: times[0] };
 }
 
 export function kbReps(items: DraftItem[]): number {

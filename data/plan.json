@@ -84,14 +84,16 @@
           "items": [
             { "id": "c-get-up", "move": "get-up-pieces", "kind": "reps", "sets": 3, "reps": 1, "perSide": true, "bell": 18,
               "notes": "One rep per side each set" },
-            { "id": "c-arm-bar", "move": "arm-bar", "kind": "time", "sets": 2, "seconds": 30, "perSide": true, "bell": 18 },
+            { "id": "c-arm-bar", "move": "arm-bar", "kind": "reps", "sets": 2, "reps": 5, "perSide": true, "bell": 18, "progressKey": "arm-bar-reps",
+              "notes": "Each rep: roll onto your side, pause, roll back" },
             { "id": "c-sldl", "move": "single-leg-deadlift", "kind": "reps", "sets": 3, "reps": 5, "perSide": true, "bell": "BW",
               "ladder": [{ "bell": "BW" }, { "bell": 18 }] },
             { "id": "c-cossack", "move": "cossack-squat", "kind": "reps", "sets": 2, "reps": 5, "perSide": true,
               "byWeek": { "3": { "reps": [5, 7] } } },
             { "id": "c-pullover", "move": "pullover", "kind": "reps", "sets": 2, "reps": 8, "bell": 18,
               "byWeek": { "3": { "reps": [8, 10] } } },
-            { "id": "c-mini-flow", "move": "mini-flow", "kind": "time", "sets": 3, "seconds": 60, "bell": 18, "notes": "Slow" }
+            { "id": "c-mini-flow", "move": "mini-flow", "kind": "reps", "sets": 3, "reps": 5, "bell": 18, "progressKey": "mini-flow-reps",
+              "notes": "Slow. One rep: halo, goblet squat, halo" }
           ]
         },
         "REST": {

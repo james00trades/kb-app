@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { loadData } from '../src/engine/data';
 import {
   advance, back, chosen, completeNext, finishSession, initialState, isItemComplete, kbReps, passDay, planSession, repsDone, restAfter, restKey,
-  setChoice, startDraft, undoSet, withLatestEvening,
+  lastAndBest, moveTime, setChoice, stampTimes, startDraft, timesFor, undoSet, withLatestEvening, workOf,
   type DraftItem, type EngineState, type PlannedSession, type SessionDraft,
 } from '../src/engine/engine';
 
@@ -465,5 +465,77 @@ describe('bells', () => {
     const d = completeAll(startDraft(s, 'x', NOW));
     // swing 5×5 @25 = 25; row 3×8×2 @45 = 48; floor press 3×8×2 = 48; halo 2×5×2 = 20; lunge is BW
     expect(kbReps(d.items)).toBe(25 + 48 + 48 + 20);
+  });
+});
+
+describe('move times (James, Nov 19: "time them and keep track")', () => {
+  const dl = () => startDraft(planSession(data, at(2, 'A')), 'x', NOW).items.find((it) => it.plan.itemId === 'a-deadlift')!; // 24 reps @45
+  const logAt = (it: DraftItem, n: number, t: number) =>
+    stampTimes(completeNext({ ...it, sets: it.sets.map((s) => (s.done ? s : { ...s, actual: n })) }), t);
+
+  it('the clock stops when the total is reached, rests included; each set notes when it was logged', () => {
+    let it: DraftItem = { ...dl(), startedAt: NOW };
+    it = logAt(it, 10, NOW + 40_000);
+    expect(it.endedAt).toBeUndefined();
+    expect(moveTime(it)).toBeUndefined();
+    it = logAt(it, 10, NOW + 110_000);
+    it = logAt(it, 4, NOW + 151_000);
+    expect(it.sets.map((s) => s.at)).toEqual([NOW + 40_000, NOW + 110_000, NOW + 151_000]);
+    expect(moveTime(it)).toBe(151_000);
+  });
+
+  it('undoing a set reopens the clock; a move logged without its clock starts at that first set', () => {
+    let it: DraftItem = logAt(logAt(logAt({ ...dl(), startedAt: NOW }, 10, NOW + 1000), 10, NOW + 2000), 4, NOW + 3000);
+    it = stampTimes(undoSet(it, 2), NOW + 4000);
+    expect(it.endedAt).toBeUndefined();
+    expect(it.startedAt).toBe(NOW);
+    const cold = logAt(dl(), 8, NOW + 5000);
+    expect(cold.startedAt).toBe(NOW + 5000);
+  });
+
+  it('skipping a move gives it no time', () => {
+    const it = stampTimes({ ...dl(), startedAt: NOW, skipped: true }, NOW + 9000);
+    expect(moveTime(it)).toBeUndefined();
+  });
+
+  it('keeps every time per move, newest first, and compares only the same work (total and bell)', () => {
+    const day = (date: string, ms: number, bell: 35 | 45 = 45) => {
+      const it = { ...dl(), bell, startedAt: 0, endedAt: ms };
+      return { date, startedAt: new Date(`${date}T07:00:00`).getTime(), items: [it] };
+    };
+    const times = timesFor([day('2026-11-10', 160_000), day('2026-11-14', 140_000), day('2026-11-18', 150_000), day('2026-11-19', 90_000, 35)], 'deadlift');
+    expect(times.map((t) => [t.date, t.ms, t.work])).toEqual([
+      ['2026-11-19', 90_000, '24 reps @35'],
+      ['2026-11-18', 150_000, '24 reps @45'],
+      ['2026-11-14', 140_000, '24 reps @45'],
+      ['2026-11-10', 160_000, '24 reps @45'],
+    ]);
+    const { last, best, lastAny } = lastAndBest(times, '24 reps @45');
+    expect([last!.ms, best!.ms, lastAny!.ms]).toEqual([150_000, 140_000, 90_000]);
+    expect(workOf({ ...draftItem('a-press') })).toBe('15 reps per side @18');
+    expect(workOf(draftItem('a-suitcase-carry'))).toBe('3 × 30 s per side @45');
+  });
+});
+
+describe('counted vs timed (James, Nov 19: "Anything that requires me to move in a rep-like fashion is NOT a timed exercise")', () => {
+  it('in the workouts only carries and hangs are timed; everything that moves is counted', () => {
+    const timed = new Set<string>();
+    for (const week of [1, 2, 3, 4])
+      for (const day of ['A', 'B', 'C'] as const)
+        for (const it of planSession(data, at(week, day)).items) if (it.kind === 'time') timed.add(it.stay.move!);
+    expect([...timed].sort()).toEqual(['dead-hang', 'suitcase-carry']);
+  });
+
+  it('arm bar is 10 per side and the mini-flow 15 in all, on the 18', () => {
+    const c = planSession(data, at(2, 'C'));
+    expect(item(c, 'c-arm-bar')).toMatchObject({ kind: 'reps', perSide: true, stay: { total: 10, bell: 18 } });
+    expect(item(c, 'c-mini-flow')).toMatchObject({ kind: 'reps', perSide: false, stay: { total: 15, bell: 18 } });
+  });
+
+  it('their old timed records (most seconds held) never become a rep count', () => {
+    const st = { ...at(2, 'C'), levels: { 'arm-bar': { amount: 40, bell: 18 as const, sets: 2 }, 'mini-flow': { amount: 70, bell: 18 as const, sets: 3 } } };
+    const c = planSession(data, st);
+    expect(item(c, 'c-arm-bar')!.stay.total).toBe(10);
+    expect(item(c, 'c-mini-flow')!.stay.total).toBe(15);
   });
 });

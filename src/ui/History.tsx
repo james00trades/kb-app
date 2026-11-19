@@ -1,8 +1,8 @@
 import { useState } from 'preact/hooks';
-import { chosen, type SessionLog } from '../engine/engine';
+import { chosen, moveTime, type SessionLog } from '../engine/engine';
 import { copyStatsForClaude, engine, progressView as view, sessions } from '../lib/store';
 import { BodyView } from './Body';
-import { Sheet, bellText, fmtDay, fmtDuration } from './common';
+import { Sheet, bellText, fmtDay, fmtDuration, fmtTime } from './common';
 
 const STATUS_TEXT = { done: 'Done', partial: 'Partial', skipped: 'Skipped', rest: 'Rest day' } as const;
 
@@ -130,6 +130,7 @@ function SessionDetail({ s, onClose }: { s: SessionLog; onClose: () => void }) {
                         (it.bell !== null ? ` · ${bellText(done[done.length - 1].bell ?? it.bell)}` : '')
                       : 'not done'}
                   {it.choice === 'up' && it.plan.up ? ' · moved up' : ''}
+                  {moveTime(it) !== undefined && ` · ${fmtTime(moveTime(it)!)}`}
                 </div>
               </div>
             );

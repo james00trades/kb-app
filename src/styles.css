@@ -1107,6 +1107,27 @@ p {
   align-items: center;
   gap: 8px;
 }
+/* Each move's clock (Nov 19): amber while running, green when the move is done */
+.move-clock {
+  flex: none;
+  font-size: 18px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+.move-clock.waiting {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.move-clock.done,
+.move-time-done {
+  color: var(--good);
+}
+.move-time-done {
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+}
 .item-name {
   font-weight: 650;
   display: inline-flex;
@@ -2331,4 +2352,21 @@ div.stats {
 }
 #checkin-settings {
   scroll-margin-top: calc(var(--safe-t) + var(--topbar-h) + 12px);
+}
+
+/* Your times, in a move's sheet (Nov 19) */
+.times-list {
+  display: grid;
+  gap: 6px;
+  font-size: 15px;
+}
+.times-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: baseline;
+}
+.times-ms {
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
 }

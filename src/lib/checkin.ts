@@ -5,7 +5,7 @@
 // Nothing personal is written in this file (the repo is public); "About you" lives on the phone.
 import { z } from 'zod';
 import { daysBetween, round1, type WeightPoint } from '../engine/body';
-import { chosen, repsDone, type SessionLog } from '../engine/engine';
+import { chosen, moveTime, repsDone, type SessionLog } from '../engine/engine';
 import { addDays } from '../engine/streak';
 import type { BodyEntry, Daily, Pose } from './db';
 
@@ -146,6 +146,11 @@ export interface ReportInput {
 
 const STATUS_WORD = { done: 'done (every move)', partial: 'ended early', skipped: 'skipped', rest: 'rest day' } as const;
 
+/** A move's time (Nov 19): 151000 → "2:31". */
+const clock = (ms: number) => {
+  const sec = Math.round(ms / 1000);
+  return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+};
 const signed = (n: number) => `${n > 0 ? '+' : ''}${n.toFixed(1)}`;
 const avg = (ns: number[]) => ns.reduce((a, b) => a + b, 0) / ns.length;
 const trained = (s: SessionLog) => s.status === 'done' || s.status === 'partial';
@@ -179,7 +184,8 @@ function sessionLine(s: SessionLog, daily?: Daily): string {
       const done = it.sets.filter((x) => x.done);
       const unit = it.plan.kind === 'time' ? 's' : '';
       const m = moveText(it);
-      const up = it.choice === 'up' && it.plan.up ? ' (moved up)' : '';
+      const ms = moveTime(it);
+      const up = (it.choice === 'up' && it.plan.up ? ' (moved up)' : '') + (ms !== undefined ? ` · took ${clock(ms)}` : '');
       const total = chosen(it).total;
       if (total !== undefined) {
         const side = it.plan.perSide ? '/side' : '';

@@ -1,7 +1,8 @@
 import { useState } from 'preact/hooks';
+import { lastAndBest, timesFor } from '../engine/engine';
 import { LEVELS, type Level, type Movement, type Pattern } from '../engine/schema';
-import { data, isUnlocked, moveSheet, unlockMove } from '../lib/store';
-import { Icon, Sheet } from './common';
+import { data, isUnlocked, moveSheet, sessions, unlockMove } from '../lib/store';
+import { Icon, Sheet, fmtDay, fmtTime } from './common';
 
 /** The library is grouped by difficulty, easiest first; each level says roughly when in the plan it comes (James, Nov 18). */
 const LEVEL_NAMES: Record<Level, string> = { beginner: 'Beginner', intermediate: 'Intermediate', advanced: 'Advanced' };
@@ -127,6 +128,7 @@ export function MoveSheet() {
         <p class="muted">Form cues for this move are coming later.</p>
       )}
       <div class="clip-placeholder">Demo clip: coming in version 2</div>
+      <YourTimes move={m.id} />
       {m.prereqs?.length ? (
         <>
           <h3>Before this move</h3>
@@ -164,5 +166,33 @@ export function MoveSheet() {
       )}
       <button class="big-btn" onClick={close}>Close</button>
     </Sheet>
+  );
+}
+
+/** Every time this move was on the clock, newest first; the best for each amount and bell is marked (Nov 19). */
+function YourTimes({ move }: { move: string }) {
+  const times = timesFor(sessions.value, move);
+  if (!times.length) return null;
+  const shown = times.slice(0, 8);
+  return (
+    <>
+      <h3>Your times</h3>
+      <div class="times-list">
+        {shown.map((t) => {
+          const best = lastAndBest(times, t.work).best === t;
+          return (
+            <div key={t.startedAt} class="times-row">
+              <span class="muted">{fmtDay(t.date)}</span>
+              <span>{t.work}</span>
+              <span class={best ? 'good-text times-ms' : 'times-ms'}>
+                {fmtTime(t.ms)}
+                {best && times.filter((x) => x.work === t.work).length > 1 ? ' best' : ''}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+      {times.length > shown.length && <p class="small muted">Showing the last {shown.length} of {times.length}.</p>}
+    </>
   );
 }

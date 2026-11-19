@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { chosen, completeNext, isItemComplete, repsDone, restAfter, restKey, setCap, setChoice, undoSet as undoSetAt, type DraftItem, type SessionDraft } from '../engine/engine';
+import {
+  chosen, completeNext, isItemComplete, isTimedMove, lastAndBest, moveTime, repsDone, restAfter, restKey, setCap, setChoice, stampTimes, timesFor,
+  undoSet as undoSetAt, workOf, type DraftItem, type SessionDraft,
+} from '../engine/engine';
 import type { Bell } from '../engine/schema';
-import { discardWorkout, draft, finishWorkout, moveSheet, setMoveRest, settings, updateDraft, workoutOpen } from '../lib/store';
+import { discardWorkout, draft, finishWorkout, moveSheet, sessions, setMoveRest, settings, updateDraft, workoutOpen } from '../lib/store';
 import { breathSpec, fmtClock, holdSpec, intervalSpec, restSpec, startTimer, stopTimer, timer, type TimerSpec } from '../lib/timer';
-import { Icon, Sheet, Stepper, bellShort, fmtSeconds, prescText, sideText, upText } from './common';
+import { Icon, Sheet, Stepper, bellShort, fmtSeconds, fmtTime, prescText, sideText, upText } from './common';
 
 const SECTION_TITLES = { warmup: 'Warm-up', main: 'Main work', cooldown: 'Breathwork' } as const;
 
@@ -47,13 +50,35 @@ export function Workout() {
     document.querySelector('.item-card.active')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
   }, [active]);
 
+  // Each move's clock (James, Nov 19): it starts when the move is the one open and no rest is running;
+  // a move left before any of it was done starts over the next time.
+  const resting = !!timer.value && timer.value.spec.mode === 'rest' && !timer.value.done;
+  useEffect(() => {
+    const cur = draft.value;
+    if (!cur) return;
+    const now = Date.now();
+    const needs = cur.items.some((it, k) =>
+      k === active
+        ? !resting && isTimedMove(it) && it.startedAt === undefined && !isItemComplete(it)
+        : it.startedAt !== undefined && !it.sets.some((x) => x.done),
+    );
+    if (!needs) return;
+    void updateDraft((dd) => ({
+      ...dd,
+      items: dd.items.map((it, k) => {
+        if (k === active) return !resting && isTimedMove(it) && it.startedAt === undefined && !isItemComplete(it) ? { ...it, startedAt: now } : it;
+        return it.startedAt !== undefined && !it.sets.some((x) => x.done) ? { ...it, startedAt: undefined } : it;
+      }),
+    }));
+  }, [active, resting]);
+
   /** Mark the current set of item i done, then rest and move along. */
   const completeSet = async (i: number) => {
     const before = draft.value;
     if (!before) return;
     const it = before.items[i];
     if (!it.sets.some((x) => !x.done)) return;
-    await patchItem(i, completeNext);
+    await patchItem(i, (x) => stampTimes(completeNext(x), Date.now()));
     const after = draft.value!;
     const itemDone = isItemComplete(after.items[i]);
     const workoutDone = after.items.every(isItemComplete);
@@ -135,6 +160,7 @@ export function Workout() {
 function CollapsedItem({ it, onOpen }: { it: DraftItem; onOpen: () => void }) {
   const p = chosen(it);
   const complete = isItemComplete(it);
+  const took = moveTime(it);
   return (
     <button class={`item-card ${complete ? 'complete' : ''}`} onClick={onOpen}>
       <div class="item-top">
@@ -144,6 +170,8 @@ function CollapsedItem({ it, onOpen }: { it: DraftItem; onOpen: () => void }) {
         <span class="dots">
           {it.skipped ? (
             <span class="muted small">skipped</span>
+          ) : took !== undefined ? (
+            <span class="muted small move-time-done">{fmtTime(took)}</span>
           ) : p.total !== undefined ? (
             <span class="muted small">
               {repsDone(it.sets)}/{p.total}
@@ -172,7 +200,7 @@ function ActiveItem({ it, i, onComplete }: { it: DraftItem; i: number; onComplet
   const setActual = (v: number) =>
     patchItem(i, (x) => ({ ...x, sets: x.sets.map((s, k) => (k === cur ? { ...s, actual: v } : s)) }));
 
-  const undoSet = (k: number) => patchItem(i, (x) => undoSetAt(x, k));
+  const undoSet = (k: number) => patchItem(i, (x) => stampTimes(undoSetAt(x, k), Date.now()));
   const total = p.total;
 
   const setBell = (b: Bell) =>
@@ -184,8 +212,10 @@ function ActiveItem({ it, i, onComplete }: { it: DraftItem; i: number; onComplet
         <button class="item-name big" disabled={!p.move} onClick={() => p.move && (moveSheet.value = p.move)}>
           {p.name} {p.move && <Icon name="info" size={18} />}
         </button>
+        {isTimedMove(it) && <MoveClock it={it} />}
       </div>
       <div class="item-presc">{prescText(it.plan, { ...p, bell: it.bell }, false)}</div>
+      {isTimedMove(it) && p.move && <PastTimes it={it} move={p.move} />}
       {p.fromLast && (
         <div class="muted small">
           {total !== undefined
@@ -338,6 +368,32 @@ function ActiveItem({ it, i, onComplete }: { it: DraftItem; i: number; onComplet
       )}
     </section>
   );
+}
+
+/** The move's own clock, top right of its card: running, waiting for the rest, or its final time (Nov 19). */
+function MoveClock({ it }: { it: DraftItem }) {
+  const took = moveTime(it);
+  if (took !== undefined) return <span class="move-clock done">{fmtTime(took)}</span>;
+  if (it.startedAt === undefined) return <span class="move-clock waiting">after rest</span>;
+  return <span class="move-clock">{fmtTime(Date.now() - it.startedAt)}</span>;
+}
+
+/** "Last 2:05 · Best 1:50" for the same work (bell and total); "New best" when today beats it. */
+function PastTimes({ it, move }: { it: DraftItem; move: string }) {
+  const { last, best, lastAny } = lastAndBest(timesFor(sessions.value, move), workOf(it));
+  const took = moveTime(it);
+  if (took !== undefined && best && took < best.ms) return <div class="good-text small">New best! Was {fmtTime(best.ms)}</div>;
+  if (took !== undefined && !lastAny) return <div class="muted small">First time on the clock</div>;
+  if (last && best) {
+    return (
+      <div class="muted small">
+        Last {fmtTime(last.ms)}
+        {best !== last && ` · Best ${fmtTime(best.ms)}`}
+      </div>
+    );
+  }
+  if (lastAny) return <div class="muted small">Last {fmtTime(lastAny.ms)} for {lastAny.work}</div>;
+  return null;
 }
 
 /** "16 of 24 · 8 to go" (Nov 19). */

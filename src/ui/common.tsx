@@ -63,6 +63,12 @@ export function fmtSeconds(sec: number): string {
   return s ? `${m} min ${s} s` : `${m} min`;
 }
 
+/** A move's time: 151000 → "2:31" (Nov 19). */
+export function fmtTime(ms: number): string {
+  const s = Math.max(0, Math.round(ms / 1000));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
 export function fmtDuration(ms: number): string {
   const min = Math.round(ms / 60000);
   return min < 60 ? `${min} min` : `${Math.floor(min / 60)} h ${min % 60} min`;
