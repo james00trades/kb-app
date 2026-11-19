@@ -177,6 +177,17 @@ describe('long-run helpers', () => {
     expect(lines).toEqual(['- Deadlift: 2026-10-01 2×8 @45 lb → 2026-10-15 3×8 @45 lb (last done 2026-10-15)']);
   });
 
+  it('a totals workout (Nov 19) reads as reps done of the total, with each set before a rest', () => {
+    const s = session('2026-11-19');
+    const it = s.items[0];
+    s.items = [{ ...it, plan: { ...it.plan, stay: { ...it.plan.stay, total: 24 } }, sets: [10, 10, 4].map((n) => ({ target: n, actual: n, done: true, bell: 45 })) }];
+    expect(moveHistory([session('2026-11-12'), s])).toEqual([
+      '- Deadlift: 2026-11-12 3×8 @45 lb → 2026-11-19 24 total @45 lb (last done 2026-11-19)',
+    ]);
+    const text = buildReport(input({ sessions: [s] }));
+    expect(text).toContain('Deadlift 24/24 reps in 3 sets [10, 10, 4] planned 24 total @45 lb');
+  });
+
   it('sends photos from the start, about a month ago, and now', () => {
     const dates = ['2026-09-06', '2026-09-13', '2026-10-11', '2026-10-18', '2026-11-08', '2026-11-14'];
     expect(pickPhotoDates(dates, TODAY).map((p) => p.date)).toEqual(['2026-09-06', '2026-10-18', '2026-11-14']);

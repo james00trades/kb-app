@@ -26,11 +26,14 @@ export function prescText(item: PlannedItem, p: Prescription, withBell = true): 
     return `${fmtSeconds(r.seconds)}${r.transition ? '' : ', no breaks'} · ${r.stations.map((st) => st.label).join(', ')}`;
   } else if (item.kind === 'time') {
     s = p.sets === 1 ? `${p.target} s` : `${p.sets} × ${p.target} s`;
+  } else if (p.total !== undefined) {
+    // "24 reps total", "15 reps per side" (Nov 19)
+    s = `${p.total} reps${sideText(item) || ' total'}`;
   } else {
     s = p.sets === 1 ? `${p.target} reps` : `${p.sets} × ${p.target}`;
   }
-  s += sideText(item);
-  if (p.range && p.target < p.range[1]) s += ` (up to ${p.range[1]})`;
+  if (p.total === undefined) s += sideText(item);
+  if (p.total === undefined && p.range && p.target < p.range[1]) s += ` (up to ${p.range[1]})`;
   const b = bellText(p.bell);
   if (withBell && b) s += ` · ${b}`;
   return s;
@@ -42,9 +45,13 @@ export function upText(item: PlannedItem): string {
   if (!up) return '';
   const unit = item.kind === 'time' ? ' s' : ' reps';
   const parts: string[] = [];
-  if (up.target !== stay.target) parts.push(`${up.target}${unit} (was ${stay.target})`);
+  if (up.total !== undefined && stay.total !== undefined) {
+    if (up.total !== stay.total) parts.push(`${up.total} reps (was ${stay.total})`);
+  } else {
+    if (up.target !== stay.target) parts.push(`${up.target}${unit} (was ${stay.target})`);
+    if (up.sets !== stay.sets) parts.push(`${up.sets} sets (was ${stay.sets})`);
+  }
   if (up.bell !== stay.bell) parts.push(`${bellText(up.bell)} (was ${bellText(stay.bell)})`);
-  if (up.sets !== stay.sets) parts.push(`${up.sets} sets (was ${stay.sets})`);
   return parts.join(', ');
 }
 
@@ -85,9 +92,10 @@ export function Sheet(props: { onClose: () => void; children: ComponentChildren;
   );
 }
 
-export function Stepper(props: { value: number; onChange: (v: number) => void; step?: number; min?: number; unit?: string }) {
+export function Stepper(props: { value: number; onChange: (v: number) => void; step?: number; min?: number; max?: number; unit?: string }) {
   const step = props.step ?? 1;
   const min = props.min ?? 0;
+  const max = props.max ?? Infinity;
   return (
     <div class="stepper">
       <button class="step-btn" aria-label="less" onClick={() => props.onChange(Math.max(min, props.value - step))}>−</button>
@@ -95,7 +103,7 @@ export function Stepper(props: { value: number; onChange: (v: number) => void; s
         {props.value}
         {props.unit && <span class="step-unit">{props.unit}</span>}
       </div>
-      <button class="step-btn" aria-label="more" onClick={() => props.onChange(props.value + step)}>+</button>
+      <button class="step-btn" aria-label="more" disabled={props.value + step > max} onClick={() => props.onChange(Math.min(max, props.value + step))}>+</button>
     </div>
   );
 }

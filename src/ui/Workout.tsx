@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { chosen, completeSetAt, isItemComplete, restAfter, restKey, setChoice, type DraftItem, type SessionDraft } from '../engine/engine';
+import { chosen, completeNext, isItemComplete, repsDone, restAfter, restKey, setCap, setChoice, undoSet as undoSetAt, type DraftItem, type SessionDraft } from '../engine/engine';
 import type { Bell } from '../engine/schema';
 import { discardWorkout, draft, finishWorkout, moveSheet, setMoveRest, settings, updateDraft, workoutOpen } from '../lib/store';
 import { breathSpec, fmtClock, holdSpec, intervalSpec, restSpec, startTimer, stopTimer, timer, type TimerSpec } from '../lib/timer';
@@ -52,9 +52,8 @@ export function Workout() {
     const before = draft.value;
     if (!before) return;
     const it = before.items[i];
-    const s = it.sets.findIndex((x) => !x.done);
-    if (s < 0) return;
-    await patchItem(i, (x) => completeSetAt(x, s));
+    if (!it.sets.some((x) => !x.done)) return;
+    await patchItem(i, completeNext);
     const after = draft.value!;
     const itemDone = isItemComplete(after.items[i]);
     const workoutDone = after.items.every(isItemComplete);
@@ -145,6 +144,10 @@ function CollapsedItem({ it, onOpen }: { it: DraftItem; onOpen: () => void }) {
         <span class="dots">
           {it.skipped ? (
             <span class="muted small">skipped</span>
+          ) : p.total !== undefined ? (
+            <span class="muted small">
+              {repsDone(it.sets)}/{p.total}
+            </span>
           ) : (
             it.sets.map((s, k) => <i key={k} class={s.done ? 'dot done' : 'dot'} />)
           )}
@@ -169,8 +172,8 @@ function ActiveItem({ it, i, onComplete }: { it: DraftItem; i: number; onComplet
   const setActual = (v: number) =>
     patchItem(i, (x) => ({ ...x, sets: x.sets.map((s, k) => (k === cur ? { ...s, actual: v } : s)) }));
 
-  const undoSet = (k: number) =>
-    patchItem(i, (x) => ({ ...x, skipped: false, sets: x.sets.map((s, j) => (j === k ? { ...s, done: false } : s)) }));
+  const undoSet = (k: number) => patchItem(i, (x) => undoSetAt(x, k));
+  const total = p.total;
 
   const setBell = (b: Bell) =>
     patchItem(i, (x) => ({ ...x, bell: b, sets: x.sets.map((s) => (s.done ? s : { ...s, bell: b })) }));
@@ -185,7 +188,11 @@ function ActiveItem({ it, i, onComplete }: { it: DraftItem; i: number; onComplet
       <div class="item-presc">{prescText(it.plan, { ...p, bell: it.bell }, false)}</div>
       {p.fromLast && (
         <div class="muted small">
-          {p.moreSets ? 'Set from what you did last time: 10 reps a set at most, so extra sets instead' : 'Set from what you did last time'}
+          {total !== undefined
+            ? 'Total set from what you did last time'
+            : p.moreSets
+              ? 'Set from what you did last time: 10 reps a set at most, so extra sets instead'
+              : 'Set from what you did last time'}
         </div>
       )}
       {p.notes && <div class="muted small">{p.notes}</div>}
@@ -216,9 +223,11 @@ function ActiveItem({ it, i, onComplete }: { it: DraftItem; i: number; onComplet
         </div>
       )}
 
-      {it.plan.kind !== 'breath' && it.plan.kind !== 'routine' && (it.sets.length > 1 || complete) && (
+      {total !== undefined && !it.skipped && <TotalLine it={it} total={total} />}
+
+      {it.plan.kind !== 'breath' && it.plan.kind !== 'routine' && (total !== undefined ? it.sets.some((s) => s.done) : it.sets.length > 1 || complete) && (
         <div class="set-chips">
-          {it.sets.map((s, k) => (
+          {it.sets.map((s, k) => (total !== undefined && !s.done ? null :
             <button
               key={k}
               class={`set-chip ${s.done ? 'done' : ''} ${k === cur ? 'current' : ''}`}
@@ -235,7 +244,23 @@ function ActiveItem({ it, i, onComplete }: { it: DraftItem; i: number; onComplet
         </div>
       )}
 
-      {!complete && it.plan.kind === 'reps' && (
+      {!complete && it.plan.kind === 'reps' && total !== undefined && cur >= 0 && (
+        <>
+          <Stepper value={it.sets[cur].actual} onChange={setActual} min={1} max={setCap(it)} unit={sideText(it.plan) ? ' / side' : ''} />
+          <div class="muted small center">Reps before you rest: aim for 5–10, 10 at most.</div>
+          <button class="big-btn primary" onClick={onComplete}>
+            {it.sets[cur].actual + repsDone(it.sets) >= total ? (
+              <>
+                <Icon name="check" /> Done
+              </>
+            ) : (
+              'Rest'
+            )}
+          </button>
+        </>
+      )}
+
+      {!complete && it.plan.kind === 'reps' && total === undefined && (
         <>
           <Stepper value={it.sets[cur].actual} onChange={setActual} unit={sideText(it.plan) ? ' / side' : ''} />
           <button class="big-btn primary" onClick={onComplete}>
@@ -312,6 +337,19 @@ function ActiveItem({ it, i, onComplete }: { it: DraftItem; i: number; onComplet
         <div class="good-text small">Done. Tap a set above to undo it.</div>
       )}
     </section>
+  );
+}
+
+/** "16 of 24 · 8 to go" (Nov 19). */
+function TotalLine({ it, total }: { it: DraftItem; total: number }) {
+  const done = repsDone(it.sets);
+  const left = Math.max(0, total - done);
+  return (
+    <div class="total-line">
+      <b>{done}</b> of {total}
+      {it.plan.perSide ? ` ${it.plan.sideLabel ?? 'per side'}` : ''}
+      {left > 0 ? <span class="muted"> · {left} to go</span> : <span class="good-text"> · total done</span>}
+    </div>
   );
 }
 

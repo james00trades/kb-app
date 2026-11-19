@@ -152,6 +152,11 @@ export interface Prescription {
   fromLast?: boolean;
   /** He did more than 10 reps a set last time, so the extra work became extra sets (Nov 13). */
   moreSets?: boolean;
+  /** Reps moves: the total to get done (per side when perSide), in sets of his own size, each ended
+   *  by tapping Rest (James, Nov 19: "prescribe a total number of reps… get it done as fast as
+   *  possible"). sets × target, so the plan's numbers and ladders carry over. Missing on plans
+   *  saved before Nov 19, which keep counting set by set. */
+  total?: number;
 }
 
 const low =(v: number | [number, number] | undefined) => (Array.isArray(v) ? v[0] : v ?? 0);
@@ -190,6 +195,15 @@ const heft = (b: Bell | null) => (typeof b === 'number' ? b : 0);
  *  plan's, ask for what he managed with it, even if that's below the plan's number.
  *  Never more than 10 reps a set (Nov 13): past that, the same work comes as more sets of 10. */
 function adapt(p: Prescription, level: Level | undefined, kind: Item['kind']): Prescription {
+  const out = adaptSets(p, level, kind);
+  if (kind !== 'reps') return out; // holds stay timed sets
+  // A reps move's total (Nov 19): the plan's sets × reps. After a level saved before totals, the reps
+  // he hit on every set, over at least the planned sets (exact, not rounded up to sets of 10).
+  const total = out.fromLast && level ? Math.max(p.sets, level.sets ?? p.sets) * level.amount : out.sets * out.target;
+  return { ...out, total };
+}
+
+function adaptSets(p: Prescription, level: Level | undefined, kind: Item['kind']): Prescription {
   if (!level || level.bell !== p.bell) return p;
   const heavier = heft(p.bell) > heft(p.planBell);
   if (heavier ? level.amount === p.target : level.amount <= p.target) return p;
@@ -314,7 +328,9 @@ function planItem(
   const canOffer = !ctx.held && !!entry?.ready && step + 1 < ladder.length;
   let up = canOffer ? adapt(prescribe(r, ladder[step + 1], data, state.bellPrefs), level, r.kind) : undefined;
   // Already doing more than the plan's next step? Then there's nothing to move up to.
-  if (up && up.target <= stay.target && up.bell === stay.bell && up.sets <= stay.sets) up = undefined;
+  const noMore = (u: Prescription) =>
+    u.total !== undefined && stay.total !== undefined ? u.total <= stay.total : u.target <= stay.target && u.sets <= stay.sets;
+  if (up && up.bell === stay.bell && noMore(up)) up = undefined;
   return { ...base, progressKey, ladderLen: ladder.length, step, stay, up };
 }
 
@@ -438,7 +454,24 @@ export const chosen = (it: DraftItem | { plan: PlannedItem; choice: 'stay' | 'up
   it.choice === 'up' && it.plan.up ? it.plan.up : it.plan.stay;
 
 function setsFor(p: Prescription, bell: Bell | null): SetLog[] {
+  if (p.total !== undefined) return withPending([], p, bell);
   return Array.from({ length: p.sets }, () => ({ target: p.target, actual: p.target, done: false, bell }));
+}
+
+/** Reps done so far (per side when perSide). */
+export const repsDone = (sets: SetLog[]): number => sets.reduce((sum, s) => sum + (s.done ? s.actual : 0), 0);
+
+/** Most reps the next set can log: what's left of the total, and never more than 10 (Nov 13, Nov 19). */
+export const setCap = (it: DraftItem): number => Math.min(MAX_REPS, Math.max(0, (chosen(it).total ?? 0) - repsDone(it.sets)));
+
+/** Totals mode: the sets done, then one open set to fill in, sized like the last set (or the plan's
+ *  reps a set), never past what's left or 10. None once the total is reached. */
+function withPending(sets: SetLog[], p: Prescription, bell: Bell | null, size?: number): SetLog[] {
+  const done = sets.filter((s) => s.done);
+  const left = (p.total ?? 0) - repsDone(done);
+  if (left <= 0) return done;
+  const n = Math.max(1, Math.min(size ?? p.target, left, MAX_REPS));
+  return [...done, { target: n, actual: n, done: false, bell }];
 }
 
 export function startDraft(session: PlannedSession, id: string, now: number): SessionDraft {
@@ -460,8 +493,31 @@ export function setChoice(it: DraftItem, choice: 'stay' | 'up'): DraftItem {
   const p = choice === 'up' ? it.plan.up! : it.plan.stay;
   const bell = p.bell;
   const done = it.sets.filter((s) => s.done);
+  if (p.total !== undefined) return { ...it, choice, bell, sets: withPending(done, p, bell) };
   const fresh = setsFor(p, bell).slice(done.length);
   return { ...it, choice, bell, sets: [...done, ...fresh] };
+}
+
+/** Log the open set: Rest (or Done, when it reaches the total) in totals mode, else the next set. */
+export function completeNext(it: DraftItem): DraftItem {
+  const k = it.sets.findIndex((s) => !s.done);
+  if (k < 0) return it;
+  const p = chosen(it);
+  if (p.total === undefined) return completeSetAt(it, k);
+  const actual = Math.max(0, Math.min(it.sets[k].actual, setCap(it)));
+  const done = [...it.sets.filter((s) => s.done), { ...it.sets[k], actual, done: true, bell: it.bell }];
+  return { ...it, sets: withPending(done, p, it.bell, actual) };
+}
+
+/** Undo a set: in totals mode it's taken out and its reps go back on what's left. */
+export function undoSet(it: DraftItem, k: number): DraftItem {
+  const p = chosen(it);
+  if (p.total === undefined || it.plan.kind !== 'reps') {
+    return { ...it, skipped: false, sets: it.sets.map((s, j) => (j === k ? { ...s, done: false } : s)) };
+  }
+  const open = it.sets.find((s) => !s.done);
+  const kept = it.sets.filter((s, j) => s.done && j !== k);
+  return { ...it, skipped: false, sets: withPending(kept, p, it.bell, open?.actual ?? it.sets[k]?.actual) };
 }
 
 /** Mark set k done with the item's bell. The sets after it start at what was just done,
@@ -485,7 +541,9 @@ export function restAfter(it: DraftItem, restByMove: Record<string, number>): nu
 }
 
 export function isItemComplete(it: DraftItem): boolean {
-  return it.skipped || it.sets.every((s) => s.done);
+  if (it.skipped) return true;
+  const total = chosen(it).total;
+  return total !== undefined ? repsDone(it.sets) >= total : it.sets.every((s) => s.done);
 }
 
 export function kbReps(items: DraftItem[]): number {
@@ -531,11 +589,16 @@ export function finishSession(
 
     if (it.plan.section === 'main' && it.plan.progressKey && didAny) {
       const used = it.choice === 'up' && it.plan.up ? it.plan.step + 1 : it.plan.step;
-      const allToPlan = !it.skipped && it.sets.length > 0 && it.sets.every((s) => s.done && s.actual >= s.target);
+      // Totals: the whole total done. Sets: every set done to plan.
+      const allToPlan =
+        p.total !== undefined
+          ? !it.skipped && repsDone(it.sets) >= p.total
+          : !it.skipped && it.sets.length > 0 && it.sets.every((s) => s.done && s.actual >= s.target);
       progress[it.plan.progressKey] = { step: used, ready: allToPlan && !answers.pain };
 
-      // Adapt to what James did (Nov 9): every set done and no joint pain
-      if (!answers.pain && !it.skipped && it.sets.length > 0 && it.sets.every((s) => s.done)) {
+      // Adapt to what James did (Nov 9): every set done and no joint pain. Holds only since totals
+      // came in (Nov 19): a total can't be beaten, it moves up through the plan's steps instead.
+      if (p.total === undefined && !answers.pain && !it.skipped && it.sets.length > 0 && it.sets.every((s) => s.done)) {
         const lastBell = it.sets[it.sets.length - 1].bell;
         const withBell = it.sets.filter((s) => s.bell === lastBell);
         const best = Math.min(...withBell.map((s) => s.actual));

@@ -583,6 +583,15 @@ p {
   color: var(--muted);
   font-size: 15px;
 }
+/* Totals: "16 of 24 · 8 to go" (Nov 19) */
+.total-line {
+  font-size: 20px;
+  margin: 10px 0 2px;
+}
+.total-line b {
+  font-size: 28px;
+  font-variant-numeric: tabular-nums;
+}
 .dots {
   display: flex;
   gap: 5px;
