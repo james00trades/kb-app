@@ -2,11 +2,14 @@ import { render } from 'preact';
 import { App } from './ui/App';
 import { init, refreshDate } from './lib/store';
 import { initPWA } from './lib/pwa';
+import { pinFixedBars } from './lib/viewport';
 import { appHidden, refreshOnNextTap, unlockAudio } from './lib/sound';
 import './styles.css';
 
 // Installed on the iPhone home screen: iOS 26 blurs the top edge, so the layout clears it (see .ios-app in styles.css).
 if ((navigator as Navigator & { standalone?: boolean }).standalone) document.documentElement.classList.add('ios-app');
+// iOS 26 can leave the screen offset after the keyboard closes; keep the tab bar and other bars on it.
+pinFixedBars();
 
 // iOS only allows sound after a touch; every tap keeps audio ready.
 document.addEventListener('pointerdown', unlockAudio, { passive: true });

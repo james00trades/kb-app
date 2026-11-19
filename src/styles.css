@@ -28,6 +28,20 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+/* iOS 26 can leave the screen offset after the keyboard closes, so fixed bars ride up with the
+   scroll (James, Nov 19). src/lib/viewport.ts measures the offset; everything fixed moves back by it.
+   `translate` adds to any `transform` an element already animates. Normally 0. */
+.topbar,
+.tabbar,
+.rest-bar,
+.sheet-backdrop,
+.timer-overlay,
+.viewer,
+.lightbox,
+.cam {
+  translate: 0 var(--vv-shift, 0px);
+}
+
 html,
 body {
   margin: 0;
