@@ -134,6 +134,8 @@ const ICONS: Record<string, string> = {
   pause: 'M7 4h4v16H7zM13 4h4v16h-4z',
   close: 'M6 6l12 12M18 6L6 18',
   up: 'M12 19V5M5 12l7-7 7 7',
+  // Rotate-cw, from Lucide (ISC license)
+  refresh: 'M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8M21 3v5h-5',
   back: 'M15 18l-6-6 6-6',
   next: 'M9 6l6 6-6 6',
   circle: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z',

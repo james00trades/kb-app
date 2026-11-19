@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { loadData } from '../src/engine/data';
 import { initialState, upcoming, type SessionStatus } from '../src/engine/engine';
-import { addDays, seededFix, streak, streakParts, streakPartsDone, type DayExtras } from '../src/engine/streak';
+import { addDays, seededFix, streak, streakHeat, streakParts, streakPartsDone, type DayExtras } from '../src/engine/streak';
+
+describe('the flame heats up with the streak (James, Nov 19)', () => {
+  it('steps at 2, 4, 6, 8, 10, 12 and 14 days, and stays at the top after 14', () => {
+    const at = (days: number[]) => days.map(streakHeat);
+    expect(at([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 40])).toEqual([0, 0, 2, 2, 4, 4, 6, 6, 8, 8, 10, 10, 12, 12, 14, 14, 14]);
+  });
+});
 
 const log = (date: string, status: SessionStatus) => ({ date, status });
 const TODAY = '2026-11-07';
@@ -158,5 +165,23 @@ describe('next 7 days', () => {
     const [first] = upcoming(data, initialState(), 1);
     expect(first.day).toBe('A');
     expect(first.week).toBe(1);
+  });
+});
+
+describe('sparks off the flame (James, Nov 19)', () => {
+  it('none below 6 days; campfire embers that grow in number and speed up to 12; welding sparks at 14', async () => {
+    const { SPARKS, sparkVars } = await import('../src/ui/Sparks');
+    expect(Object.keys(SPARKS).map(Number)).toEqual([6, 8, 10, 12, 14]);
+    expect([6, 8, 10, 12].map((h) => SPARKS[h].kind)).toEqual(['ember', 'ember', 'ember', 'ember']);
+    expect(SPARKS[14].kind).toBe('weld');
+    const counts = [6, 8, 10, 12, 14].map((h) => SPARKS[h].count);
+    expect(counts).toEqual([...counts].sort((a, b) => a - b));
+    expect(SPARKS[14].dur[1]).toBeLessThan(SPARKS[12].dur[0]); // welding is the fastest
+    expect(SPARKS[12].dur[1]).toBeLessThan(SPARKS[10].dur[1]); // 12 is the most intense campfire
+    // Each spark gets its own path, and the same one every time
+    const a = sparkVars(SPARKS[14], 3);
+    expect(a).toEqual(sparkVars(SPARKS[14], 3));
+    expect(a).not.toEqual(sparkVars(SPARKS[14], 4));
+    expect(parseFloat(a['--dy'])).toBeLessThan(0); // shoots upward first
   });
 });

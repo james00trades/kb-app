@@ -1,6 +1,6 @@
 import { useEffect } from 'preact/hooks';
 import { applyUpdate, updateReady } from '../lib/pwa';
-import { streakParts, streakPartsDone } from '../engine/streak';
+import { streakHeat, streakParts, streakPartsDone } from '../engine/streak';
 import { currentStreak, draft, loadError, logDueCount, photoSession, ready, tab, type Tab } from '../lib/store';
 import { timer } from '../lib/timer';
 import { setAwake } from '../lib/wakelock';
@@ -10,6 +10,7 @@ import { PhotoSession } from './PhotoSession';
 import { History } from './History';
 import { Library, MoveSheet } from './Library';
 import { Settings } from './Settings';
+import { Sparks } from './Sparks';
 import { RestBar, TimerOverlay } from './TimerView';
 import { Timers } from './Timers';
 import { Today } from './Today';
@@ -41,12 +42,14 @@ export function App() {
   return (
     <>
       <StreakBar />
+      {/* New version ready: a color-blast circle tucked into the top right corner, partly off screen
+          (James, Nov 19). Never mid-workout. */}
+      {updateReady.value && !draft.value && (
+        <button class="update-orb" onClick={applyUpdate} aria-label="A new version is ready. Tap to update." title="Update the app">
+          <Icon name="refresh" size={24} />
+        </button>
+      )}
       <main class="main">
-        {updateReady.value && !draft.value && (
-          <button class="note good note-btn" onClick={applyUpdate}>
-            A new version is ready. Tap to update.
-          </button>
-        )}
         {t === 'today' && <Today />}
         {t === 'timers' && <Timers />}
         {t === 'library' && <Library />}
@@ -92,8 +95,9 @@ function StreakBar() {
   return (
     <header class="topbar">
       <div class={`streak ${todayKept ? '' : 'cold'}`} aria-label={`${current} day streak. Best ${best}.`}>
-        <span class="flame">
+        <span class={`flame heat-${streakHeat(current)}`}>
           <Icon name="flame" size={26} filled={todayKept} />
+          <Sparks heat={streakHeat(current)} />
         </span>
         {current === 0 && best === 0 ? (
           <span class="streak-label">Start your streak today</span>

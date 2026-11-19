@@ -54,6 +54,17 @@ export const streakParts = (p: DayParts) => (p.rest ? 1 : 2);
 export const streakPartsDone = (p: DayParts) => (p.rest ? Number(p.main) : Number(p.warmup) + Number(p.main));
 export const dayKept = (p: DayParts) => streakPartsDone(p) === streakParts(p);
 
+/** The flame heats up with the streak (James, Nov 19): 2 dim red, 4 brighter red, 6 orange with a
+ *  slight flicker, 8 orange more intense, 10 yellow more intense, 12 sky blue with more intense
+ *  campfire sparks, 14+ white-hot blue with welding sparks. Returns the step reached (0 below 2 days);
+ *  the look for each step is in styles.css (.heat-N), the sparks in ui/Sparks.tsx. */
+export const HEAT_STEPS = [2, 4, 6, 8, 10, 12, 14] as const;
+export function streakHeat(days: number): number {
+  let heat = 0;
+  for (const step of HEAT_STEPS) if (days >= step) heat = step;
+  return heat;
+}
+
 /** James's own correction (Nov 10): "as of `through`, I'd kept `count` days in a row".
  *  Days the app didn't see (or saw wrongly) before then don't matter. */
 export interface StreakFix {
