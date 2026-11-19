@@ -16,10 +16,16 @@ export const Pattern = z.enum([
 ]);
 export type Pattern = z.infer<typeof Pattern>;
 
+/** Difficulty, easiest first: roughly Month 1, Months 2–3, Month 4 and on (James, Nov 18, 2026). */
+export const LEVELS = ['beginner', 'intermediate', 'advanced'] as const;
+export const Level = z.enum(LEVELS);
+export type Level = z.infer<typeof Level>;
+
 export const Movement = z.object({
   id: z.string().regex(/^[a-z0-9-]+$/),
   name: z.string(),
   tier: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]),
+  level: Level,
   pattern: Pattern,
   bell: z.boolean(),
   unlocked: z.boolean(),

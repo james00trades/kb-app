@@ -1,21 +1,25 @@
 import { useState } from 'preact/hooks';
-import type { Movement, Pattern } from '../engine/schema';
+import { LEVELS, type Level, type Movement, type Pattern } from '../engine/schema';
 import { data, isUnlocked, moveSheet, unlockMove } from '../lib/store';
 import { Icon, Sheet } from './common';
 
-const TIER_NAMES = ['Tier 0 · Prep and mobility', 'Tier 1 · Slow strength', 'Tier 2 · Fast / explosive', 'Tier 3 · Compound and flow'];
+/** The library is grouped by difficulty, easiest first; each level says roughly when in the plan it comes (James, Nov 18). */
+const LEVEL_NAMES: Record<Level, string> = { beginner: 'Beginner', intermediate: 'Intermediate', advanced: 'Advanced' };
+const LEVEL_WHEN: Record<Level, string> = { beginner: 'Month 1', intermediate: 'Months 2–3', advanced: 'Month 4 on' };
 const PATTERNS: Pattern[] = ['hinge', 'squat', 'lunge', 'push', 'pull', 'carry', 'rotation', 'mobility', 'compound'];
 /** Name plus badge words, so "best guess" or "shoulder" in the search lists those moves. */
 const searchText = (m: Movement) => [m.name, m.shoulder && 'shoulder hold', m.guess && 'best guess'].filter(Boolean).join(' ').toLowerCase();
 
 export function Library() {
   const [q, setQ] = useState('');
+  const [level, setLevel] = useState<Level | null>(null);
   const [tier, setTier] = useState<number | null>(null);
   const [pattern, setPattern] = useState<Pattern | null>(null);
 
   const query = q.trim().toLowerCase();
   const list = data.movements.filter(
     (m) =>
+      (level === null || m.level === level) &&
       (tier === null || m.tier === tier) &&
       (pattern === null || m.pattern === pattern) &&
       (!query || searchText(m).includes(query)),
@@ -32,6 +36,14 @@ export function Library() {
         onInput={(e) => setQ((e.target as HTMLInputElement).value)}
       />
       <div class="chips">
+        <button class={`chip ${level === null ? 'selected' : ''}`} onClick={() => setLevel(null)}>All levels</button>
+        {LEVELS.map((l) => (
+          <button key={l} class={`chip ${level === l ? 'selected' : ''}`} onClick={() => setLevel(level === l ? null : l)}>
+            {LEVEL_NAMES[l]}
+          </button>
+        ))}
+      </div>
+      <div class="chips">
         <button class={`chip ${tier === null ? 'selected' : ''}`} onClick={() => setTier(null)}>All tiers</button>
         {[0, 1, 2, 3].map((t) => (
           <button key={t} class={`chip ${tier === t ? 'selected' : ''}`} onClick={() => setTier(tier === t ? null : t)}>
@@ -47,12 +59,14 @@ export function Library() {
         ))}
       </div>
 
-      {[0, 1, 2, 3].map((t) => {
-        const moves = list.filter((m) => m.tier === t);
+      {LEVELS.map((l) => {
+        const moves = list.filter((m) => m.level === l).sort((a, b) => a.tier - b.tier);
         if (!moves.length) return null;
         return (
-          <section key={t}>
-            <h3 class="section-title">{TIER_NAMES[t]}</h3>
+          <section key={l}>
+            <h3 class="section-title">
+              {LEVEL_NAMES[l]} · {LEVEL_WHEN[l]}
+            </h3>
             <div class="list">
               {moves.map((m) => {
                 const open = isUnlocked(m.id);
@@ -61,7 +75,7 @@ export function Library() {
                     <span class="list-main">
                       <span class={open ? '' : 'muted'}>{m.name}</span>
                       <span class="muted small">
-                        {m.pattern}
+                        Tier {m.tier} · {m.pattern}
                         {m.shoulder && <span class="tag hold">Shoulder hold</span>}
                         {m.guess && <span class="tag guess">Best guess</span>}
                       </span>
@@ -90,7 +104,7 @@ export function MoveSheet() {
   return (
     <Sheet onClose={close} title={m.name}>
       <div class="muted">
-        Tier {m.tier} · {m.pattern} · {open ? 'Unlocked' : 'Locked'}
+        {LEVEL_NAMES[m.level]} · Tier {m.tier} · {m.pattern} · {open ? 'Unlocked' : 'Locked'}
         {m.startBell ? ` · Start with the ${m.startBell} lb` : ''}
       </div>
       {m.shoulder && (

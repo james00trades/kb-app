@@ -63,6 +63,27 @@ describe('data files', () => {
     expect(m.cues!.join(' ')).toContain('straight out at chest height');
   });
 
+  it('every move has a difficulty level (James, Nov 18) that matches the plan and the unlock order', () => {
+    const { moveById, movements, plan } = loadData();
+    const count = (l: string) => movements.filter((m) => m.level === l).length;
+    expect([count('beginner'), count('intermediate'), count('advanced')]).toEqual([57, 37, 16]);
+    // Everything in Month 1 (warm-up, days, evening holds) is Beginner
+    const m1 = JSON.stringify(plan.phases.find((p) => p.id === 'm1'));
+    const used = [...m1.matchAll(/"move":"([a-z0-9-]+)"/g)].map((x) => x[1]);
+    expect(used.length).toBeGreaterThan(10);
+    for (const id of used) expect(moveById.get(id)!.level, id).toBe('beginner');
+    // Month 2 new moves land in Intermediate; the Month 4+ ones in Advanced
+    for (const id of ['single-arm-swing', 'clean', 'push-press', 'figure-8', 'transfers', 'full-get-up', 'clean-and-press'])
+      expect(moveById.get(id)!.level, id).toBe('intermediate');
+    for (const id of ['windmill', 'wtf-mfer', 'snatch']) expect(moveById.get(id)!.level, id).toBe('advanced');
+  });
+
+  it('flags a move rated easier than a move it requires', () => {
+    const moves = parseMovements(structuredClone(movementsJson));
+    moves.find((m) => m.id === 'snatch')!.level = 'beginner';
+    expect(crossCheck(parsePlan(planJson), moves).join()).toContain('snatch: easier level than its prerequisite');
+  });
+
   it('flags an unknown related move', () => {
     const moves = parseMovements(structuredClone(movementsJson));
     moves[0].related = ['not-a-move'];

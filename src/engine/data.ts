@@ -1,7 +1,7 @@
 // Loads and validates the bundled data files, plus cross-file checks.
 import movementsJson from '../../data/movements.json';
 import planJson from '../../data/plan.json';
-import { MAX_REPS, MovementFile, PlanFile, type Movement, type Item } from './schema';
+import { LEVELS, MAX_REPS, MovementFile, PlanFile, type Movement, type Item } from './schema';
 
 export function parseMovements(raw: unknown): Movement[] {
   return MovementFile.parse(raw).movements;
@@ -19,8 +19,12 @@ export function crossCheck(plan: PlanFile, movements: Movement[]): string[] {
     if (ids.has(m.id)) problems.push(`Duplicate movement id: ${m.id}`);
     ids.add(m.id);
   }
+  const levelOf = new Map(movements.map((m) => [m.id, LEVELS.indexOf(m.level)]));
   for (const m of movements) {
-    for (const p of m.prereqs ?? []) if (!ids.has(p)) problems.push(`${m.id}: unknown prerequisite ${p}`);
+    for (const p of m.prereqs ?? []) {
+      if (!ids.has(p)) problems.push(`${m.id}: unknown prerequisite ${p}`);
+      else if (levelOf.get(p)! > levelOf.get(m.id)!) problems.push(`${m.id}: easier level than its prerequisite ${p}`);
+    }
     for (const r of m.related ?? []) if (!ids.has(r)) problems.push(`${m.id}: unknown related move ${r}`);
   }
 
