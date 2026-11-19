@@ -32,7 +32,7 @@
    scroll (James, Nov 19). src/lib/viewport.ts measures the offset; everything fixed moves back by it.
    `translate` adds to any `transform` an element already animates. Normally 0. */
 .topbar,
-.update-orb,
+.update-card,
 .tabbar,
 .rest-bar,
 .sheet-backdrop,
@@ -511,48 +511,161 @@ p {
   font-weight: 650;
 }
 
-/* ---------- New version ready (James, Nov 19) ----------
-   A color-blast circle tucked into the top right corner just under the streak bar, about a third
-   of it off screen. The rainbow spins slowly and the glow pulses; the arrow stays still. */
-.update-orb {
+/* ---------- Update Available (James, Nov 19) ----------
+   A floating square over the end of the streak bar (where James marked it). It explodes into view
+   once (pop, white flash, shockwave ring, a burst of sparks from UpdateOrb.tsx), then glows and pulses
+   until tapped. Amber with white words; the sparks and pulse are amber and white (James's pick). */
+.update-card {
   position: fixed;
-  top: calc(var(--safe-t) + var(--topbar-h) + 10px);
-  right: -22px;
+  top: calc(var(--safe-t) + var(--topbar-h) - 40px);
+  right: 12px;
   z-index: 25;
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  padding-left: 9px;
-  color: #fff;
-  overflow: hidden;
-  isolation: isolate;
-  box-shadow: 0 0 16px 2px rgba(255, 61, 110, 0.55), 0 0 32px 6px rgba(46, 197, 255, 0.3);
-  animation: orb-glow 2.4s ease-in-out infinite;
+  width: 100px;
+  height: 100px;
+  border-radius: 24px;
+  --u-bg1: #f59e0b;
+  --u-bg2: #d97706;
+  --u-ink: #ffffff;
+  --u-glow: rgba(245, 158, 11, 0.75);
+  --u-c1: #fbbf24;
+  --u-c2: #ffffff;
+  --u-c3: #f59e0b;
 }
-.update-orb::before {
+.update-card > span {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+.uc-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--u-ink);
+  background: linear-gradient(160deg, var(--u-bg1), var(--u-bg2));
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45), 0 0 16px 2px var(--u-glow);
+  animation: uc-pop 0.6s cubic-bezier(0.2, 1.5, 0.4, 1) both, uc-glow 2.2s ease-in-out 1.4s infinite;
+}
+.uc-body svg {
+  stroke-width: 2.4;
+  filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.3));
+}
+.uc-body::after {
   content: '';
   position: absolute;
-  inset: -25%;
-  z-index: -1;
-  background: conic-gradient(#ff3d6e, #ff9f1c, #ffe14d, #3ddc84, #2ec5ff, #8b5cf6, #ff3d6e);
-  animation: spin 4s linear infinite;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(circle, #fff 0%, rgba(255, 255, 255, 0.85) 45%, rgba(255, 255, 255, 0.4) 100%);
+  animation: uc-flash 0.7s ease-out both;
 }
-.update-orb svg {
-  stroke-width: 2.6;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.65));
+.uc-text {
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.15;
+  text-align: center;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
 }
-@keyframes orb-glow {
+.update-card .uc-ring {
+  border-radius: 50%;
+  border: 3px solid #fff;
+  opacity: 0;
+  animation: uc-shock 0.9s ease-out 0.05s both;
+}
+.update-card .uc-pulse {
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  opacity: 0;
+  animation: uc-pulse 2.2s ease-out 1.4s infinite;
+}
+.uc-burst i {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--s);
+  height: var(--s);
+  margin: calc(var(--s) / -2) 0 0 calc(var(--s) / -2);
+  border-radius: 50%;
+  background: var(--c);
+  box-shadow: 0 0 8px 2px var(--c);
+  opacity: 0;
+  animation: uc-burst var(--dur) cubic-bezier(0.1, 0.7, 0.3, 1) var(--delay) both;
+}
+@keyframes uc-pop {
+  0% {
+    scale: 0;
+    opacity: 0;
+  }
+  60% {
+    scale: 1.15;
+    opacity: 1;
+  }
+  100% {
+    scale: 1;
+    opacity: 1;
+  }
+}
+@keyframes uc-flash {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+@keyframes uc-shock {
+  0% {
+    scale: 0.4;
+    opacity: 1;
+  }
+  100% {
+    scale: 2.8;
+    opacity: 0;
+  }
+}
+@keyframes uc-burst {
+  0% {
+    transform: translate(0, 0) scale(1.3);
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--dx), calc(var(--dy) + 30px)) scale(0.3);
+    opacity: 0;
+  }
+}
+@keyframes uc-glow {
+  0%,
+  100% {
+    scale: 1;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45), 0 0 14px 2px var(--u-glow);
+  }
   50% {
-    box-shadow: 0 0 24px 6px rgba(255, 159, 28, 0.6), 0 0 44px 10px rgba(139, 92, 246, 0.4);
+    scale: 1.05;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45), 0 0 32px 10px var(--u-glow), inset 0 0 0 2px rgba(255, 255, 255, 0.6);
+  }
+}
+@keyframes uc-pulse {
+  0% {
+    scale: 1;
+    opacity: 0.8;
+  }
+  100% {
+    scale: 1.35;
+    opacity: 0;
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .update-orb,
-  .update-orb::before {
+  .uc-body {
     animation: none;
+  }
+  .uc-body::after,
+  .update-card .uc-ring,
+  .update-card .uc-pulse,
+  .uc-burst {
+    display: none;
   }
 }
 .screen {

@@ -1,5 +1,5 @@
 import { useEffect } from 'preact/hooks';
-import { applyUpdate, updateReady } from '../lib/pwa';
+import { updateReady } from '../lib/pwa';
 import { streakHeat, streakParts, streakPartsDone } from '../engine/streak';
 import { currentStreak, draft, loadError, logDueCount, photoSession, ready, tab, type Tab } from '../lib/store';
 import { timer } from '../lib/timer';
@@ -11,6 +11,7 @@ import { History } from './History';
 import { Library, MoveSheet } from './Library';
 import { Settings } from './Settings';
 import { Sparks } from './Sparks';
+import { UpdateOrb } from './UpdateOrb';
 import { RestBar, TimerOverlay } from './TimerView';
 import { Timers } from './Timers';
 import { Today } from './Today';
@@ -42,13 +43,9 @@ export function App() {
   return (
     <>
       <StreakBar />
-      {/* New version ready: a color-blast circle tucked into the top right corner, partly off screen
-          (James, Nov 19). Never mid-workout. */}
-      {updateReady.value && !draft.value && (
-        <button class="update-orb" onClick={applyUpdate} aria-label="A new version is ready. Tap to update." title="Update the app">
-          <Icon name="refresh" size={24} />
-        </button>
-      )}
+      {/* New version ready: a circle that bursts into the top right corner, then pulses (James, Nov 19).
+          Never mid-workout; it bursts in when the workout ends. */}
+      {updateReady.value && !draft.value && <UpdateOrb />}
       <main class="main">
         {t === 'today' && <Today />}
         {t === 'timers' && <Timers />}
