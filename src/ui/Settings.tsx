@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { buildBackupFile, readBackupFile, restoreBackup, saveBackupFile, type Backup } from '../lib/backup';
 import { beep, loadVoice, say, unlockAudio } from '../lib/sound';
-import { clearMoveRest, currentStreak, data, markBackedUp, meta, persisted, sessions, setStreakBeforeToday, settings, updateSettings } from '../lib/store';
+import {
+  clearMoveRest, currentStreak, data, markBackedUp, meta, persisted, routinePicker, sessions, setStreakBeforeToday, settings, today, updateSettings,
+} from '../lib/store';
 import { wakeLockSupported } from '../lib/wakelock';
 import { CheckInSettings } from './CheckIn';
 import { Sheet, Stepper, Toggle, daysAgo } from './common';
@@ -17,6 +19,34 @@ function StreakSettings() {
         <div class="mini-label">Days in a row before today</div>
         <Stepper value={before} onChange={(v) => void setStreakBeforeToday(v)} unit={before === 1 ? ' day' : ' days'} />
         <p class="muted small">If the app missed days you did, set the right number here. Today adds one once its warm-up and workout are done.</p>
+      </div>
+    </>
+  );
+}
+
+/** Level and routine (Nov 20): what you're on now, and the picker. */
+function TrainingLevel() {
+  const s = today.value;
+  const level = data.plan.levels.find((l) => l.n === s.level);
+  return (
+    <>
+      <h3 class="section-title">Level and routine</h3>
+      <div class="card">
+        <div class="day-title">
+          Level {s.level} · {level?.name}
+        </div>
+        <p class="muted small">
+          {s.phaseName}, Week {s.week} of {s.routineWeeks}. When it ends, the next routine at this level starts by itself.
+        </p>
+        <button
+          class="big-btn"
+          onClick={() => {
+            routinePicker.value = { welcome: false };
+            window.scrollTo(0, 0);
+          }}
+        >
+          Change level or routine
+        </button>
       </div>
     </>
   );
@@ -45,6 +75,8 @@ export function Settings() {
   return (
     <div class="screen">
       <h1>Settings</h1>
+
+      <TrainingLevel />
 
       <h3 class="section-title">Sound</h3>
       <div class="list">

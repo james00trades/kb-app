@@ -18,7 +18,7 @@ function allSpecs(): TimerSpec[] {
     amrapSpec(20),
     ...Object.values(plan.breathPatterns).map((p) => breathSpec(p, 4)),
   ];
-  for (const ph of plan.phases) {
+  for (const ph of loadData().routines) {
     for (const extra of [ph.morning, ph.evening]) if (extra) specs.push(intervalSpec(extra.title, extra.stations, extra.transition));
     const items = [...ph.warmup, ...ph.cooldown, ...Object.values(ph.days).flatMap((d) => d.items ?? [])];
     for (const it of items) {

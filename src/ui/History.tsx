@@ -104,7 +104,7 @@ function SessionDetail({ s, onClose }: { s: SessionLog; onClose: () => void }) {
   return (
     <Sheet onClose={onClose} title={`${fmtDay(s.date)} · ${s.session.title}`}>
       <div class="muted">
-        Week {s.session.week} · {STATUS_TEXT[s.status]}
+        {s.session.level ? `${s.session.phaseName} · ` : ''}Week {s.session.week} · {STATUS_TEXT[s.status]}
         {s.effort !== undefined && ` · effort ${s.effort}/10`}
         {s.pain !== undefined && ` · joint pain: ${s.pain ? 'yes' : 'no'}`}
       </div>
@@ -124,6 +124,12 @@ function SessionDetail({ s, onClose }: { s: SessionLog; onClose: () => void }) {
                         ? `${it.plan.breath?.pattern.name ?? 'Breathwork'} ✓`
                         : 'done ✓'
                       : 'not done'
+                    : done.length && it.plan.kind === 'circuit'
+                      ? `${done.length} round${done.length === 1 ? '' : 's'} of ${done.map((x) => x.actual).join(', ')} each`
+                      : done.length && it.plan.kind === 'flow'
+                        ? `${done.length} set${done.length === 1 ? '' : 's'} of ${done.map((x) => x.actual).join(', ')} cycles` +
+                          (it.plan.perSide ? ' per side' : '') +
+                          (typeof it.bell === 'number' ? ` · ${bellText(it.bell)}` : '')
                     : done.length
                       ? done.map((x) => `${x.actual}${unit}`).join(', ') +
                         (it.plan.perSide ? ` ${it.plan.sideLabel ?? 'per side'}` : '') +

@@ -24,6 +24,12 @@ export function prescText(item: PlannedItem, p: Prescription, withBell = true): 
   } else if (item.kind === 'routine' && item.routine) {
     const r = item.routine;
     return `${fmtSeconds(r.seconds)}${r.transition ? '' : ', no breaks'} · ${r.stations.map((st) => st.label).join(', ')}`;
+  } else if (item.kind === 'circuit') {
+    // "4 rounds · 5 each" (Nov 20)
+    s = `${p.sets} round${p.sets === 1 ? '' : 's'} · ${p.target} each`;
+  } else if (item.kind === 'flow') {
+    // "3 sets × 3 cycles per side · 18 lb"
+    s = `${p.sets} set${p.sets === 1 ? '' : 's'} × ${p.target} cycle${p.target === 1 ? '' : 's'}`;
   } else if (item.kind === 'time') {
     s = p.sets === 1 ? `${p.target} s` : `${p.sets} × ${p.target} s`;
   } else if (p.total !== undefined) {
@@ -49,7 +55,7 @@ export function upText(item: PlannedItem): string {
     if (up.total !== stay.total) parts.push(`${up.total} reps (was ${stay.total})`);
   } else {
     if (up.target !== stay.target) parts.push(`${up.target}${unit} (was ${stay.target})`);
-    if (up.sets !== stay.sets) parts.push(`${up.sets} sets (was ${stay.sets})`);
+    if (up.sets !== stay.sets) parts.push(`${up.sets} ${item.kind === 'circuit' ? 'rounds' : 'sets'} (was ${stay.sets})`);
   }
   if (up.bell !== stay.bell) parts.push(`${bellText(up.bell)} (was ${bellText(stay.bell)})`);
   return parts.join(', ');

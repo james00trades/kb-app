@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { loadData } from '../src/engine/data';
 import { initialState, upcoming, type SessionStatus } from '../src/engine/engine';
-import { addDays, seededFix, streak, streakHeat, streakParts, streakPartsDone, type DayExtras } from '../src/engine/streak';
+import { addDays, seededFix, seedApplies, streak, streakHeat, streakParts, streakPartsDone, type DayExtras } from '../src/engine/streak';
 
 describe('the flame heats up with the streak (James, Nov 19)', () => {
   it('steps at 2, 4, 6, 8, 10, 12, 14 and 16 days, and stays at the top after 16', () => {
@@ -148,6 +148,15 @@ describe("James's own streak count (Nov 10)", () => {
     expect(seededFix({ through: '2026-11-09', count: 4 }, seed)).toBe(seed);
     const later = { through: '2026-11-11', count: 6 };
     expect(seededFix(later, seed)).toBe(later);
+  });
+
+  it("only a phone in use by Nov 10 gets James's count; a new install starts clean (Nov 20)", () => {
+    const seed = { through: '2026-11-10', count: 5 };
+    expect(seedApplies(undefined, seed)).toBe(false);
+    expect(seedApplies(new Date(2026, 10, 6, 9, 0).getTime(), seed)).toBe(true);
+    expect(seedApplies(new Date(2026, 10, 10, 23, 0).getTime(), seed)).toBe(true);
+    expect(seedApplies(new Date(2026, 10, 11, 0, 5).getTime(), seed)).toBe(false);
+    expect(seedApplies(new Date(2026, 10, 20, 12, 0).getTime(), seed)).toBe(false);
   });
 });
 

@@ -3,7 +3,7 @@ import {
   chosen, completeNext, isItemComplete, isTimedMove, lastAndBest, moveTime, repsDone, restAfter, restKey, setCap, setChoice, stampTimes, timesFor,
   undoSet as undoSetAt, workOf, type DraftItem, type SessionDraft,
 } from '../engine/engine';
-import type { Bell } from '../engine/schema';
+import { MAX_REPS, type Bell } from '../engine/schema';
 import { discardWorkout, draft, finishWorkout, moveSheet, sessions, setMoveRest, settings, updateDraft, workoutOpen } from '../lib/store';
 import { breathSpec, fmtClock, holdSpec, intervalSpec, restSpec, startTimer, stopTimer, timer, type TimerSpec } from '../lib/timer';
 import { Icon, Sheet, Stepper, bellShort, fmtSeconds, fmtTime, prescText, sideText, upText } from './common';
@@ -225,12 +225,15 @@ function ActiveItem({ it, i, onComplete }: { it: DraftItem; i: number; onComplet
               : 'Set from what you did last time'}
         </div>
       )}
+      {it.plan.parts && <Parts it={it} count={cur >= 0 ? it.sets[cur].actual : p.target} />}
       {p.notes && <div class="muted small">{p.notes}</div>}
 
       {it.plan.up && (
         <div class="offer">
           <div class="small">
-            <Icon name="up" size={14} /> Last time went to plan. Move up: {upText(it.plan)}?
+            <Icon name="up" size={14} />{' '}
+            {it.plan.kind === 'time' ? 'Last time went to plan.' : 'Your sets crept up to 8+ last time: ready for more.'} Move up:{' '}
+            {upText(it.plan)}?
           </div>
           <div class="seg">
             <button class={it.choice === 'up' ? 'selected' : ''} onClick={() => patchItem(i, (x) => setChoice(x, 'up'))}>
@@ -264,7 +267,9 @@ function ActiveItem({ it, i, onComplete }: { it: DraftItem; i: number; onComplet
               onClick={() => s.done && undoSet(k)}
               aria-label={s.done ? `Set ${k + 1} done, tap to undo` : `Set ${k + 1}`}
             >
-              <span class="set-n">Set {k + 1}</span>
+              <span class="set-n">
+                {it.plan.kind === 'circuit' ? 'Round' : 'Set'} {k + 1}
+              </span>
               <span class="set-v">
                 {s.done ? `✓ ${s.actual}` : s.actual}
                 {it.plan.kind === 'time' ? 's' : ''}
@@ -295,6 +300,21 @@ function ActiveItem({ it, i, onComplete }: { it: DraftItem; i: number; onComplet
           <Stepper value={it.sets[cur].actual} onChange={setActual} unit={sideText(it.plan) ? ' / side' : ''} />
           <button class="big-btn primary" onClick={onComplete}>
             <Icon name="check" /> {it.sets.length > 1 ? `Set ${cur + 1} of ${it.sets.length} done` : 'Done'}
+          </button>
+        </>
+      )}
+
+      {!complete && (it.plan.kind === 'circuit' || it.plan.kind === 'flow') && (
+        <>
+          <Stepper
+            value={it.sets[cur].actual}
+            onChange={setActual}
+            min={1}
+            max={MAX_REPS}
+            unit={it.plan.kind === 'circuit' ? ' each' : it.plan.perSide ? ' cycles / side' : ' cycles'}
+          />
+          <button class="big-btn primary" onClick={onComplete}>
+            <Icon name="check" /> {it.plan.kind === 'circuit' ? 'Round' : 'Set'} {cur + 1} of {it.sets.length} done
           </button>
         </>
       )}
@@ -367,6 +387,42 @@ function ActiveItem({ it, i, onComplete }: { it: DraftItem; i: number; onComplet
         <div class="good-text small">Done. Tap a set above to undo it.</div>
       )}
     </section>
+  );
+}
+
+/** A circuit's moves with their counts and bells, or a flow's moves in order (Nov 20). Tap one for its cues. */
+function Parts({ it, count }: { it: DraftItem; count: number }) {
+  const parts = it.plan.parts ?? [];
+  if (it.plan.kind === 'flow') {
+    return (
+      <div class="flow-chain">
+        {parts.map((pt, k) => (
+          <span key={k} class="flow-step">
+            {k > 0 && <span class="flow-arrow">→</span>}
+            <button class="chip" onClick={() => (moveSheet.value = pt.move)}>
+              {pt.reps && pt.reps > 1 ? `${pt.reps} ` : ''}
+              {pt.name}
+            </button>
+          </span>
+        ))}
+      </div>
+    );
+  }
+  return (
+    <ol class="parts">
+      {parts.map((pt, k) => (
+        <li key={k}>
+          <button class="part-row" onClick={() => (moveSheet.value = pt.move)}>
+            <span class="part-count">{pt.reps ?? count}</span>
+            <span class="part-name">
+              {pt.name}
+              {pt.perSide ? <span class="muted"> {pt.sideLabel ?? 'per side'}</span> : null}
+            </span>
+            <span class="muted small">{pt.bell === null ? '' : pt.bell === 'BW' ? 'BW' : `${pt.bell} lb`}</span>
+          </button>
+        </li>
+      ))}
+    </ol>
   );
 }
 

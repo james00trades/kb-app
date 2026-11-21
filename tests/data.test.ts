@@ -18,23 +18,23 @@ describe('data files', () => {
     expect(problems).toEqual([]);
   });
 
-  it('every move used in the plan has form cues and starts unlocked', () => {
-    const { plan, moveById } = loadData();
-    const used = new Set<string>();
-    for (const ph of plan.phases) {
+  it('every move used in any routine has form cues; the first routine (Foundations) starts all unlocked', () => {
+    const { routines, moveById } = loadData();
+    const usedIn = (ph: (typeof routines)[number]) => {
+      const used = new Set<string>();
       const items = [...ph.warmup, ...ph.cooldown, ...Object.values(ph.days).flatMap((d) => d.items ?? [])];
       for (const it of items) {
         if (it.move) used.add(it.move);
         for (const o of Object.values(it.byWeek ?? {})) if (o.move) used.add(o.move);
         for (const st of it.stations ?? []) if (st.move) used.add(st.move);
+        for (const pt of it.parts ?? []) used.add(pt.move);
       }
       for (const s of [...(ph.morning?.stations ?? []), ...(ph.evening?.stations ?? [])]) if (s.move) used.add(s.move);
-    }
-    for (const id of used) {
-      const m = moveById.get(id)!;
-      expect(m.cues?.length, `${id} cues`).toBeGreaterThan(0);
-      expect(m.unlocked, `${id} unlocked`).toBe(true);
-    }
+      return used;
+    };
+    for (const r of routines) for (const id of usedIn(r)) expect(moveById.get(id)!.cues?.length, `${r.id}: ${id} cues`).toBeGreaterThan(0);
+    // Moves in later routines unlock in the library once they're trained
+    for (const id of usedIn(routines[0])) expect(moveById.get(id)!.unlocked, `${id} unlocked`).toBe(true);
   });
 
   it('Frame of David additions (James, Nov 10): 14 moves + the supported row, with his flags and start bells', () => {
@@ -47,13 +47,14 @@ describe('data files', () => {
     // Shoulder hold: the ⚠ moves from his notes
     expect(movements.filter((m) => m.shoulder).map((m) => m.id).sort()).toEqual(
       ['curl-to-press', 'curl-to-pullover', 'front-to-back-raise', 'over-shoulder-pull', 'pullover-to-side-pull', 'side-to-front-raise']);
-    // Best guesses: the medium-confidence moves, so he can find and check them
-    expect(movements.filter((m) => m.guess).map((m) => m.id).sort()).toEqual(
-      ['curl-to-press', 'gravedigger', 'over-shoulder-pull', 'pullover-to-side-pull', 'side-to-front-raise', 'tactical-crossover']);
+    // Best guesses: the medium-confidence moves, so he can find and check them (more joined on Nov 20: the
+    // cues written for moves the new routines use)
+    expect(movements.filter((m) => m.guess).map((m) => m.id)).toEqual(expect.arrayContaining(
+      ['curl-to-press', 'gravedigger', 'over-shoulder-pull', 'pullover-to-side-pull', 'side-to-front-raise', 'tactical-crossover']));
     // His pick: 35 lb for the leg-driven ones, 18 lb for the rest
     expect(added.filter((id) => moveById.get(id)!.startBell === 35).sort()).toEqual(['clean-to-squat', 'gravedigger', 'woodchop']);
     expect(added.filter((id) => moveById.get(id)!.startBell === 18)).toHaveLength(11);
-    // None of them goes into the current plan: only the easier row variation starts unlocked
+    // Only the easier row variation starts unlocked
     expect(added.filter((id) => moveById.get(id)!.unlocked)).toEqual(['supported-row']);
   });
 
@@ -63,15 +64,19 @@ describe('data files', () => {
     expect(m.cues!.join(' ')).toContain('straight out at chest height');
   });
 
-  it('every move has a difficulty level (James, Nov 18) that matches the plan and the unlock order', () => {
-    const { moveById, movements, plan } = loadData();
+  it('every move has a difficulty level (James, Nov 18) that matches the routines and the unlock order', () => {
+    const { moveById, movements, routines } = loadData();
     const count = (l: string) => movements.filter((m) => m.level === l).length;
     expect([count('beginner'), count('intermediate'), count('advanced')]).toEqual([57, 37, 16]);
-    // Everything in Month 1 (warm-up, days, evening holds) is Beginner
-    const m1 = JSON.stringify(plan.phases.find((p) => p.id === 'm1'));
-    const used = [...m1.matchAll(/"move":"([a-z0-9-]+)"/g)].map((x) => x[1]);
-    expect(used.length).toBeGreaterThan(10);
-    for (const id of used) expect(moveById.get(id)!.level, id).toBe('beginner');
+    const movesOf = (level: number) =>
+      routines.filter((r) => r.level === level).flatMap((r) => [...JSON.stringify(r).matchAll(/"move":"([a-z0-9-]+)"/g)].map((x) => x[1]));
+    // Everything in Level 1 (warm-up, days, flows, evening holds) is Beginner
+    expect(movesOf(1).length).toBeGreaterThan(30);
+    for (const id of movesOf(1)) expect(moveById.get(id)!.level, id).toBe('beginner');
+    // Level 2 brings in Intermediate moves but nothing Advanced yet
+    expect(movesOf(2).some((id) => moveById.get(id)!.level === 'intermediate')).toBe(true);
+    for (const id of movesOf(2)) expect(moveById.get(id)!.level, id).not.toBe('advanced');
+    expect(movesOf(4).some((id) => moveById.get(id)!.level === 'advanced')).toBe(true);
     // Month 2 new moves land in Intermediate; the Month 4+ ones in Advanced
     for (const id of ['single-arm-swing', 'clean', 'push-press', 'figure-8', 'transfers', 'full-get-up', 'clean-and-press'])
       expect(moveById.get(id)!.level, id).toBe('intermediate');
@@ -98,7 +103,7 @@ describe('data files', () => {
       (it: Record<string, unknown>) => (it.byWeek = { 3: { reps: [10, 15] } }),
     ]) {
       const plan = parsePlan(structuredClone(planJson));
-      const dl = plan.phases[0].days.A.items!.find((i) => i.id === 'a-deadlift')!;
+      const dl = plan.routines[0].days.A.items!.find((i) => i.id === 'a-deadlift')!;
       change(dl as unknown as Record<string, unknown>);
       expect(crossCheck(plan, moves).join()).toContain('a-deadlift: ');
       expect(crossCheck(plan, moves).join()).toContain('add sets instead');
@@ -107,7 +112,31 @@ describe('data files', () => {
 
   it('flags an unknown move id', () => {
     const plan = parsePlan(structuredClone(planJson));
-    plan.phases[0].days.A.items![0].move = 'not-a-move';
+    plan.routines[0].days.A.items![0].move = 'not-a-move';
     expect(crossCheck(plan, parseMovements(movementsJson)).join()).toContain('not-a-move');
+  });
+
+  it('flags circuits and flows that break the rules (Nov 20)', () => {
+    const moves = parseMovements(movementsJson);
+    const anvil = () => {
+      const plan = parsePlan(structuredClone(planJson));
+      return { plan, c1: plan.routines.find((r) => r.id === 'l2-anvil')!.days.A.items!.find((i) => i.id === 'a-c1')! };
+    };
+    let t = anvil();
+    t.c1.parts![0].move = 'not-a-move';
+    expect(crossCheck(t.plan, moves).join()).toContain('a-c1: unknown move not-a-move');
+    t = anvil();
+    t.c1.parts = t.c1.parts!.slice(0, 1);
+    expect(crossCheck(t.plan, moves).join()).toContain('needs at least 2 moves');
+    t = anvil();
+    t.c1.parts![1].reps = 12;
+    expect(crossCheck(t.plan, moves).join()).toContain('add sets instead');
+    const plan = parsePlan(structuredClone(planJson));
+    const flow = plan.routines.find((r) => r.id === 'l3-raider')!.days.A.items!.find((i) => i.id === 'a-f1')!;
+    flow.parts![0].bell = 35;
+    expect(crossCheck(plan, moves).join()).toContain('a flow uses one bell');
+    const noLevel = parsePlan(structuredClone(planJson));
+    noLevel.routines = noLevel.routines.filter((r) => r.level !== 3);
+    expect(crossCheck(noLevel, moves).join()).toContain('Level 3 has no routines');
   });
 });

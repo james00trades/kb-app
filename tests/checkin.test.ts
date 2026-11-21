@@ -57,11 +57,17 @@ const result = {
 };
 
 const program = {
-  name: 'Month 1: Wake up',
+  name: 'Foundations',
+  level: 1,
+  levelName: 'Beginner',
   week: 2,
+  weeks: 4,
   effort: '5–6 out of 10',
   rotation: ['A', 'B', 'C', 'REST'],
-  phases: [{ name: 'Month 1: Wake up', weeks: [1, 4] as [number, number], effort: '5–6 out of 10' }],
+  levels: [
+    { n: 1, name: 'Beginner', summary: 'Straight sets', routines: ['Foundations', 'Ironwood'] },
+    { n: 2, name: 'Intermediate', summary: 'Circuits', routines: ['Anvil'] },
+  ],
 };
 
 function input(over: Partial<ReportInput> = {}): ReportInput {
@@ -90,8 +96,8 @@ const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart
 describe('check-in report', () => {
   it('lays out the program, recent weight, waist, training and photos', () => {
     const text = buildReport(input());
-    expect(text).toContain('Program: now in "Month 1: Wake up", program week 2, target effort 5–6 out of 10');
-    expect(text).toContain('Program phases loaded so far: Month 1: Wake up (weeks 1–4, effort 5–6 out of 10)');
+    expect(text).toContain('Program: Level 1 (Beginner), routine "Foundations", week 2 of 4, target effort 5–6 out of 10');
+    expect(text).toContain('1 Beginner, Straight sets: Foundations, Ironwood; 2 Intermediate, Circuits: Anvil.');
     expect(text).toContain("User's note this week: Ate out twice");
     expect(text).toContain('About the user: not given');
     expect(text).toContain('- 2026-11-07: 233.0 / 233.0');

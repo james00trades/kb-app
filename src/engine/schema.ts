@@ -57,6 +57,18 @@ export const Station = z.object({
 });
 export type Station = z.infer<typeof Station>;
 
+/** One move inside a circuit (one round = each part once) or a flow (one cycle = each part in order). */
+export const Part = z.object({
+  move: z.string(),
+  /** Circuits: this move's own count, when it differs from the round's (flows: times through in a cycle). */
+  reps: z.number().int().positive().optional(),
+  perSide: z.boolean().optional(),
+  sideLabel: z.string().optional(),
+  /** Circuits: this move's bell (a flow uses one bell, the item's). */
+  bell: Bell.optional(),
+});
+export type Part = z.infer<typeof Part>;
+
 /** Fields that can change week to week, or step to step on a progression ladder. */
 const Override = z.object({
   move: z.string(),
@@ -67,6 +79,7 @@ const Override = z.object({
   bell: Bell,
   rest: z.number().min(0),
   notes: z.string(),
+  parts: z.array(Part),
 }).partial();
 
 export const LadderStep = Override.pick({ sets: true, reps: true, seconds: true, bell: true });
@@ -74,7 +87,10 @@ export type LadderStep = z.infer<typeof LadderStep>;
 
 export const Item = Override.extend({
   id: z.string(),
-  kind: z.enum(['reps', 'time', 'breath', 'routine']),
+  /** reps: straight sets of one move, done as a total. time: a hold or carry. circuit: several moves back
+   *  to back, then rest; `sets` = rounds, `reps` = the count for each move. flow: moves chained without
+   *  putting the bell down; `sets` = sets, `reps` = cycles a set (per side when perSide). (Nov 20, 2026) */
+  kind: z.enum(['reps', 'time', 'breath', 'routine', 'circuit', 'flow']),
   /** Routine items only: a guided timer that runs this phase routine (e.g. the morning wake-up) first… */
   routine: z.enum(['morning', 'evening']).optional(),
   /** …then these stations. */
@@ -113,21 +129,43 @@ const Day = z.object({
 export const DayKey = z.enum(['A', 'B', 'C', 'REST']);
 export type DayKey = z.infer<typeof DayKey>;
 
-export const Phase = z.object({
-  id: z.string(),
+/** A difficulty level (James, Nov 20): 1 straight sets, 2 circuits, 3 circuits and flows, 4 mostly flows. */
+export const LevelInfo = z.object({
+  n: z.number().int().min(1),
   name: z.string(),
+  summary: z.string(),
+});
+export type LevelInfo = z.infer<typeof LevelInfo>;
+
+/** A 4-week routine at one level. The warm-up, breathing and evening holds come from the plan's
+ *  `base` unless the routine has its own. */
+export const RoutineFile = z.object({
+  id: z.string().regex(/^[a-z0-9-]+$/),
+  name: z.string(),
+  level: z.number().int().min(1),
+  summary: z.string(),
   weeks: Range,
   effort: z.string().optional(),
   minutes: z.string().optional(),
   setCapInWeek: z.record(z.string(), z.number().int().positive()).optional(),
-  warmup: z.array(Item),
-  cooldown: z.array(Item),
+  warmup: z.array(Item).optional(),
+  cooldown: z.array(Item).optional(),
   days: z.object({ A: Day, B: Day, C: Day, REST: Day }),
   morning: Extra.optional(),
   evening: Extra.optional(),
   checks: z.array(z.string()).optional(),
 });
-export type Phase = z.infer<typeof Phase>;
+export type RoutineFile = z.infer<typeof RoutineFile>;
+
+/** A routine with the shared parts filled in: what the engine plans from. */
+export type Phase = Omit<RoutineFile, 'warmup' | 'cooldown'> & { warmup: Item[]; cooldown: Item[] };
+
+const Base = z.object({
+  warmup: z.array(Item),
+  cooldown: z.array(Item),
+  morning: Extra.optional(),
+  evening: Extra.optional(),
+});
 
 export const BreathPattern = z.object({
   name: z.string(),
@@ -141,6 +179,8 @@ export const PlanFile = z.object({
   rotation: z.array(DayKey).min(1),
   defaultRest: z.number().min(0),
   breathPatterns: z.record(z.string(), BreathPattern),
-  phases: z.array(Phase).min(1),
+  levels: z.array(LevelInfo).min(1),
+  base: Base,
+  routines: z.array(RoutineFile).min(1),
 });
 export type PlanFile = z.infer<typeof PlanFile>;

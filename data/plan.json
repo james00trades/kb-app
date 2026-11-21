@@ -1,130 +1,1844 @@
 {
-  "version": 1,
-  "name": "Kettlebell: first 3 months",
+  "version": 2,
+  "name": "Kettlebell: levels and routines",
   "rotation": ["A", "B", "C", "A", "B", "C", "REST"],
   "defaultRest": 60,
   "breathPatterns": {
-    "box": { "name": "Box breathing", "steps": [["in", 4], ["hold", 4], ["out", 4], ["hold", 4]] },
-    "4-7-8": { "name": "4-7-8 breathing", "steps": [["in", 4], ["hold", 7], ["out", 8]] },
-    "belly": { "name": "Belly breathing", "steps": [["in", 4], ["out", 6]] }
+    "box": {"name": "Box breathing", "steps": [["in", 4], ["hold", 4], ["out", 4], ["hold", 4]]},
+    "4-7-8": {"name": "4-7-8 breathing", "steps": [["in", 4], ["hold", 7], ["out", 8]]},
+    "belly": {"name": "Belly breathing", "steps": [["in", 4], ["out", 6]]}
   },
-  "phases": [
+  "levels": [
+    {"n": 1, "name": "Beginner", "summary": "Straight sets of the basics, with a couple of easy flows"},
     {
-      "id": "m1",
-      "name": "Month 1: Wake up and learn foundations",
+      "n": 2,
+      "name": "Intermediate",
+      "summary": "Circuits: several moves back to back, then rest; cleans, push presses and single-arm swings come in"
+    },
+    {"n": 3, "name": "Intermediate+", "summary": "A circuit plus 3–4-move flows; snatches and windmills start, light"},
+    {"n": 4, "name": "Advanced", "summary": "Mostly flows, longer and more skilled, plus one heavy circuit"}
+  ],
+  "base": {
+    "warmup": [
+      {
+        "id": "wu-guided",
+        "kind": "routine",
+        "label": "Guided warm-up",
+        "transition": 0,
+        "rest": 0,
+        "notes": "Trevor's wake-up routine mixed in with bodyweight moves: never two leg moves in a row. 30 s each, no breaks.",
+        "stations": [
+          {"label": "Arm circles forward", "seconds": 15},
+          {"label": "Arm circles backward", "seconds": 15},
+          {"label": "Jumping twists", "seconds": 30},
+          {"label": "Arm swings", "seconds": 30},
+          {"label": "Lunge reaches", "seconds": 30},
+          {"label": "Elbow throws", "seconds": 30},
+          {"label": "Monk squats", "seconds": 30, "move": "monk-squat"},
+          {"label": "Push-ups (knees or bench OK)", "seconds": 30, "move": "push-up"},
+          {"label": "Ragdoll twists", "seconds": 30},
+          {"label": "Cossack squats", "seconds": 30, "move": "cossack-squat"},
+          {"label": "Body waves", "seconds": 30},
+          {"label": "Plank (knees OK)", "seconds": 30, "move": "plank"},
+          {"label": "Side bends", "seconds": 30},
+          {"label": "Hindu push-ups", "seconds": 30, "move": "hindu-push-up"},
+          {"label": "Hip hinges (wall drill)", "seconds": 30, "move": "hip-hinge-drill"}
+        ]
+      }
+    ],
+    "cooldown": [{"id": "cd-breath", "kind": "breath", "minutes": 4, "patterns": ["box", "4-7-8", "belly"]}],
+    "evening": {
+      "title": "Evening holds",
+      "transition": 10,
+      "stations": [
+        {"label": "Reverse prayer pose", "seconds": 60, "move": "reverse-prayer-pose"},
+        {"label": "Deep twist squats", "seconds": 60, "move": "deep-twist-squat"},
+        {"label": "Downward dog pulses", "seconds": 60, "move": "downward-dog-pulse"},
+        {"label": "Pigeon pose, left leg forward", "seconds": 60, "move": "pigeon-pose"},
+        {"label": "Pigeon pose, right leg forward", "seconds": 60, "move": "pigeon-pose"},
+        {"label": "Couch stretch, left leg back", "seconds": 60, "move": "couch-stretch"},
+        {"label": "Couch stretch, right leg back", "seconds": 60, "move": "couch-stretch"},
+        {"label": "Frog pose", "seconds": 60, "move": "frog-pose"},
+        {"label": "Cobra", "seconds": 60, "move": "cobra"},
+        {"label": "Straddle", "seconds": 60, "move": "straddle"},
+        {"label": "Lying spinal twist, knee to the left", "seconds": 60, "move": "lying-spinal-twist"},
+        {"label": "Lying spinal twist, knee to the right", "seconds": 60, "move": "lying-spinal-twist"},
+        {"label": "Bridge (regressed)", "seconds": 60, "move": "bridge-regressed"}
+      ]
+    }
+  },
+  "routines": [
+    {
+      "id": "l1-foundations",
+      "name": "Foundations",
+      "level": 1,
+      "summary": "Learn the hinge, squat, press and row; the swing builds week by week. Start here if you're new.",
       "weeks": [1, 4],
       "effort": "5–6 out of 10",
-      "minutes": "20–25 min",
-      "setCapInWeek": { "1": 2 },
-      "warmup": [
-        { "id": "wu-guided", "kind": "routine", "label": "Guided warm-up", "transition": 0, "rest": 0,
-          "notes": "Trevor's wake-up routine mixed in with bodyweight moves: never two leg moves in a row. 30 s each, no breaks.",
-          "stations": [
-            { "label": "Arm circles forward", "seconds": 15 },
-            { "label": "Arm circles backward", "seconds": 15 },
-            { "label": "Jumping twists", "seconds": 30 },
-            { "label": "Arm swings", "seconds": 30 },
-            { "label": "Lunge reaches", "seconds": 30 },
-            { "label": "Elbow throws", "seconds": 30 },
-            { "label": "Monk squats", "seconds": 30, "move": "monk-squat" },
-            { "label": "Push-ups (knees or bench OK)", "seconds": 30, "move": "push-up" },
-            { "label": "Ragdoll twists", "seconds": 30 },
-            { "label": "Cossack squats", "seconds": 30, "move": "cossack-squat" },
-            { "label": "Body waves", "seconds": 30 },
-            { "label": "Plank (knees OK)", "seconds": 30, "move": "plank" },
-            { "label": "Side bends", "seconds": 30 },
-            { "label": "Hindu push-ups", "seconds": 30, "move": "hindu-push-up" },
-            { "label": "Hip hinges (wall drill)", "seconds": 30, "move": "hip-hinge-drill" }
-          ] }
-      ],
-      "cooldown": [
-        { "id": "cd-breath", "kind": "breath", "minutes": 4, "patterns": ["box", "4-7-8", "belly"] }
-      ],
+      "minutes": "20–30 min",
+      "setCapInWeek": {"1": 2},
       "days": {
         "A": {
           "title": "Hinge and press",
           "items": [
-            { "id": "a-hinge-drill", "move": "hip-hinge-drill", "kind": "reps", "sets": 2, "reps": 10, "weeks": [1, 2], "bell": 45 },
-            { "id": "a-deadlift", "move": "deadlift", "kind": "reps", "sets": 3, "reps": [8, 10], "bell": 45 },
-            { "id": "a-swing", "move": "hike-pass", "kind": "reps", "sets": 5, "reps": 5, "bell": 35, "weeks": [2, 4],
-              "notes": "Swing path",
+            {"id": "a-hinge-drill", "move": "hip-hinge-drill", "kind": "reps", "sets": 2, "reps": 10, "bell": 45, "weeks": [1, 2]},
+            {
+              "id": "a-deadlift",
+              "move": "deadlift",
+              "kind": "reps",
+              "sets": 3,
+              "reps": 6,
+              "bell": 45,
+              "byWeek": {"3": {"sets": 4}, "4": {"sets": 5}}
+            },
+            {
+              "id": "a-swing",
+              "move": "hike-pass",
+              "kind": "reps",
+              "sets": 5,
+              "reps": 5,
+              "bell": 35,
+              "weeks": [2, 4],
               "byWeek": {
-                "3": { "move": "full-stop-swing", "sets": 5, "reps": 5, "bell": 35 },
-                "4": { "move": "two-hand-swing", "sets": 5, "reps": [8, 10], "bell": 45 }
-              } },
-            { "id": "a-goblet-squat", "move": "goblet-squat", "kind": "reps", "sets": 3, "reps": 8, "bell": 35,
-              "byWeek": { "3": { "reps": [8, 10] } } },
-            { "id": "a-press", "move": "single-arm-press", "kind": "reps", "sets": 3, "reps": 5, "perSide": true, "bell": 18,
-              "byWeek": { "3": { "reps": [5, 7] } } },
-            { "id": "a-suitcase-carry", "move": "suitcase-carry", "kind": "time", "sets": 3, "seconds": 30, "perSide": true, "bell": 45 }
+                "3": {"move": "full-stop-swing", "sets": 6, "reps": 5, "bell": 35},
+                "4": {"move": "two-hand-swing", "sets": 6, "reps": 6, "bell": 45}
+              },
+              "notes": "Swing path"
+            },
+            {
+              "id": "a-goblet-squat",
+              "move": "goblet-squat",
+              "kind": "reps",
+              "sets": 3,
+              "reps": 6,
+              "bell": 35,
+              "byWeek": {"3": {"sets": 4}, "4": {"sets": 5}}
+            },
+            {
+              "id": "a-press",
+              "move": "single-arm-press",
+              "kind": "reps",
+              "sets": 3,
+              "reps": 5,
+              "perSide": true,
+              "bell": 18,
+              "byWeek": {"3": {"sets": 4}}
+            },
+            {"id": "a-suitcase-carry", "move": "suitcase-carry", "kind": "time", "sets": 3, "seconds": 30, "perSide": true, "bell": 45}
           ]
         },
         "B": {
           "title": "Pull and lunge",
           "items": [
-            { "id": "b-swing", "move": "hike-pass", "kind": "reps", "sets": 5, "reps": 5, "bell": 35, "weeks": [2, 4],
-              "notes": "Swing path",
+            {
+              "id": "b-swing",
+              "move": "hike-pass",
+              "kind": "reps",
+              "sets": 5,
+              "reps": 5,
+              "bell": 35,
+              "weeks": [2, 4],
               "byWeek": {
-                "3": { "move": "full-stop-swing", "sets": 5, "reps": 5, "bell": 35 },
-                "4": { "move": "two-hand-swing", "sets": 5, "reps": [8, 10], "bell": 45 }
-              } },
-            { "id": "b-row", "move": "bent-over-row", "kind": "reps", "sets": 3, "reps": [8, 10], "perSide": true, "bell": 45 },
-            { "id": "b-reverse-lunge", "move": "reverse-lunge", "kind": "reps", "sets": 3, "reps": 6, "perSide": true, "bell": "BW",
-              "ladder": [{ "bell": "BW" }, { "bell": 18 }],
-              "notes": "When loaded, hold the 18 goblet-style" },
-            { "id": "b-floor-press", "move": "floor-press", "kind": "reps", "sets": 3, "reps": 8, "perSide": true, "bell": 35,
-              "byWeek": { "3": { "reps": [8, 10] } } },
-            { "id": "b-halo", "move": "halo", "kind": "reps", "sets": 2, "reps": 5, "perSide": true, "sideLabel": "each direction", "bell": 18,
-              "byWeek": { "3": { "reps": [5, 7] } } },
-            { "id": "b-dead-hang", "move": "dead-hang", "kind": "time", "sets": 3, "seconds": [15, 20] }
+                "3": {"move": "full-stop-swing", "sets": 6, "reps": 5, "bell": 35},
+                "4": {"move": "two-hand-swing", "sets": 6, "reps": 6, "bell": 45}
+              },
+              "notes": "Swing path"
+            },
+            {
+              "id": "b-row",
+              "move": "bent-over-row",
+              "kind": "reps",
+              "sets": 3,
+              "reps": 6,
+              "perSide": true,
+              "bell": 45,
+              "byWeek": {"3": {"sets": 4}}
+            },
+            {
+              "id": "b-reverse-lunge",
+              "move": "reverse-lunge",
+              "kind": "reps",
+              "sets": 3,
+              "reps": 5,
+              "perSide": true,
+              "bell": "BW",
+              "byWeek": {"3": {"sets": 4}},
+              "ladder": [{"bell": "BW"}, {"bell": 18}],
+              "notes": "When loaded, hold the 18 goblet-style"
+            },
+            {
+              "id": "b-floor-press",
+              "move": "floor-press",
+              "kind": "reps",
+              "sets": 3,
+              "reps": 6,
+              "perSide": true,
+              "bell": 35,
+              "byWeek": {"3": {"sets": 4}}
+            },
+            {
+              "id": "b-halo",
+              "move": "halo",
+              "kind": "reps",
+              "sets": 2,
+              "reps": 5,
+              "perSide": true,
+              "sideLabel": "each direction",
+              "bell": 18,
+              "byWeek": {"3": {"sets": 3}}
+            },
+            {"id": "b-dead-hang", "move": "dead-hang", "kind": "time", "sets": 3, "seconds": [15, 20]}
           ]
         },
         "C": {
           "title": "Skill and mobility",
           "items": [
-            { "id": "c-get-up", "move": "get-up-pieces", "kind": "reps", "sets": 3, "reps": 1, "perSide": true, "bell": 18,
-              "notes": "One rep per side each set" },
-            { "id": "c-arm-bar", "move": "arm-bar", "kind": "reps", "sets": 2, "reps": 5, "perSide": true, "bell": 18, "progressKey": "arm-bar-reps",
-              "notes": "Each rep: roll onto your side, pause, roll back" },
-            { "id": "c-sldl", "move": "single-leg-deadlift", "kind": "reps", "sets": 3, "reps": 5, "perSide": true, "bell": "BW",
-              "ladder": [{ "bell": "BW" }, { "bell": 18 }] },
-            { "id": "c-cossack", "move": "cossack-squat", "kind": "reps", "sets": 2, "reps": 5, "perSide": true,
-              "byWeek": { "3": { "reps": [5, 7] } } },
-            { "id": "c-pullover", "move": "pullover", "kind": "reps", "sets": 2, "reps": 8, "bell": 18,
-              "byWeek": { "3": { "reps": [8, 10] } } },
-            { "id": "c-mini-flow", "move": "mini-flow", "kind": "reps", "sets": 3, "reps": 5, "bell": 18, "progressKey": "mini-flow-reps",
-              "notes": "Slow. One rep: halo, goblet squat, halo" }
+            {
+              "id": "c-get-up",
+              "move": "get-up-pieces",
+              "kind": "reps",
+              "sets": 3,
+              "reps": 1,
+              "perSide": true,
+              "bell": 18,
+              "notes": "One rep per side each set"
+            },
+            {
+              "id": "c-arm-bar",
+              "move": "arm-bar",
+              "kind": "reps",
+              "sets": 2,
+              "reps": 5,
+              "perSide": true,
+              "bell": 18,
+              "byWeek": {"3": {"sets": 3}},
+              "notes": "Each rep: roll onto your side, pause, roll back"
+            },
+            {
+              "id": "c-sldl",
+              "move": "single-leg-deadlift",
+              "kind": "reps",
+              "sets": 3,
+              "reps": 5,
+              "perSide": true,
+              "bell": "BW",
+              "byWeek": {"3": {"sets": 4}},
+              "ladder": [{"bell": "BW"}, {"bell": 18}]
+            },
+            {
+              "id": "c-cossack",
+              "move": "cossack-squat",
+              "kind": "reps",
+              "sets": 2,
+              "reps": 5,
+              "perSide": true,
+              "byWeek": {"3": {"sets": 3}}
+            },
+            {"id": "c-pullover", "move": "pullover", "kind": "reps", "sets": 2, "reps": 6, "bell": 18, "byWeek": {"3": {"sets": 3}}},
+            {
+              "id": "c-mini-flow",
+              "kind": "flow",
+              "label": "Mini-flow: halo → goblet squat → halo",
+              "sets": 3,
+              "reps": 5,
+              "bell": 18,
+              "parts": [{"move": "halo"}, {"move": "goblet-squat"}, {"move": "halo"}],
+              "byWeek": {"3": {"sets": 4}},
+              "notes": "Slow. One cycle: halo, goblet squat, halo. Then rest."
+            }
           ]
         },
-        "REST": {
-          "title": "Rest / walk day",
-          "notes": "Trail walk if you can. Evening holds whenever you like."
-        }
-      },
-      "evening": {
-        "title": "Evening holds",
-        "transition": 10,
-        "stations": [
-          { "label": "Reverse prayer pose", "seconds": 60, "move": "reverse-prayer-pose" },
-          { "label": "Deep twist squats", "seconds": 60, "move": "deep-twist-squat" },
-          { "label": "Downward dog pulses", "seconds": 60, "move": "downward-dog-pulse" },
-          { "label": "Pigeon pose, left leg forward", "seconds": 60, "move": "pigeon-pose" },
-          { "label": "Pigeon pose, right leg forward", "seconds": 60, "move": "pigeon-pose" },
-          { "label": "Couch stretch, left leg back", "seconds": 60, "move": "couch-stretch" },
-          { "label": "Couch stretch, right leg back", "seconds": 60, "move": "couch-stretch" },
-          { "label": "Frog pose", "seconds": 60, "move": "frog-pose" },
-          { "label": "Cobra", "seconds": 60, "move": "cobra" },
-          { "label": "Straddle", "seconds": 60, "move": "straddle" },
-          { "label": "Lying spinal twist, knee to the left", "seconds": 60, "move": "lying-spinal-twist" },
-          { "label": "Lying spinal twist, knee to the right", "seconds": 60, "move": "lying-spinal-twist" },
-          { "label": "Bridge (regressed)", "seconds": 60, "move": "bridge-regressed" }
-        ]
+        "REST": {"title": "Rest / walk day", "notes": "Trail walk if you can. Evening holds whenever you like."}
       },
       "checks": [
-        "3 × 10 deadlifts (45) with clean form",
-        "2 × 10 crisp two-hand swings (45)",
+        "5 × 6 deadlifts (45) with clean form",
+        "6 × 6 crisp two-hand swings (45)",
         "Get-up to half-kneeling (18), each side",
         "No joint pain the day after sessions"
+      ]
+    },
+    {
+      "id": "l1-ironwood",
+      "name": "Ironwood",
+      "level": 1,
+      "summary": "New basics: suitcase deadlifts, glute bridges, supported rows and loaded lunges, with two easy flows.",
+      "weeks": [1, 4],
+      "effort": "5–6 out of 10",
+      "minutes": "20–30 min",
+      "setCapInWeek": {"1": 2},
+      "days": {
+        "A": {
+          "title": "Hinge and push",
+          "items": [
+            {
+              "id": "a-suitcase-dl",
+              "move": "suitcase-deadlift",
+              "kind": "reps",
+              "sets": 3,
+              "reps": 6,
+              "perSide": true,
+              "bell": 35,
+              "byWeek": {"3": {"sets": 4}}
+            },
+            {"id": "a-swing", "move": "two-hand-swing", "kind": "reps", "sets": 5, "reps": 5, "bell": 35, "byWeek": {"3": {"sets": 6}}},
+            {"id": "a-goblet-squat", "move": "goblet-squat", "kind": "reps", "sets": 3, "reps": 6, "bell": 35, "byWeek": {"3": {"sets": 4}}},
+            {
+              "id": "a-floor-press",
+              "move": "floor-press",
+              "kind": "reps",
+              "sets": 3,
+              "reps": 6,
+              "perSide": true,
+              "bell": 35,
+              "byWeek": {"3": {"sets": 4}}
+            },
+            {"id": "a-glute-bridge", "move": "glute-bridge", "kind": "reps", "sets": 3, "reps": 6, "bell": 45, "byWeek": {"3": {"sets": 4}}},
+            {"id": "a-rack-hold", "move": "rack-hold", "kind": "time", "sets": 3, "seconds": 20, "perSide": true, "bell": 35}
+          ]
+        },
+        "B": {
+          "title": "Pull and lunge",
+          "items": [
+            {
+              "id": "b-row",
+              "move": "supported-row",
+              "kind": "reps",
+              "sets": 3,
+              "reps": 6,
+              "perSide": true,
+              "bell": 35,
+              "byWeek": {"3": {"sets": 4}}
+            },
+            {
+              "id": "b-lunge",
+              "move": "loaded-reverse-lunge",
+              "kind": "reps",
+              "sets": 3,
+              "reps": 5,
+              "perSide": true,
+              "bell": 18,
+              "byWeek": {"3": {"sets": 4}}
+            },
+            {
+              "id": "b-press",
+              "move": "single-arm-press",
+              "kind": "reps",
+              "sets": 3,
+              "reps": 5,
+              "perSide": true,
+              "bell": 18,
+              "byWeek": {"3": {"sets": 4}}
+            },
+            {
+              "id": "b-curl",
+              "move": "hammer-curl",
+              "kind": "reps",
+              "sets": 2,
+              "reps": 6,
+              "perSide": true,
+              "bell": 18,
+              "byWeek": {"3": {"sets": 3}}
+            },
+            {
+              "id": "b-pull-through",
+              "move": "plank-pull-through",
+              "kind": "reps",
+              "sets": 2,
+              "reps": 5,
+              "perSide": true,
+              "bell": 18,
+              "byWeek": {"3": {"sets": 3}}
+            },
+            {"id": "b-dead-hang", "move": "dead-hang", "kind": "time", "sets": 3, "seconds": 20}
+          ]
+        },
+        "C": {
+          "title": "Skill and flow",
+          "items": [
+            {
+              "id": "c-get-up",
+              "move": "get-up-pieces",
+              "kind": "reps",
+              "sets": 3,
+              "reps": 1,
+              "perSide": true,
+              "bell": 18,
+              "notes": "One rep per side each set"
+            },
+            {
+              "id": "c-sldl",
+              "move": "single-leg-deadlift",
+              "kind": "reps",
+              "sets": 3,
+              "reps": 5,
+              "perSide": true,
+              "bell": 18,
+              "byWeek": {"3": {"sets": 4}}
+            },
+            {"id": "c-pullover", "move": "pullover", "kind": "reps", "sets": 2, "reps": 6, "bell": 18, "byWeek": {"3": {"sets": 3}}},
+            {
+              "id": "c-flow-1",
+              "kind": "flow",
+              "label": "Around the world → halo",
+              "sets": 2,
+              "reps": 5,
+              "bell": 18,
+              "parts": [{"move": "around-the-world"}, {"move": "halo"}],
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "One cycle = each move once, in order, without putting the bell down. Then rest."
+            },
+            {
+              "id": "c-flow-2",
+              "kind": "flow",
+              "label": "Deadlift → goblet squat",
+              "sets": 2,
+              "reps": 5,
+              "bell": 35,
+              "parts": [{"move": "deadlift"}, {"move": "goblet-squat"}],
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "Deadlift the bell, curl it up to your chest, squat, set it down. That's one cycle. Then rest."
+            },
+            {"id": "c-plank", "move": "plank", "kind": "time", "sets": 3, "seconds": 30}
+          ]
+        },
+        "REST": {"title": "Rest / walk day", "notes": "Trail walk if you can. Evening holds whenever you like."}
+      },
+      "checks": [
+        "Ready for the next level when this feels smooth: clean form on every set, your own set sizes creeping up to 8+, and no joint pain the day after."
+      ]
+    },
+    {
+      "id": "l1-hearth",
+      "name": "Hearth",
+      "level": 1,
+      "summary": "More swings: the two-hand swing every week, deadlifts and goblet squats, an easy flow every day.",
+      "weeks": [1, 4],
+      "effort": "5–6 out of 10",
+      "minutes": "20–30 min",
+      "setCapInWeek": {"1": 2},
+      "days": {
+        "A": {
+          "title": "Swing and press",
+          "items": [
+            {"id": "a-swing", "move": "two-hand-swing", "kind": "reps", "sets": 6, "reps": 5, "bell": 45, "byWeek": {"3": {"sets": 7}}},
+            {"id": "a-goblet-squat", "move": "goblet-squat", "kind": "reps", "sets": 3, "reps": 6, "bell": 35, "byWeek": {"3": {"sets": 4}}},
+            {
+              "id": "a-press",
+              "move": "single-arm-press",
+              "kind": "reps",
+              "sets": 3,
+              "reps": 5,
+              "perSide": true,
+              "bell": 18,
+              "byWeek": {"3": {"sets": 4}}
+            },
+            {
+              "id": "a-row",
+              "move": "bent-over-row",
+              "kind": "reps",
+              "sets": 3,
+              "reps": 6,
+              "perSide": true,
+              "bell": 35,
+              "byWeek": {"3": {"sets": 4}}
+            },
+            {
+              "id": "a-flow",
+              "kind": "flow",
+              "label": "Deadlift → goblet squat",
+              "sets": 2,
+              "reps": 5,
+              "bell": 35,
+              "parts": [{"move": "deadlift"}, {"move": "goblet-squat"}],
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "Deadlift the bell, curl it up to your chest, squat, set it down. That's one cycle. Then rest."
+            }
+          ]
+        },
+        "B": {
+          "title": "Hinge and carry",
+          "items": [
+            {"id": "b-deadlift", "move": "deadlift", "kind": "reps", "sets": 4, "reps": 6, "bell": 45, "byWeek": {"3": {"sets": 5}}},
+            {"id": "b-swing", "move": "full-stop-swing", "kind": "reps", "sets": 5, "reps": 5, "bell": 45, "byWeek": {"3": {"sets": 6}}},
+            {
+              "id": "b-floor-press",
+              "move": "floor-press",
+              "kind": "reps",
+              "sets": 3,
+              "reps": 6,
+              "perSide": true,
+              "bell": 35,
+              "byWeek": {"3": {"sets": 4}}
+            },
+            {
+              "id": "b-lunge",
+              "move": "reverse-lunge",
+              "kind": "reps",
+              "sets": 3,
+              "reps": 5,
+              "perSide": true,
+              "bell": 18,
+              "byWeek": {"3": {"sets": 4}},
+              "notes": "Hold the 18 goblet-style"
+            },
+            {"id": "b-carry", "move": "suitcase-carry", "kind": "time", "sets": 3, "seconds": 30, "perSide": true, "bell": 45},
+            {
+              "id": "b-flow",
+              "kind": "flow",
+              "label": "Around the world → halo",
+              "sets": 2,
+              "reps": 5,
+              "bell": 18,
+              "parts": [{"move": "around-the-world"}, {"move": "halo"}],
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "One cycle = each move once, in order, without putting the bell down. Then rest."
+            }
+          ]
+        },
+        "C": {
+          "title": "Skill and flow",
+          "items": [
+            {
+              "id": "c-get-up",
+              "move": "get-up-pieces",
+              "kind": "reps",
+              "sets": 3,
+              "reps": 1,
+              "perSide": true,
+              "bell": 18,
+              "notes": "One rep per side each set"
+            },
+            {
+              "id": "c-cossack",
+              "move": "cossack-squat",
+              "kind": "reps",
+              "sets": 3,
+              "reps": 5,
+              "perSide": true,
+              "byWeek": {"3": {"sets": 4}}
+            },
+            {
+              "id": "c-sldl",
+              "move": "single-leg-deadlift",
+              "kind": "reps",
+              "sets": 3,
+              "reps": 5,
+              "perSide": true,
+              "bell": 18,
+              "byWeek": {"3": {"sets": 4}}
+            },
+            {
+              "id": "c-arm-bar",
+              "move": "arm-bar",
+              "kind": "reps",
+              "sets": 2,
+              "reps": 5,
+              "perSide": true,
+              "bell": 18,
+              "byWeek": {"3": {"sets": 3}}
+            },
+            {
+              "id": "c-mini-flow",
+              "kind": "flow",
+              "label": "Mini-flow: halo → goblet squat → halo",
+              "sets": 2,
+              "reps": 5,
+              "bell": 18,
+              "parts": [{"move": "halo"}, {"move": "goblet-squat"}, {"move": "halo"}],
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "One cycle = each move once, in order, without putting the bell down. Then rest."
+            },
+            {"id": "c-dead-hang", "move": "dead-hang", "kind": "time", "sets": 3, "seconds": 20}
+          ]
+        },
+        "REST": {"title": "Rest / walk day", "notes": "Trail walk if you can. Evening holds whenever you like."}
+      },
+      "checks": [
+        "Ready for the next level when this feels smooth: clean form on every set, your own set sizes creeping up to 8+, and no joint pain the day after."
+      ]
+    },
+    {
+      "id": "l2-anvil",
+      "name": "Anvil",
+      "level": 2,
+      "summary": "Two circuits a day built on squats, swings, presses and rows. Cleans and single-arm swings start here.",
+      "weeks": [1, 4],
+      "effort": "6–7 out of 10",
+      "minutes": "25–30 min",
+      "days": {
+        "A": {
+          "title": "Lower and press",
+          "items": [
+            {
+              "id": "a-c1",
+              "kind": "circuit",
+              "label": "Squat, swing, press, row",
+              "sets": 2,
+              "reps": 5,
+              "parts": [
+                {"move": "goblet-squat", "bell": 35},
+                {"move": "two-hand-swing", "bell": 45},
+                {"move": "single-arm-press", "perSide": true, "bell": 18},
+                {"move": "bent-over-row", "perSide": true, "bell": 35}
+              ],
+              "byWeek": {"2": {"sets": 3}, "3": {"sets": 4}},
+              "notes": "Each move back to back, then rest. One round = every move once."
+            },
+            {
+              "id": "a-c2",
+              "kind": "circuit",
+              "label": "Clean, lunge, push, swing",
+              "sets": 2,
+              "reps": 5,
+              "parts": [
+                {"move": "clean", "perSide": true, "bell": 18},
+                {"move": "loaded-reverse-lunge", "perSide": true, "bell": 18},
+                {"move": "push-up"},
+                {"move": "single-arm-swing", "perSide": true, "bell": 18}
+              ],
+              "byWeek": {"2": {"sets": 3}, "3": {"sets": 4}},
+              "notes": "Each move back to back, then rest. One round = every move once."
+            },
+            {
+              "id": "a-flow",
+              "kind": "flow",
+              "label": "Mini-flow: halo → goblet squat → halo",
+              "sets": 2,
+              "reps": 5,
+              "bell": 18,
+              "parts": [{"move": "halo"}, {"move": "goblet-squat"}, {"move": "halo"}],
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "One cycle = each move once, in order, without putting the bell down. Then rest."
+            }
+          ]
+        },
+        "B": {
+          "title": "Pull and hinge",
+          "items": [
+            {
+              "id": "b-c1",
+              "kind": "circuit",
+              "label": "Deadlift, press, pull, squat",
+              "sets": 2,
+              "reps": 5,
+              "parts": [
+                {"move": "deadlift", "bell": 45},
+                {"move": "floor-press", "perSide": true, "bell": 35},
+                {"move": "high-pull", "perSide": true, "bell": 18},
+                {"move": "rack-squat", "perSide": true, "bell": 35}
+              ],
+              "byWeek": {"2": {"sets": 3}, "3": {"sets": 4}},
+              "notes": "Each move back to back, then rest. One round = every move once."
+            },
+            {
+              "id": "b-c2",
+              "kind": "circuit",
+              "label": "Swing and rotate",
+              "sets": 2,
+              "reps": 5,
+              "parts": [
+                {"move": "hand-to-hand-swing", "perSide": true, "sideLabel": "each hand", "bell": 35},
+                {"move": "figure-8", "bell": 18},
+                {"move": "lawn-mower-starter", "perSide": true, "bell": 35},
+                {"move": "plank-pull-through", "perSide": true, "bell": 18}
+              ],
+              "byWeek": {"2": {"sets": 3}, "3": {"sets": 4}},
+              "notes": "Each move back to back, then rest. One round = every move once."
+            },
+            {"id": "b-dead-hang", "move": "dead-hang", "kind": "time", "sets": 3, "seconds": [20, 30]}
+          ]
+        },
+        "C": {
+          "title": "Skill and flow",
+          "items": [
+            {
+              "id": "c-get-up",
+              "move": "full-get-up",
+              "kind": "reps",
+              "sets": 3,
+              "reps": 1,
+              "perSide": true,
+              "bell": 18,
+              "notes": "One rep per side each set. Slow."
+            },
+            {
+              "id": "c-c1",
+              "kind": "circuit",
+              "label": "Clean and press",
+              "sets": 2,
+              "reps": 5,
+              "parts": [
+                {"move": "tactical-clean", "perSide": true, "bell": 18},
+                {"move": "push-press", "perSide": true, "bell": 18},
+                {"move": "goblet-squat", "bell": 35},
+                {"move": "halo", "perSide": true, "sideLabel": "each direction", "bell": 18}
+              ],
+              "byWeek": {"2": {"sets": 3}, "3": {"sets": 4}},
+              "notes": "Each move back to back, then rest. One round = every move once."
+            },
+            {
+              "id": "c-flow",
+              "kind": "flow",
+              "label": "Clean → press",
+              "sets": 2,
+              "reps": 3,
+              "bell": 18,
+              "parts": [{"move": "clean"}, {"move": "single-arm-press"}],
+              "perSide": true,
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "One cycle = each move once, in order, without putting the bell down. Do your cycles on one side, then the other, then rest."
+            }
+          ]
+        },
+        "REST": {"title": "Rest / walk day", "notes": "Trail walk if you can. Evening holds whenever you like."}
+      },
+      "checks": [
+        "Ready for the next level when this feels smooth: clean form on every set, your own set sizes creeping up to 8+, and no joint pain the day after."
+      ]
+    },
+    {
+      "id": "l2-shieldwall",
+      "name": "Shieldwall",
+      "level": 2,
+      "summary": "Pressing and pulling circuits with lunges and rotation; the push press and figure-8 get regular work.",
+      "weeks": [1, 4],
+      "effort": "6–7 out of 10",
+      "minutes": "25–30 min",
+      "days": {
+        "A": {
+          "title": "Press and squat",
+          "items": [
+            {
+              "id": "a-c1",
+              "kind": "circuit",
+              "label": "Press, squat, swing, row",
+              "sets": 2,
+              "reps": 5,
+              "parts": [
+                {"move": "push-press", "perSide": true, "bell": 18},
+                {"move": "goblet-squat", "bell": 35},
+                {"move": "single-arm-swing", "perSide": true, "bell": 35},
+                {"move": "supported-row", "perSide": true, "bell": 35}
+              ],
+              "byWeek": {"2": {"sets": 3}, "3": {"sets": 4}},
+              "notes": "Each move back to back, then rest. One round = every move once."
+            },
+            {
+              "id": "a-c2",
+              "kind": "circuit",
+              "label": "Press and bridge",
+              "sets": 2,
+              "reps": 5,
+              "parts": [
+                {"move": "floor-press", "perSide": true, "bell": 35},
+                {"move": "glute-bridge", "bell": 45},
+                {"move": "halo", "perSide": true, "sideLabel": "each direction", "bell": 18},
+                {"move": "plank-pull-through", "perSide": true, "bell": 18}
+              ],
+              "byWeek": {"2": {"sets": 3}, "3": {"sets": 4}},
+              "notes": "Each move back to back, then rest. One round = every move once."
+            },
+            {
+              "id": "a-flow",
+              "kind": "flow",
+              "label": "Deadlift → goblet squat",
+              "sets": 2,
+              "reps": 5,
+              "bell": 35,
+              "parts": [{"move": "deadlift"}, {"move": "goblet-squat"}],
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "One cycle = each move once, in order, without putting the bell down. Then rest."
+            }
+          ]
+        },
+        "B": {
+          "title": "Hinge and clean",
+          "items": [
+            {
+              "id": "b-c1",
+              "kind": "circuit",
+              "label": "Deadlift, clean, lunge, push",
+              "sets": 2,
+              "reps": 5,
+              "parts": [
+                {"move": "deadlift", "bell": 45},
+                {"move": "clean", "perSide": true, "bell": 18},
+                {"move": "loaded-reverse-lunge", "perSide": true, "bell": 18},
+                {"move": "horn-push-up", "bell": 18}
+              ],
+              "byWeek": {"2": {"sets": 3}, "3": {"sets": 4}},
+              "notes": "Each move back to back, then rest. One round = every move once."
+            },
+            {
+              "id": "b-c2",
+              "kind": "circuit",
+              "label": "Swing and carry the load",
+              "sets": 2,
+              "reps": 5,
+              "parts": [
+                {"move": "two-hand-swing", "bell": 45},
+                {"move": "figure-8", "bell": 18},
+                {"move": "lawn-mower-starter", "perSide": true, "bell": 35},
+                {"move": "suitcase-deadlift", "perSide": true, "bell": 35}
+              ],
+              "byWeek": {"2": {"sets": 3}, "3": {"sets": 4}},
+              "notes": "Each move back to back, then rest. One round = every move once."
+            },
+            {"id": "b-carry", "move": "overhead-carry", "kind": "time", "sets": 3, "seconds": 20, "perSide": true, "bell": 18}
+          ]
+        },
+        "C": {
+          "title": "Skill and flow",
+          "items": [
+            {
+              "id": "c-get-up",
+              "move": "full-get-up",
+              "kind": "reps",
+              "sets": 3,
+              "reps": 1,
+              "perSide": true,
+              "bell": 18,
+              "notes": "One rep per side each set. Slow."
+            },
+            {
+              "id": "c-c1",
+              "kind": "circuit",
+              "label": "Clean, squat, press",
+              "sets": 2,
+              "reps": 5,
+              "parts": [
+                {"move": "tactical-clean", "perSide": true, "bell": 18},
+                {"move": "rack-squat", "perSide": true, "bell": 18},
+                {"move": "single-arm-press", "perSide": true, "bell": 18},
+                {"move": "around-the-world", "perSide": true, "sideLabel": "each direction", "bell": 18}
+              ],
+              "byWeek": {"2": {"sets": 3}, "3": {"sets": 4}},
+              "notes": "Each move back to back, then rest. One round = every move once."
+            },
+            {
+              "id": "c-flow",
+              "kind": "flow",
+              "label": "Around the world → halo",
+              "sets": 2,
+              "reps": 5,
+              "bell": 18,
+              "parts": [{"move": "around-the-world"}, {"move": "halo"}],
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "One cycle = each move once, in order, without putting the bell down. Then rest."
+            }
+          ]
+        },
+        "REST": {"title": "Rest / walk day", "notes": "Trail walk if you can. Evening holds whenever you like."}
+      },
+      "checks": [
+        "Ready for the next level when this feels smooth: clean form on every set, your own set sizes creeping up to 8+, and no joint pain the day after."
+      ]
+    },
+    {
+      "id": "l2-longship",
+      "name": "Longship",
+      "level": 2,
+      "summary": "Swing-heavy circuits with rows and lunges; the hand-to-hand swing and high pull get regular work.",
+      "weeks": [1, 4],
+      "effort": "6–7 out of 10",
+      "minutes": "25–30 min",
+      "days": {
+        "A": {
+          "title": "Swing and row",
+          "items": [
+            {
+              "id": "a-c1",
+              "kind": "circuit",
+              "label": "Swing, squat, row, push",
+              "sets": 2,
+              "reps": 5,
+              "parts": [
+                {"move": "two-hand-swing", "bell": 45},
+                {"move": "goblet-squat", "bell": 35},
+                {"move": "bent-over-row", "perSide": true, "bell": 45},
+                {"move": "push-up"}
+              ],
+              "byWeek": {"2": {"sets": 3}, "3": {"sets": 4}},
+              "notes": "Each move back to back, then rest. One round = every move once."
+            },
+            {
+              "id": "a-c2",
+              "kind": "circuit",
+              "label": "Swing, pull, squat, press",
+              "sets": 2,
+              "reps": 5,
+              "parts": [
+                {"move": "hand-to-hand-swing", "perSide": true, "sideLabel": "each hand", "bell": 35},
+                {"move": "high-pull", "perSide": true, "bell": 18},
+                {"move": "cossack-squat", "perSide": true},
+                {"move": "single-arm-press", "perSide": true, "bell": 18}
+              ],
+              "byWeek": {"2": {"sets": 3}, "3": {"sets": 4}},
+              "notes": "Each move back to back, then rest. One round = every move once."
+            },
+            {
+              "id": "a-flow",
+              "kind": "flow",
+              "label": "Mini-flow: halo → goblet squat → halo",
+              "sets": 2,
+              "reps": 5,
+              "bell": 18,
+              "parts": [{"move": "halo"}, {"move": "goblet-squat"}, {"move": "halo"}],
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "One cycle = each move once, in order, without putting the bell down. Then rest."
+            }
+          ]
+        },
+        "B": {
+          "title": "Hinge and press",
+          "items": [
+            {
+              "id": "b-c1",
+              "kind": "circuit",
+              "label": "Deadlift, swing, press, lunge",
+              "sets": 2,
+              "reps": 5,
+              "parts": [
+                {"move": "deadlift", "bell": 45},
+                {"move": "single-arm-swing", "perSide": true, "bell": 35},
+                {"move": "floor-press", "perSide": true, "bell": 35},
+                {"move": "loaded-reverse-lunge", "perSide": true, "bell": 18}
+              ],
+              "byWeek": {"2": {"sets": 3}, "3": {"sets": 4}},
+              "notes": "Each move back to back, then rest. One round = every move once."
+            },
+            {
+              "id": "b-c2",
+              "kind": "circuit",
+              "label": "Clean, press, pass, pull",
+              "sets": 2,
+              "reps": 5,
+              "parts": [
+                {"move": "clean", "perSide": true, "bell": 18},
+                {"move": "push-press", "perSide": true, "bell": 18},
+                {"move": "figure-8", "bell": 18},
+                {"move": "plank-pull-through", "perSide": true, "bell": 18}
+              ],
+              "byWeek": {"2": {"sets": 3}, "3": {"sets": 4}},
+              "notes": "Each move back to back, then rest. One round = every move once."
+            },
+            {"id": "b-dead-hang", "move": "dead-hang", "kind": "time", "sets": 3, "seconds": [20, 30]}
+          ]
+        },
+        "C": {
+          "title": "Skill and flow",
+          "items": [
+            {
+              "id": "c-get-up",
+              "move": "full-get-up",
+              "kind": "reps",
+              "sets": 3,
+              "reps": 1,
+              "perSide": true,
+              "bell": 18,
+              "notes": "One rep per side each set. Slow."
+            },
+            {
+              "id": "c-c1",
+              "kind": "circuit",
+              "label": "Rotate, clean, squat, halo",
+              "sets": 2,
+              "reps": 5,
+              "parts": [
+                {"move": "lawn-mower-starter", "perSide": true, "bell": 35},
+                {"move": "tactical-clean", "perSide": true, "bell": 18},
+                {"move": "goblet-squat", "bell": 35},
+                {"move": "halo", "perSide": true, "sideLabel": "each direction", "bell": 18}
+              ],
+              "byWeek": {"2": {"sets": 3}, "3": {"sets": 4}},
+              "notes": "Each move back to back, then rest. One round = every move once."
+            },
+            {
+              "id": "c-flow",
+              "kind": "flow",
+              "label": "Clean → press",
+              "sets": 2,
+              "reps": 3,
+              "bell": 18,
+              "parts": [{"move": "clean"}, {"move": "single-arm-press"}],
+              "perSide": true,
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "One cycle = each move once, in order, without putting the bell down. Do your cycles on one side, then the other, then rest."
+            }
+          ]
+        },
+        "REST": {"title": "Rest / walk day", "notes": "Trail walk if you can. Evening holds whenever you like."}
+      },
+      "checks": [
+        "Ready for the next level when this feels smooth: clean form on every set, your own set sizes creeping up to 8+, and no joint pain the day after."
+      ]
+    },
+    {
+      "id": "l3-raider",
+      "name": "Raider",
+      "level": 3,
+      "summary": "A strength circuit plus two flows a day; the swing → high pull → goblet squat → press flow leads.",
+      "weeks": [1, 4],
+      "effort": "7 out of 10",
+      "minutes": "about 30 min",
+      "days": {
+        "A": {
+          "title": "Squat and press",
+          "items": [
+            {
+              "id": "a-c1",
+              "kind": "circuit",
+              "label": "Strength",
+              "sets": 2,
+              "reps": 5,
+              "parts": [
+                {"move": "goblet-squat", "bell": 45},
+                {"move": "bent-over-row", "perSide": true, "bell": 45},
+                {"move": "push-press", "perSide": true, "bell": 18},
+                {"move": "two-hand-swing", "bell": 45}
+              ],
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "Each move back to back, then rest. One round = every move once."
+            },
+            {
+              "id": "a-f1",
+              "kind": "flow",
+              "label": "Swing → high pull → goblet squat → press",
+              "sets": 2,
+              "reps": 3,
+              "bell": 18,
+              "parts": [{"move": "single-arm-swing"}, {"move": "high-pull"}, {"move": "goblet-squat"}, {"move": "single-arm-press"}],
+              "perSide": true,
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "One cycle = each move once, in order, without putting the bell down. Do your cycles on one side, then the other, then rest."
+            },
+            {
+              "id": "a-f2",
+              "kind": "flow",
+              "label": "Clean → press → rack squat",
+              "sets": 2,
+              "reps": 3,
+              "bell": 18,
+              "parts": [{"move": "clean"}, {"move": "single-arm-press"}, {"move": "rack-squat"}],
+              "perSide": true,
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "One cycle = each move once, in order, without putting the bell down. Do your cycles on one side, then the other, then rest."
+            }
+          ]
+        },
+        "B": {
+          "title": "Hinge and snatch",
+          "items": [
+            {
+              "id": "b-c1",
+              "kind": "circuit",
+              "label": "Hinge and press",
+              "sets": 2,
+              "reps": 5,
+              "parts": [
+                {"move": "deadlift", "bell": 45},
+                {"move": "floor-press", "perSide": true, "bell": 35},
+                {"move": "single-arm-swing", "perSide": true, "bell": 35},
+                {"move": "loaded-reverse-lunge", "perSide": true, "bell": 18}
+              ],
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "Each move back to back, then rest. One round = every move once."
+            },
+            {
+              "id": "b-f1",
+              "kind": "flow",
+              "label": "Swing → high pull → snatch",
+              "sets": 2,
+              "reps": 3,
+              "bell": 18,
+              "parts": [{"move": "single-arm-swing"}, {"move": "high-pull"}, {"move": "snatch"}],
+              "perSide": true,
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "Snatches are new: keep them light and smooth, punch through so the bell lands softly."
+            },
+            {
+              "id": "b-f2",
+              "kind": "flow",
+              "label": "Figure-8 → hand-to-hand swing → goblet squat",
+              "sets": 2,
+              "reps": 4,
+              "bell": 18,
+              "parts": [{"move": "figure-8"}, {"move": "hand-to-hand-swing"}, {"move": "goblet-squat"}],
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "One cycle = each move once, in order, without putting the bell down. Then rest."
+            }
+          ]
+        },
+        "C": {
+          "title": "Skill and flow",
+          "items": [
+            {
+              "id": "c-get-up",
+              "move": "full-get-up",
+              "kind": "reps",
+              "sets": 3,
+              "reps": 1,
+              "perSide": true,
+              "bell": 18,
+              "notes": "One rep per side each set. Slow."
+            },
+            {
+              "id": "c-windmill",
+              "move": "windmill",
+              "kind": "reps",
+              "sets": 2,
+              "reps": 5,
+              "perSide": true,
+              "bell": 18,
+              "byWeek": {"3": {"sets": 3}},
+              "notes": "New: slow, eyes on the bell."
+            },
+            {
+              "id": "c-f1",
+              "kind": "flow",
+              "label": "Swing → clean → lunge → press",
+              "sets": 2,
+              "reps": 3,
+              "bell": 18,
+              "parts": [{"move": "single-arm-swing"}, {"move": "clean"}, {"move": "loaded-reverse-lunge"}, {"move": "single-arm-press"}],
+              "perSide": true,
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "One cycle = each move once, in order, without putting the bell down. Do your cycles on one side, then the other, then rest."
+            },
+            {
+              "id": "c-c1",
+              "kind": "circuit",
+              "label": "Mobility",
+              "sets": 2,
+              "reps": 5,
+              "parts": [
+                {"move": "plank-pull-through", "perSide": true, "bell": 18},
+                {"move": "halo", "perSide": true, "sideLabel": "each direction", "bell": 18},
+                {"move": "cossack-squat", "perSide": true},
+                {"move": "horn-push-up", "bell": 18}
+              ],
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "Each move back to back, then rest. One round = every move once."
+            }
+          ]
+        },
+        "REST": {"title": "Rest / walk day", "notes": "Trail walk if you can. Evening holds whenever you like."}
+      },
+      "checks": [
+        "Ready for the next level when this feels smooth: clean form on every set, your own set sizes creeping up to 8+, and no joint pain the day after."
+      ]
+    },
+    {
+      "id": "l3-stormforge",
+      "name": "Stormforge",
+      "level": 3,
+      "summary": "Clean-and-press flows with a swing circuit; snatches get their own straight sets.",
+      "weeks": [1, 4],
+      "effort": "7 out of 10",
+      "minutes": "about 30 min",
+      "days": {
+        "A": {
+          "title": "Swing and clean",
+          "items": [
+            {
+              "id": "a-c1",
+              "kind": "circuit",
+              "label": "Swing and pull",
+              "sets": 2,
+              "reps": 5,
+              "parts": [
+                {"move": "two-hand-swing", "bell": 45},
+                {"move": "rack-squat", "perSide": true, "bell": 35},
+                {"move": "single-arm-press", "perSide": true, "bell": 18},
+                {"move": "ballistic-row", "perSide": true, "bell": 35}
+              ],
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "Each move back to back, then rest. One round = every move once."
+            },
+            {
+              "id": "a-f1",
+              "kind": "flow",
+              "label": "Deadlift → clean → rack squat → push press",
+              "sets": 2,
+              "reps": 3,
+              "bell": 18,
+              "parts": [{"move": "suitcase-deadlift"}, {"move": "clean"}, {"move": "rack-squat"}, {"move": "push-press"}],
+              "perSide": true,
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "One cycle = each move once, in order, without putting the bell down. Do your cycles on one side, then the other, then rest."
+            },
+            {
+              "id": "a-f2",
+              "kind": "flow",
+              "label": "Lawn mower → clean → press",
+              "sets": 2,
+              "reps": 3,
+              "bell": 18,
+              "parts": [{"move": "lawn-mower-starter"}, {"move": "clean"}, {"move": "single-arm-press"}],
+              "perSide": true,
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "One cycle = each move once, in order, without putting the bell down. Do your cycles on one side, then the other, then rest."
+            }
+          ]
+        },
+        "B": {
+          "title": "Pull and windmill",
+          "items": [
+            {
+              "id": "b-c1",
+              "kind": "circuit",
+              "label": "Deadlift, push, pull, squat",
+              "sets": 2,
+              "reps": 5,
+              "parts": [
+                {"move": "deadlift", "bell": 45},
+                {"move": "push-up"},
+                {"move": "high-pull", "perSide": true, "bell": 35},
+                {"move": "goblet-squat", "bell": 45}
+              ],
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "Each move back to back, then rest. One round = every move once."
+            },
+            {
+              "id": "b-f1",
+              "kind": "flow",
+              "label": "Clean → press → windmill",
+              "sets": 2,
+              "reps": 3,
+              "bell": 18,
+              "parts": [{"move": "clean"}, {"move": "single-arm-press"}, {"move": "windmill"}],
+              "perSide": true,
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "One cycle = each move once, in order, without putting the bell down. Do your cycles on one side, then the other, then rest."
+            },
+            {
+              "id": "b-f2",
+              "kind": "flow",
+              "label": "Figure-8 → hand-to-hand swing → goblet squat",
+              "sets": 2,
+              "reps": 4,
+              "bell": 18,
+              "parts": [{"move": "figure-8"}, {"move": "hand-to-hand-swing"}, {"move": "goblet-squat"}],
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "One cycle = each move once, in order, without putting the bell down. Then rest."
+            }
+          ]
+        },
+        "C": {
+          "title": "Skill and flow",
+          "items": [
+            {
+              "id": "c-get-up",
+              "move": "full-get-up",
+              "kind": "reps",
+              "sets": 3,
+              "reps": 1,
+              "perSide": true,
+              "bell": 18,
+              "notes": "One rep per side each set. Slow."
+            },
+            {
+              "id": "c-snatch",
+              "move": "snatch",
+              "kind": "reps",
+              "sets": 3,
+              "reps": 5,
+              "perSide": true,
+              "bell": 18,
+              "byWeek": {"3": {"sets": 4}},
+              "notes": "Light and smooth: punch through so the bell lands softly."
+            },
+            {
+              "id": "c-f1",
+              "kind": "flow",
+              "label": "Clean → press → rack squat",
+              "sets": 2,
+              "reps": 3,
+              "bell": 18,
+              "parts": [{"move": "clean"}, {"move": "single-arm-press"}, {"move": "rack-squat"}],
+              "perSide": true,
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "One cycle = each move once, in order, without putting the bell down. Do your cycles on one side, then the other, then rest."
+            },
+            {"id": "c-carry", "move": "overhead-carry", "kind": "time", "sets": 3, "seconds": 20, "perSide": true, "bell": 18}
+          ]
+        },
+        "REST": {"title": "Rest / walk day", "notes": "Trail walk if you can. Evening holds whenever you like."}
+      },
+      "checks": [
+        "Ready for the next level when this feels smooth: clean form on every set, your own set sizes creeping up to 8+, and no joint pain the day after."
+      ]
+    },
+    {
+      "id": "l3-runestone",
+      "name": "Runestone",
+      "level": 3,
+      "summary": "Rotation and power: side swings, lawn mowers and a snatch flow, with a hinge circuit.",
+      "weeks": [1, 4],
+      "effort": "7 out of 10",
+      "minutes": "about 30 min",
+      "days": {
+        "A": {
+          "title": "Hinge and rotate",
+          "items": [
+            {
+              "id": "a-c1",
+              "kind": "circuit",
+              "label": "Hinge and rotate",
+              "sets": 2,
+              "reps": 5,
+              "parts": [
+                {"move": "deadlift", "bell": 45},
+                {"move": "side-swing", "perSide": true, "bell": 18},
+                {"move": "floor-press", "perSide": true, "bell": 35},
+                {"move": "loaded-reverse-lunge", "perSide": true, "bell": 18}
+              ],
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "Each move back to back, then rest. One round = every move once."
+            },
+            {
+              "id": "a-f1",
+              "kind": "flow",
+              "label": "Swing → high pull → snatch",
+              "sets": 2,
+              "reps": 3,
+              "bell": 18,
+              "parts": [{"move": "single-arm-swing"}, {"move": "high-pull"}, {"move": "snatch"}],
+              "perSide": true,
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "One cycle = each move once, in order, without putting the bell down. Do your cycles on one side, then the other, then rest."
+            },
+            {
+              "id": "a-f2",
+              "kind": "flow",
+              "label": "Rotational swing → clean → press",
+              "sets": 2,
+              "reps": 3,
+              "bell": 18,
+              "parts": [{"move": "rotational-swing"}, {"move": "clean"}, {"move": "single-arm-press"}],
+              "perSide": true,
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "One cycle = each move once, in order, without putting the bell down. Do your cycles on one side, then the other, then rest."
+            }
+          ]
+        },
+        "B": {
+          "title": "Squat and press",
+          "items": [
+            {
+              "id": "b-c1",
+              "kind": "circuit",
+              "label": "Squat, swing, press, row",
+              "sets": 2,
+              "reps": 5,
+              "parts": [
+                {"move": "goblet-squat", "bell": 45},
+                {"move": "single-arm-swing", "perSide": true, "bell": 35},
+                {"move": "push-press", "perSide": true, "bell": 18},
+                {"move": "supported-row", "perSide": true, "bell": 45}
+              ],
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "Each move back to back, then rest. One round = every move once."
+            },
+            {
+              "id": "b-f1",
+              "kind": "flow",
+              "label": "Swing → high pull → goblet squat → press",
+              "sets": 2,
+              "reps": 3,
+              "bell": 18,
+              "parts": [{"move": "single-arm-swing"}, {"move": "high-pull"}, {"move": "goblet-squat"}, {"move": "single-arm-press"}],
+              "perSide": true,
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "One cycle = each move once, in order, without putting the bell down. Do your cycles on one side, then the other, then rest."
+            },
+            {
+              "id": "b-f2",
+              "kind": "flow",
+              "label": "Lawn mower → clean → press",
+              "sets": 2,
+              "reps": 3,
+              "bell": 18,
+              "parts": [{"move": "lawn-mower-starter"}, {"move": "clean"}, {"move": "single-arm-press"}],
+              "perSide": true,
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "One cycle = each move once, in order, without putting the bell down. Do your cycles on one side, then the other, then rest."
+            }
+          ]
+        },
+        "C": {
+          "title": "Skill and flow",
+          "items": [
+            {
+              "id": "c-get-up",
+              "move": "full-get-up",
+              "kind": "reps",
+              "sets": 3,
+              "reps": 1,
+              "perSide": true,
+              "bell": 18,
+              "notes": "One rep per side each set. Slow."
+            },
+            {
+              "id": "c-windmill",
+              "move": "windmill",
+              "kind": "reps",
+              "sets": 3,
+              "reps": 5,
+              "perSide": true,
+              "bell": 18,
+              "byWeek": {"3": {"sets": 4}}
+            },
+            {
+              "id": "c-f1",
+              "kind": "flow",
+              "label": "Swing → clean → lunge → press",
+              "sets": 2,
+              "reps": 3,
+              "bell": 18,
+              "parts": [{"move": "single-arm-swing"}, {"move": "clean"}, {"move": "loaded-reverse-lunge"}, {"move": "single-arm-press"}],
+              "perSide": true,
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "One cycle = each move once, in order, without putting the bell down. Do your cycles on one side, then the other, then rest."
+            },
+            {"id": "c-dead-hang", "move": "dead-hang", "kind": "time", "sets": 3, "seconds": 30}
+          ]
+        },
+        "REST": {"title": "Rest / walk day", "notes": "Trail walk if you can. Evening holds whenever you like."}
+      },
+      "checks": [
+        "Ready for the next level when this feels smooth: clean form on every set, your own set sizes creeping up to 8+, and no joint pain the day after."
+      ]
+    },
+    {
+      "id": "l4-berserker",
+      "name": "Berserker",
+      "level": 4,
+      "summary": "Your clean → swing → high pull → snatch flow, snatch-and-windmill flows, and one heavy circuit a day.",
+      "weeks": [1, 4],
+      "effort": "7–8 out of 10",
+      "minutes": "about 30 min",
+      "days": {
+        "A": {
+          "title": "Squat and snatch",
+          "items": [
+            {
+              "id": "a-c1",
+              "kind": "circuit",
+              "label": "Heavy",
+              "sets": 2,
+              "reps": 5,
+              "parts": [
+                {"move": "goblet-squat", "bell": 45},
+                {"move": "push-press", "perSide": true, "bell": 35},
+                {"move": "bent-over-row", "perSide": true, "bell": 45},
+                {"move": "two-hand-swing", "bell": 45}
+              ],
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "Each move back to back, then rest. One round = every move once."
+            },
+            {
+              "id": "a-f1",
+              "kind": "flow",
+              "label": "Clean → swing → high pull → snatch",
+              "sets": 2,
+              "reps": 3,
+              "bell": 18,
+              "parts": [{"move": "clean"}, {"move": "single-arm-swing"}, {"move": "high-pull"}, {"move": "snatch"}],
+              "perSide": true,
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "One cycle = each move once, in order, without putting the bell down. Do your cycles on one side, then the other, then rest."
+            },
+            {
+              "id": "a-f2",
+              "kind": "flow",
+              "label": "Side swing to rack → press → rack squat",
+              "sets": 2,
+              "reps": 3,
+              "bell": 18,
+              "parts": [{"move": "side-swing-to-rack"}, {"move": "single-arm-press"}, {"move": "rack-squat"}],
+              "perSide": true,
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "One cycle = each move once, in order, without putting the bell down. Do your cycles on one side, then the other, then rest."
+            }
+          ]
+        },
+        "B": {
+          "title": "Hinge and windmill",
+          "items": [
+            {
+              "id": "b-c1",
+              "kind": "circuit",
+              "label": "Heavy hinge",
+              "sets": 2,
+              "reps": 5,
+              "parts": [
+                {"move": "deadlift", "bell": 45},
+                {"move": "bottoms-up-press", "perSide": true, "bell": 18},
+                {"move": "single-arm-swing", "perSide": true, "bell": 45},
+                {"move": "loaded-reverse-lunge", "perSide": true, "bell": 35}
+              ],
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "Each move back to back, then rest. One round = every move once."
+            },
+            {
+              "id": "b-f1",
+              "kind": "flow",
+              "label": "Snatch → overhead squat → windmill",
+              "sets": 2,
+              "reps": 3,
+              "bell": 18,
+              "parts": [{"move": "snatch"}, {"move": "overhead-squat"}, {"move": "windmill"}],
+              "perSide": true,
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "One cycle = each move once, in order, without putting the bell down. Do your cycles on one side, then the other, then rest."
+            },
+            {
+              "id": "b-f2",
+              "kind": "flow",
+              "label": "Rotational clean → press → lunge",
+              "sets": 2,
+              "reps": 3,
+              "bell": 18,
+              "parts": [{"move": "rotational-clean"}, {"move": "single-arm-press"}, {"move": "loaded-reverse-lunge"}],
+              "perSide": true,
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "One cycle = each move once, in order, without putting the bell down. Do your cycles on one side, then the other, then rest."
+            }
+          ]
+        },
+        "C": {
+          "title": "Long flows",
+          "items": [
+            {
+              "id": "c-get-up",
+              "move": "full-get-up",
+              "kind": "reps",
+              "sets": 3,
+              "reps": 1,
+              "perSide": true,
+              "bell": 35,
+              "notes": "One rep per side each set. Slow."
+            },
+            {
+              "id": "c-f1",
+              "kind": "flow",
+              "label": "Swing → clean → press → snatch → windmill",
+              "sets": 2,
+              "reps": 3,
+              "bell": 18,
+              "parts": [{"move": "single-arm-swing"}, {"move": "clean"}, {"move": "single-arm-press"}, {"move": "snatch"}, {"move": "windmill"}],
+              "perSide": true,
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "One cycle = each move once, in order, without putting the bell down. Do your cycles on one side, then the other, then rest."
+            },
+            {
+              "id": "c-f2",
+              "kind": "flow",
+              "label": "Figure-8 → hand-to-hand swing → goblet squat",
+              "sets": 2,
+              "reps": 4,
+              "bell": 35,
+              "parts": [{"move": "figure-8"}, {"move": "hand-to-hand-swing"}, {"move": "goblet-squat"}],
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "One cycle = each move once, in order, without putting the bell down. Then rest."
+            },
+            {"id": "c-carry", "move": "overhead-carry", "kind": "time", "sets": 3, "seconds": 30, "perSide": true, "bell": 35}
+          ]
+        },
+        "REST": {"title": "Rest / walk day", "notes": "Trail walk if you can. Evening holds whenever you like."}
+      },
+      "checks": [
+        "Ready for heavier bells or the next routine when this feels smooth: clean form on every set, your own set sizes creeping up to 8+, and no joint pain the day after."
+      ]
+    },
+    {
+      "id": "l4-valkyrie",
+      "name": "Valkyrie",
+      "level": 4,
+      "summary": "Rotation and overhead work: cross-body cleans, jerks, devil's halos and the five-move flow.",
+      "weeks": [1, 4],
+      "effort": "7–8 out of 10",
+      "minutes": "about 30 min",
+      "days": {
+        "A": {
+          "title": "Rotate and press",
+          "items": [
+            {
+              "id": "a-c1",
+              "kind": "circuit",
+              "label": "Swing and press",
+              "sets": 2,
+              "reps": 5,
+              "parts": [
+                {"move": "two-hand-swing", "bell": 45},
+                {"move": "rack-squat", "perSide": true, "bell": 35},
+                {"move": "push-press", "perSide": true, "bell": 35},
+                {"move": "ballistic-row", "perSide": true, "bell": 35}
+              ],
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "Each move back to back, then rest. One round = every move once."
+            },
+            {
+              "id": "a-f1",
+              "kind": "flow",
+              "label": "Cross-body clean → press → lunge",
+              "sets": 2,
+              "reps": 3,
+              "bell": 18,
+              "parts": [{"move": "cross-body-clean"}, {"move": "single-arm-press"}, {"move": "loaded-reverse-lunge"}],
+              "perSide": true,
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "One cycle = each move once, in order, without putting the bell down. Do your cycles on one side, then the other, then rest."
+            },
+            {
+              "id": "a-f2",
+              "kind": "flow",
+              "label": "Clean → jerk → overhead squat",
+              "sets": 2,
+              "reps": 3,
+              "bell": 18,
+              "parts": [{"move": "clean"}, {"move": "jerk"}, {"move": "overhead-squat"}],
+              "perSide": true,
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "One cycle = each move once, in order, without putting the bell down. Do your cycles on one side, then the other, then rest."
+            }
+          ]
+        },
+        "B": {
+          "title": "Pull and halo",
+          "items": [
+            {
+              "id": "b-c1",
+              "kind": "circuit",
+              "label": "Hinge and pull",
+              "sets": 2,
+              "reps": 5,
+              "parts": [
+                {"move": "deadlift", "bell": 45},
+                {"move": "floor-press", "perSide": true, "bell": 45},
+                {"move": "high-pull", "perSide": true, "bell": 35},
+                {"move": "goblet-squat", "bell": 45}
+              ],
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "Each move back to back, then rest. One round = every move once."
+            },
+            {
+              "id": "b-f1",
+              "kind": "flow",
+              "label": "Devil's halo → goblet squat → thruster",
+              "sets": 2,
+              "reps": 4,
+              "bell": 18,
+              "parts": [{"move": "devils-halo"}, {"move": "goblet-squat"}, {"move": "thruster"}],
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "One cycle = each move once, in order, without putting the bell down. Then rest."
+            },
+            {
+              "id": "b-f2",
+              "kind": "flow",
+              "label": "Clean → swing → high pull → snatch",
+              "sets": 2,
+              "reps": 3,
+              "bell": 18,
+              "parts": [{"move": "clean"}, {"move": "single-arm-swing"}, {"move": "high-pull"}, {"move": "snatch"}],
+              "perSide": true,
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "One cycle = each move once, in order, without putting the bell down. Do your cycles on one side, then the other, then rest."
+            }
+          ]
+        },
+        "C": {
+          "title": "Long flows",
+          "items": [
+            {
+              "id": "c-get-up",
+              "move": "full-get-up",
+              "kind": "reps",
+              "sets": 3,
+              "reps": 1,
+              "perSide": true,
+              "bell": 35,
+              "notes": "One rep per side each set. Slow."
+            },
+            {
+              "id": "c-windmill",
+              "move": "windmill",
+              "kind": "reps",
+              "sets": 3,
+              "reps": 5,
+              "perSide": true,
+              "bell": 18,
+              "byWeek": {"3": {"sets": 4}}
+            },
+            {
+              "id": "c-f1",
+              "kind": "flow",
+              "label": "Swing → clean → press → snatch → windmill",
+              "sets": 2,
+              "reps": 3,
+              "bell": 18,
+              "parts": [{"move": "single-arm-swing"}, {"move": "clean"}, {"move": "single-arm-press"}, {"move": "snatch"}, {"move": "windmill"}],
+              "perSide": true,
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "One cycle = each move once, in order, without putting the bell down. Do your cycles on one side, then the other, then rest."
+            },
+            {"id": "c-dead-hang", "move": "dead-hang", "kind": "time", "sets": 3, "seconds": 30}
+          ]
+        },
+        "REST": {"title": "Rest / walk day", "notes": "Trail walk if you can. Evening holds whenever you like."}
+      },
+      "checks": [
+        "Ready for heavier bells or the next routine when this feels smooth: clean form on every set, your own set sizes creeping up to 8+, and no joint pain the day after."
+      ]
+    },
+    {
+      "id": "l4-ragnarok",
+      "name": "Ragnarok",
+      "level": 4,
+      "summary": "The longest flows: five-move chains, side swing to snatch, and a heavy hinge circuit.",
+      "weeks": [1, 4],
+      "effort": "7–8 out of 10",
+      "minutes": "about 30 min",
+      "days": {
+        "A": {
+          "title": "Long flows",
+          "items": [
+            {
+              "id": "a-c1",
+              "kind": "circuit",
+              "label": "Heavy hinge",
+              "sets": 2,
+              "reps": 5,
+              "parts": [
+                {"move": "deadlift", "bell": 45},
+                {"move": "single-arm-swing", "perSide": true, "bell": 45},
+                {"move": "push-press", "perSide": true, "bell": 35},
+                {"move": "goblet-squat", "bell": 45}
+              ],
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "Each move back to back, then rest. One round = every move once."
+            },
+            {
+              "id": "a-f1",
+              "kind": "flow",
+              "label": "Figure-8 → hand-to-hand swing → clean → squat → press",
+              "sets": 2,
+              "reps": 3,
+              "bell": 18,
+              "parts": [
+                {"move": "figure-8"},
+                {"move": "hand-to-hand-swing"},
+                {"move": "clean"},
+                {"move": "rack-squat"},
+                {"move": "single-arm-press"}
+              ],
+              "perSide": true,
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "One cycle = each move once, in order, without putting the bell down. Do your cycles on one side, then the other, then rest."
+            },
+            {
+              "id": "a-f2",
+              "kind": "flow",
+              "label": "Side swing to snatch → overhead squat → windmill",
+              "sets": 2,
+              "reps": 3,
+              "bell": 18,
+              "parts": [{"move": "side-swing-to-snatch"}, {"move": "overhead-squat"}, {"move": "windmill"}],
+              "perSide": true,
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "One cycle = each move once, in order, without putting the bell down. Do your cycles on one side, then the other, then rest."
+            }
+          ]
+        },
+        "B": {
+          "title": "Rotate and snatch",
+          "items": [
+            {
+              "id": "b-c1",
+              "kind": "circuit",
+              "label": "Heavy press and row",
+              "sets": 2,
+              "reps": 5,
+              "parts": [
+                {"move": "two-hand-swing", "bell": 45},
+                {"move": "bottoms-up-press", "perSide": true, "bell": 18},
+                {"move": "bent-over-row", "perSide": true, "bell": 45},
+                {"move": "loaded-reverse-lunge", "perSide": true, "bell": 35}
+              ],
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "Each move back to back, then rest. One round = every move once."
+            },
+            {
+              "id": "b-f1",
+              "kind": "flow",
+              "label": "Rotational clean → press → lunge",
+              "sets": 2,
+              "reps": 3,
+              "bell": 18,
+              "parts": [{"move": "rotational-clean"}, {"move": "single-arm-press"}, {"move": "loaded-reverse-lunge"}],
+              "perSide": true,
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "One cycle = each move once, in order, without putting the bell down. Do your cycles on one side, then the other, then rest."
+            },
+            {
+              "id": "b-f2",
+              "kind": "flow",
+              "label": "Clean → swing → high pull → snatch",
+              "sets": 2,
+              "reps": 3,
+              "bell": 35,
+              "parts": [{"move": "clean"}, {"move": "single-arm-swing"}, {"move": "high-pull"}, {"move": "snatch"}],
+              "perSide": true,
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "One cycle = each move once, in order, without putting the bell down. Do your cycles on one side, then the other, then rest."
+            }
+          ]
+        },
+        "C": {
+          "title": "Overhead",
+          "items": [
+            {
+              "id": "c-get-up",
+              "move": "full-get-up",
+              "kind": "reps",
+              "sets": 3,
+              "reps": 1,
+              "perSide": true,
+              "bell": 35,
+              "notes": "One rep per side each set. Slow."
+            },
+            {
+              "id": "c-f1",
+              "kind": "flow",
+              "label": "Swing → clean → press → snatch → windmill",
+              "sets": 2,
+              "reps": 3,
+              "bell": 18,
+              "parts": [{"move": "single-arm-swing"}, {"move": "clean"}, {"move": "single-arm-press"}, {"move": "snatch"}, {"move": "windmill"}],
+              "perSide": true,
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "One cycle = each move once, in order, without putting the bell down. Do your cycles on one side, then the other, then rest."
+            },
+            {
+              "id": "c-f2",
+              "kind": "flow",
+              "label": "Snatch → overhead squat → windmill",
+              "sets": 2,
+              "reps": 3,
+              "bell": 18,
+              "parts": [{"move": "snatch"}, {"move": "overhead-squat"}, {"move": "windmill"}],
+              "perSide": true,
+              "byWeek": {"2": {"sets": 3}, "4": {"sets": 4}},
+              "notes": "One cycle = each move once, in order, without putting the bell down. Do your cycles on one side, then the other, then rest."
+            },
+            {"id": "c-carry", "move": "overhead-carry", "kind": "time", "sets": 3, "seconds": 30, "perSide": true, "bell": 35}
+          ]
+        },
+        "REST": {"title": "Rest / walk day", "notes": "Trail walk if you can. Evening holds whenever you like."}
+      },
+      "checks": [
+        "Ready for heavier bells or the next routine when this feels smooth: clean form on every set, your own set sizes creeping up to 8+, and no joint pain the day after."
       ]
     }
   ]

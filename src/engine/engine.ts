@@ -38,6 +38,12 @@ export interface Level {
   sets?: number;
 }
 
+/** The routine being followed, and the rotation cycle its Week 1 began (Nov 20, 2026). */
+export interface RoutinePick {
+  id: string;
+  start: number;
+}
+
 export interface EngineState {
   pointer: Pointer;
   hold: Hold | null;
@@ -45,7 +51,14 @@ export interface EngineState {
   bellPrefs: Record<string, BellPref>;
   /** By progress key. Missing in state saved before Nov 9, 2026. */
   levels: Record<string, Level>;
+  /** Missing in state saved before Nov 20, 2026: the first Level 1 routine, from the very start. */
+  routine?: RoutinePick;
+  /** Plan format the progress belongs to. Before 2 (Nov 20) progress steps meant more reps, not more sets. */
+  planVersion?: number;
 }
+
+/** Progress steps add sets since Nov 20 (James: "more sets of lower reps"). */
+export const PLAN_VERSION = 2;
 
 export const initialState = (): EngineState => ({
   pointer: { cycle: 0, slot: 0 },
@@ -53,7 +66,21 @@ export const initialState = (): EngineState => ({
   progress: {},
   bellPrefs: {},
   levels: {},
+  planVersion: PLAN_VERSION,
 });
+
+/** State saved before routines (Nov 20): Month 1 is now Level 1's first routine, picked up at the same
+ *  week. Old progress steps were reps on a range; they'd read as extra sets now, so they start over. */
+export function migrateState(saved: EngineState, data: AppData): EngineState {
+  if ((saved.planVersion ?? 1) >= PLAN_VERSION) return saved;
+  return {
+    ...saved,
+    progress: {},
+    levels: {},
+    routine: saved.routine ?? { id: firstRoutine(data).id, start: 0 },
+    planVersion: PLAN_VERSION,
+  };
+}
 
 // ---------- Pointer ----------
 
@@ -74,31 +101,58 @@ export function back(plan: PlanFile, p: Pointer): Pointer {
 
 // ---------- Weeks and phases ----------
 
+// ---------- Levels and routines (Nov 20, 2026) ----------
+// Each level holds several 4-week routines. You follow one; when its weeks are done, the next routine at
+// the same level starts by itself, so you can stay at a level as long as you like. Picking a routine
+// (or another level) starts it at Week 1, Day A.
+
+export const routineLength = (r: Phase) => r.weeks[1] - r.weeks[0] + 1;
+
+export function firstRoutine(data: AppData, level?: number): Phase {
+  return data.routines.find((r) => level === undefined || r.level === level) ?? data.routines[0];
+}
+
+/** The routine after this one at the same level (back to the first after the last). */
+export function nextRoutine(data: AppData, r: Phase): Phase {
+  const same = data.routines.filter((x) => x.level === r.level);
+  return same[(same.indexOf(r) + 1) % same.length];
+}
+
+/** Which routine a rotation cycle falls in, its week in that routine (1-based), and when it began. */
+export function routineAt(data: AppData, pick: RoutinePick | undefined, cycle: number): { routine: Phase; week: number; start: number } {
+  let routine = (pick && data.routineById.get(pick.id)) ?? firstRoutine(data);
+  let start = pick?.start ?? 0;
+  if (cycle < start) start = cycle; // (never expected: a pick is always at or before today)
+  for (let guard = 0; cycle - start >= routineLength(routine) && guard < 1000; guard++) {
+    start += routineLength(routine);
+    routine = nextRoutine(data, routine);
+  }
+  return { routine, week: cycle - start + routine.weeks[0], start };
+}
+
+/** Start a routine now (James, Nov 20): its Week 1, Day A comes next. The rest of a half-done rotation
+ *  is dropped; nothing already logged changes. Steps up in the old routine don't carry over. */
+export function startRoutine(state: EngineState, routineId: string): EngineState {
+  const cycle = state.pointer.slot === 0 ? state.pointer.cycle : state.pointer.cycle + 1;
+  return { ...state, pointer: { cycle, slot: 0 }, routine: { id: routineId, start: cycle }, hold: null };
+}
+
 export interface WeekContext {
+  /** Week within the routine. */
   week: number;
   /** The week used to look up the plan. Lower than `week` while a pain hold is on. */
   effectiveWeek: number;
   phase: Phase;
   held: boolean;
-  /** Past the last week in the plan data; repeating the final week. */
+  /** Never true since routines (Nov 20): after the last week the next routine starts. Kept for old logs. */
   beyondPlan: boolean;
   finalWeekOfPhase: boolean;
 }
 
-export function weekContext(plan: PlanFile, p: Pointer, hold: Hold | null): WeekContext {
-  const week = p.cycle + 1;
-  let effectiveWeek = hold ? Math.min(week, hold.week) : week;
-  const last = plan.phases[plan.phases.length - 1];
-  let beyondPlan = false;
-  if (effectiveWeek > last.weeks[1]) {
-    effectiveWeek = last.weeks[1];
-    beyondPlan = true;
-  }
-  const phase =
-    plan.phases.find((ph) => effectiveWeek >= ph.weeks[0] && effectiveWeek <= ph.weeks[1]) ??
-    [...plan.phases].reverse().find((ph) => ph.weeks[0] <= effectiveWeek) ??
-    plan.phases[0];
-  return { week, effectiveWeek, phase, held: !!hold, beyondPlan, finalWeekOfPhase: effectiveWeek === phase.weeks[1] };
+export function weekContext(data: AppData, state: Pick<EngineState, 'pointer' | 'hold' | 'routine'>): WeekContext {
+  const { routine, week } = routineAt(data, state.routine, state.pointer.cycle);
+  const effectiveWeek = state.hold ? Math.max(routine.weeks[0], Math.min(week, state.hold.week)) : week;
+  return { week, effectiveWeek, phase: routine, held: !!state.hold, beyondPlan: false, finalWeekOfPhase: week === routine.weeks[1] };
 }
 
 // ---------- Item resolution ----------
@@ -130,6 +184,11 @@ export function ladderOf(r: Resolved): LadderStep[] {
     for (let s = a; s < b; s += 5) steps.push({ seconds: s });
     steps.push({ seconds: b });
     return steps;
+  }
+  // Counted work moves up by sets, never by reps (James, Nov 20): one more set a step, at most 2 over the plan
+  if (r.kind === 'reps' || r.kind === 'circuit' || r.kind === 'flow') {
+    const sets = r.sets ?? 1;
+    return [0, 1, 2].map((k) => ({ sets: sets + k }));
   }
   return [{}];
 }
@@ -168,7 +227,8 @@ function prescribe(
   bellPrefs: Record<string, BellPref>,
 ): Prescription {
   const amount = r.kind === 'time' ? step.seconds ?? r.seconds : step.reps ?? r.reps;
-  const planBell = step.bell ?? r.bell ?? null;
+  // A circuit's bells are its moves' own; a flow uses one bell for every move
+  const planBell = r.kind === 'circuit' ? null : step.bell ?? r.bell ?? null;
   const pref = r.move ? bellPrefs[r.move] : undefined;
   const bell = planBell !== null && pref && pref.planBell === planBell ? pref.bell : planBell;
   const rangeSrc = r.kind === 'time' ? r.seconds : r.reps;
@@ -195,12 +255,11 @@ const heft = (b: Bell | null) => (typeof b === 'number' ? b : 0);
  *  plan's, ask for what he managed with it, even if that's below the plan's number.
  *  Never more than 10 reps a set (Nov 13): past that, the same work comes as more sets of 10. */
 function adapt(p: Prescription, level: Level | undefined, kind: Item['kind']): Prescription {
-  const out = adaptSets(p, level, kind);
-  if (kind !== 'reps') return out; // holds stay timed sets
-  // A reps move's total (Nov 19): the plan's sets × reps. After a level saved before totals, the reps
-  // he hit on every set, over at least the planned sets (exact, not rounded up to sets of 10).
-  const total = out.fromLast && level ? Math.max(p.sets, level.sets ?? p.sets) * level.amount : out.sets * out.target;
-  return { ...out, total };
+  // A reps move is a total (Nov 19): the plan's sets × reps. It no longer follows the reps he did last
+  // time (Nov 20: more sets of lower reps), so the plan's set size stays the default.
+  if (kind === 'reps') return { ...p, total: p.sets * p.target };
+  if (kind === 'time') return adaptSets(p, level, kind); // holds follow the seconds he held
+  return p; // circuits and flows: rounds and sets, as planned
 }
 
 function adaptSets(p: Prescription, level: Level | undefined, kind: Item['kind']): Prescription {
@@ -234,6 +293,18 @@ function routineOf(title: string, stations: Station[], transition: number, notes
   return { title, stations, transition, seconds, notes };
 }
 
+/** One move of a circuit or flow, ready to show. */
+export interface PlannedPart {
+  move: string;
+  name: string;
+  /** Its own count, when it differs from the round's (circuits), or times through in a cycle (flows). */
+  reps?: number;
+  perSide: boolean;
+  sideLabel?: string;
+  /** Circuits only: this move's bell. */
+  bell: Bell | null;
+}
+
 export interface PlannedItem {
   itemId: string;
   section: Section;
@@ -248,6 +319,8 @@ export interface PlannedItem {
   up?: Prescription;
   breath?: BreathPlan;
   routine?: RoutinePlan;
+  /** Circuits and flows (Nov 20). */
+  parts?: PlannedPart[];
 }
 
 export interface PlannedSession {
@@ -258,8 +331,12 @@ export interface PlannedSession {
   slot: number;
   week: number;
   effectiveWeek: number;
+  /** The routine (a "phase" before Nov 20). */
   phaseId: string;
   phaseName: string;
+  /** Difficulty level and routine length. Missing in sessions logged before Nov 20, 2026. */
+  level?: number;
+  routineWeeks?: number;
   effort?: string;
   minutes?: string;
   held: boolean;
@@ -320,7 +397,8 @@ function planItem(
   }
 
   const ladder = ladderOf(r);
-  const progressKey = section === 'main' ? item.progressKey ?? r.move ?? item.id : undefined;
+  // Progress belongs to the routine (Nov 20): a new routine starts from its own plan
+  const progressKey = section === 'main' ? `${ctx.phase.id}/${item.progressKey ?? r.move ?? item.id}` : undefined;
   const entry = progressKey ? state.progress[progressKey] : undefined;
   const step = Math.min(Math.max(entry?.step ?? 0, 0), ladder.length - 1);
   const level = progressKey ? state.levels?.[progressKey] : undefined;
@@ -331,12 +409,25 @@ function planItem(
   const noMore = (u: Prescription) =>
     u.total !== undefined && stay.total !== undefined ? u.total <= stay.total : u.target <= stay.target && u.sets <= stay.sets;
   if (up && up.bell === stay.bell && noMore(up)) up = undefined;
-  return { ...base, progressKey, ladderLen: ladder.length, step, stay, up };
+  const parts =
+    r.kind === 'circuit' || r.kind === 'flow'
+      ? (r.parts ?? []).map(
+          (pt): PlannedPart => ({
+            move: pt.move,
+            name: data.moveById.get(pt.move)?.name ?? pt.move,
+            reps: pt.reps,
+            perSide: !!pt.perSide,
+            sideLabel: pt.sideLabel,
+            bell: r.kind === 'circuit' ? pt.bell ?? null : null,
+          }),
+        )
+      : undefined;
+  return { ...base, progressKey, ladderLen: ladder.length, step, stay, up, ...(parts ? { parts } : {}) };
 }
 
 export function planSession(data: AppData, state: EngineState): PlannedSession {
   const { plan } = data;
-  const ctx = weekContext(plan, state.pointer, state.hold);
+  const ctx = weekContext(data, state);
   const day = dayAt(plan, state.pointer);
   const d = ctx.phase.days[day];
   const items: PlannedItem[] = [];
@@ -375,6 +466,8 @@ export function planSession(data: AppData, state: EngineState): PlannedSession {
     effectiveWeek: ctx.effectiveWeek,
     phaseId: ctx.phase.id,
     phaseName: ctx.phase.name,
+    level: ctx.phase.level,
+    routineWeeks: routineLength(ctx.phase),
     effort: ctx.phase.effort,
     minutes: ctx.phase.minutes,
     held: ctx.held,
@@ -387,16 +480,18 @@ export function planSession(data: AppData, state: EngineState): PlannedSession {
   };
 }
 
-function eveningOf(phase: Phase): RoutinePlan | undefined {
+function eveningOf(phase: Pick<Phase, 'evening'>): RoutinePlan | undefined {
   const ev = phase.evening;
   return ev && routineOf(ev.title, ev.stations, ev.transition);
 }
 
 /** A logged day keeps the plan from when it was saved, but its evening holds follow the
- * latest plan, so a change shows the same day (James, Nov 14). */
-export function withLatestEvening(plan: PlanFile, session: PlannedSession): PlannedSession {
-  const phase = plan.phases.find((p) => p.id === session.phaseId);
-  return phase ? { ...session, evening: eveningOf(phase) } : session;
+ * latest plan, so a change shows the same day (James, Nov 14). A day logged under an old month or a
+ * routine since removed gets the shared evening holds. */
+export function withLatestEvening(data: AppData, session: PlannedSession): PlannedSession {
+  const phase = data.routineById.get(session.phaseId) ?? data.plan.base;
+  const evening = eveningOf(phase);
+  return evening ? { ...session, evening } : session;
 }
 
 /** The next n sessions in rotation order, starting with the current one. */
@@ -537,7 +632,7 @@ export function completeSetAt(it: DraftItem, k: number): DraftItem {
 }
 
 /** Which move a rest belongs to (an item without a move uses its own id). */
-export const restKey = (it: DraftItem) => chosen(it).move ?? it.plan.itemId;
+export const restKey = (it: DraftItem) => chosen(it).move ?? (it.plan.parts ? chosen(it).name : it.plan.itemId);
 
 /** Rest after a set: the rest James last set for this move during a workout, else the default (Nov 13). */
 export function restAfter(it: DraftItem, restByMove: Record<string, number>): number {
@@ -555,7 +650,7 @@ export function isItemComplete(it: DraftItem): boolean {
 // ---------- Move times (Nov 19) ----------
 
 /** Moves that get a clock: counted and timed sets (not the breathing or guided routines). */
-export const isTimedMove = (it: DraftItem) => it.plan.kind === 'reps' || it.plan.kind === 'time';
+export const isTimedMove = (it: DraftItem) => ['reps', 'time', 'circuit', 'flow'].includes(it.plan.kind);
 
 /** After a change to a move: newly logged sets get `now`; finishing the move stops its clock; undoing
  *  a set reopens it. A move logged without its clock running starts it at that first set. */
@@ -581,7 +676,16 @@ export function moveTime(it: Pick<DraftItem, 'startedAt' | 'endedAt'>): number |
 export function workOf(it: DraftItem): string {
   const p = chosen(it);
   const side = it.plan.perSide ? ` ${it.plan.sideLabel ?? 'per side'}` : '';
-  const amount = p.total !== undefined ? `${p.total} reps${side}` : it.plan.kind === 'time' ? `${p.sets} × ${p.target} s${side}` : `${p.sets} × ${p.target}${side}`;
+  const amount =
+    p.total !== undefined
+      ? `${p.total} reps${side}`
+      : it.plan.kind === 'time'
+        ? `${p.sets} × ${p.target} s${side}`
+        : it.plan.kind === 'circuit'
+          ? `${p.sets} rounds of ${p.target}`
+          : it.plan.kind === 'flow'
+            ? `${p.sets} × ${p.target} cycles${side}`
+            : `${p.sets} × ${p.target}${side}`;
   const bell = it.bell === null ? '' : it.bell === 'BW' ? ' bodyweight' : ` @${it.bell}`;
   return amount + bell;
 }
@@ -612,12 +716,32 @@ export function lastAndBest(times: MoveTime[], work: string): { last?: MoveTime;
   return { last: same[0], best, lastAny: times[0] };
 }
 
+/** "Once my manual edits are creeping up to 8, 9, 10… that's a sign that I'm ready for more sets" (James,
+ *  Nov 20). True when his sets averaged 8 or more (or 3 over a smaller planned count, e.g. flow cycles).
+ *  In a total the last set is often just what was left, so it doesn't count. */
+export function creepingUp(it: DraftItem): boolean {
+  const done = it.sets.filter((s) => s.done);
+  if (!done.length) return false;
+  const p = chosen(it);
+  const full = p.total !== undefined && done.length > 1 ? done.slice(0, -1) : done;
+  const avg = full.reduce((sum, s) => sum + s.actual, 0) / full.length;
+  return avg >= Math.min(MAX_REPS - 2, p.target + 3);
+}
+
 export function kbReps(items: DraftItem[]): number {
   let total = 0;
   for (const it of items) {
-    if (it.plan.kind !== 'reps') continue;
     for (const s of it.sets) {
-      if (s.done && typeof s.bell === 'number') total += s.actual * (it.plan.perSide ? 2 : 1);
+      if (!s.done) continue;
+      if (it.plan.kind === 'reps' && typeof s.bell === 'number') total += s.actual * (it.plan.perSide ? 2 : 1);
+      // A circuit round: each move with a bell, at its own count or the round's
+      if (it.plan.kind === 'circuit')
+        for (const pt of it.plan.parts ?? []) if (typeof pt.bell === 'number') total += (pt.reps ?? s.actual) * (pt.perSide ? 2 : 1);
+      // A flow set: every move in the cycle, times the cycles
+      if (it.plan.kind === 'flow' && typeof s.bell === 'number') {
+        const perCycle = (it.plan.parts ?? []).reduce((n, pt) => n + (pt.reps ?? 1), 0);
+        total += s.actual * perCycle * (it.plan.perSide ? 2 : 1);
+      }
     }
   }
   return total;
@@ -660,11 +784,13 @@ export function finishSession(
         p.total !== undefined
           ? !it.skipped && repsDone(it.sets) >= p.total
           : !it.skipped && it.sets.length > 0 && it.sets.every((s) => s.done && s.actual >= s.target);
-      progress[it.plan.progressKey] = { step: used, ready: allToPlan && !answers.pain };
+      // Counted work is ready for another set once his own set sizes creep up to 8+ (Nov 20)
+      const counted = it.plan.kind === 'reps' || it.plan.kind === 'circuit' || it.plan.kind === 'flow';
+      progress[it.plan.progressKey] = { step: used, ready: allToPlan && !answers.pain && (!counted || creepingUp(it)) };
 
       // Adapt to what James did (Nov 9): every set done and no joint pain. Holds only since totals
       // came in (Nov 19): a total can't be beaten, it moves up through the plan's steps instead.
-      if (p.total === undefined && !answers.pain && !it.skipped && it.sets.length > 0 && it.sets.every((s) => s.done)) {
+      if (it.plan.kind === 'time' && !answers.pain && !it.skipped && it.sets.length > 0 && it.sets.every((s) => s.done)) {
         const lastBell = it.sets[it.sets.length - 1].bell;
         const withBell = it.sets.filter((s) => s.bell === lastBell);
         const best = Math.min(...withBell.map((s) => s.actual));

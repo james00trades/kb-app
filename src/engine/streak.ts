@@ -77,6 +77,15 @@ export interface StreakFix {
 export const seededFix = (saved: StreakFix | null, seed: StreakFix): StreakFix =>
   saved && saved.through > seed.through ? saved : seed;
 
+/** That correction is James's own count, so only a phone already in use by that day gets it (Nov 20):
+ *  a new install, someone else's phone included, starts with no streak. `installedAt` is when this
+ *  install first opened (missing on a brand-new one). */
+export function seedApplies(installedAt: number | undefined, seed: StreakFix): boolean {
+  if (installedAt === undefined) return false;
+  const [y, m, d] = seed.through.split('-').map(Number);
+  return installedAt < new Date(y, m - 1, d + 1).getTime();
+}
+
 /** "2026-11-07" + 1 → "2026-11-08", in local calendar days. */
 export function addDays(date: string, n: number): string {
   const [y, m, d] = date.split('-').map(Number);

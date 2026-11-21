@@ -2,10 +2,10 @@
 import { computed, signal } from '@preact/signals';
 import { loadData, type AppData } from '../engine/data';
 import {
-  back, finishSession, initialState, localDate, passDay, planSession, startDraft, upcoming, withLatestEvening,
+  back, finishSession, initialState, localDate, migrateState, passDay, planSession, startDraft, startRoutine, upcoming, withLatestEvening,
   type EngineState, type PlannedSession, type SessionDraft, type SessionLog,
 } from '../engine/engine';
-import { addDays, seededFix, streak, type StreakFix } from '../engine/streak';
+import { addDays, seededFix, seedApplies, streak, type StreakFix } from '../engine/streak';
 import { bodyDue as dueNow, weightSummary, weightTrend } from '../engine/body';
 import { db, getKV, putKV, type BodyEntry, type Daily, type PhotoMeta, type Pose } from './db';
 import { setAudioSession, setVoice } from './sound';
@@ -77,6 +77,8 @@ export const checkinError = signal<string | null>(null);
 export const moveSheet = signal<string | null>(null);
 /** The workout screen is showing. Off when James backs out to the day; the workout stays in progress. */
 export const workoutOpen = signal(false);
+/** The level and routine picker (Nov 20, 2026). `welcome`: the first time the app opens on a new phone. */
+export const routinePicker = signal<{ welcome: boolean } | null>(null);
 /** Which of the next 7 days is open (0 = today), or null for the 7-day list. */
 export const openDay = signal<number | null>(null);
 /** Today's local date. Kept current when the app comes back from the background (see refreshDate). */
@@ -102,7 +104,7 @@ export interface DayPlan {
  * next session falls on tomorrow). */
 export const week = computed<DayPlan[]>(() => {
   const log = sessions.value.find((s) => s.date === todayStr.value && s.status !== 'skipped');
-  const days: DayPlan[] = log ? [{ date: todayStr.value, session: withLatestEvening(data.plan, log.session), log }] : [];
+  const days: DayPlan[] = log ? [{ date: todayStr.value, session: withLatestEvening(data, log.session), log }] : [];
   for (const session of upcoming(planData(), engine.value, 7 - days.length)) {
     days.push({ date: addDays(todayStr.value, days.length), session });
   }
@@ -143,7 +145,7 @@ const uid = () =>
 
 export async function init() {
   try {
-    const [eng, set, met, unl, dr, sess, days, bodyRows, photoRows, key, about, cks, fix, seeded] = await Promise.all([
+    const [eng, set, met, unl, dr, sess, days, bodyRows, photoRows, key, about, cks, fix, seeded, chose] = await Promise.all([
       getKV<EngineState>('engine'),
       getKV<Settings>('settings'),
       getKV<Meta>('meta'),
@@ -158,8 +160,16 @@ export async function init() {
       getKV<CheckIn[]>('checkins'),
       getKV<StreakFix>('streakFix'),
       getKV<boolean>(STREAK_SEED_KEY),
+      getKV<boolean>('routineChosen'),
     ]);
-    engine.value = { ...initialState(), ...eng };
+    if (eng) {
+      // Saved before levels and routines (Nov 20): Month 1 carries on as Level 1's first routine
+      const migrated = migrateState({ ...initialState(), ...eng, planVersion: eng.planVersion }, data);
+      engine.value = migrated;
+      if (migrated.planVersion !== eng.planVersion) await putKV('engine', migrated);
+    } else {
+      engine.value = initialState();
+    }
     const saved = { ...defaultSettings(), ...set };
     // James's bells are 18, 35 and 45 lb (Nov 7). Swap out the old starting list if it was never edited.
     if (saved.bells.join() === '25,45') {
@@ -182,10 +192,15 @@ export async function init() {
     checkins.value = cks ?? [];
     streakFix.value = fix ?? null;
     if (!seeded) {
-      streakFix.value = seededFix(fix ?? null, STREAK_SEED);
-      await putKV('streakFix', streakFix.value);
+      // James's count only: a phone first opened after Nov 10 (someone else's, a new install) starts clean
+      if (seedApplies(met?.createdAt, STREAK_SEED)) {
+        streakFix.value = seededFix(fix ?? null, STREAK_SEED);
+        await putKV('streakFix', streakFix.value);
+      }
       await putKV(STREAK_SEED_KEY, true);
     }
+    // A brand-new phone (someone James shared the app with) picks where to start
+    if (!eng && !sess.length && !chose) routinePicker.value = { welcome: true };
     setVoice(settings.value.voice);
     setAudioSession(settings.value.throughSilent);
     ready.value = true;
@@ -249,6 +264,13 @@ export async function passToday(kind: 'rest' | 'skipped', walk?: boolean) {
   await db.sessions.put(r.log);
   sessions.value = [r.log, ...sessions.value];
   await saveEngine(r.state);
+}
+
+/** Start a routine now: its Week 1, Day A is the next workout (James, Nov 20). */
+export async function chooseRoutine(id: string) {
+  await saveEngine(startRoutine(engine.value, id));
+  await putKV('routineChosen', true);
+  routinePicker.value = null;
 }
 
 export async function backOneDay() {
@@ -400,10 +422,18 @@ function reportInput(note: string): Omit<ReportInput, 'photoSets'> {
     today: todayStr.value,
     program: {
       name: plan.phaseName,
+      level: plan.level,
+      levelName: data.plan.levels.find((l) => l.n === plan.level)?.name,
       week: plan.week,
+      weeks: plan.routineWeeks,
       effort: plan.effort,
       rotation: data.plan.rotation,
-      phases: data.plan.phases.map((p) => ({ name: p.name, weeks: p.weeks as [number, number], effort: p.effort })),
+      levels: data.plan.levels.map((l) => ({
+        n: l.n,
+        name: l.name,
+        summary: l.summary,
+        routines: data.routines.filter((r) => r.level === l.n).map((r) => r.name),
+      })),
     },
     about: checkinAbout.value,
     note,

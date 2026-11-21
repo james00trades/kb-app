@@ -110,6 +110,9 @@ Choosing the lever:
 Rules:
 - Intensity suggestions must fit the program: move up one dial at a time (harder variation, heavier bell, faster tempo, or more sets); weekly kettlebell volume up no more than 10 to 15 percent; if joint pain was reported, hold volume rather than increase it. Do not invent a new program or change its overall structure.
 - Never suggest more than 10 reps in a set. To add work, add sets of 10 or fewer.
+- Volume goes up with more sets, circuit rounds or flow cycles, never more reps in a set: they prefer more sets of lower reps, and when their own set sizes creep up to 8–10 that's the sign they're ready for another set.
+- Circuits and flows are counted, never timed: don't suggest EMOMs, AMRAPs, timed rounds or "for time" work.
+- For a bigger change, suggest another routine at the same level or the next level up (the levels are listed in the report), rather than a new program.
 - Diet suggestions should be simple, specific habits they can start this week. No crash diets or extreme restriction.
 - If you see something that could be a health concern (very fast unexplained weight loss, pain that keeps coming back), say they should check with a doctor.
 - If the data is thin (few weigh-ins, no photos, few workouts, early in the journey), say so in dataGaps and keep the call tentative.
@@ -120,11 +123,16 @@ Rules:
 export interface ReportInput {
   today: string;
   program: {
+    /** The routine being followed. */
     name: string;
+    level?: number;
+    levelName?: string;
     week: number;
+    weeks?: number;
     effort?: string;
     rotation: string[];
-    phases: { name: string; weeks: [number, number]; effort?: string }[];
+    /** Every level and its routines (Nov 20, 2026). */
+    levels: { n: number; name: string; summary: string; routines: string[] }[];
   };
   about: string;
   note: string;
@@ -158,6 +166,14 @@ const trained = (s: SessionLog) => s.status === 'done' || s.status === 'partial'
 /** One line per main move: "3×8/side @45 lb". */
 function moveText(it: SessionLog['items'][number]): { name: string; text: string } {
   const p = chosen(it);
+  // Circuits and flows (Nov 20): "goblet squat @35, two-hand swing @45 …: 5 rounds of 5"
+  if (it.plan.kind === 'circuit' || it.plan.kind === 'flow') {
+    const parts = (it.plan.parts ?? []).map((pt) => `${pt.name.toLowerCase()}${pt.reps ? ` ×${pt.reps}` : ''}${typeof pt.bell === 'number' ? ` @${pt.bell}` : ''}`);
+    const joiner = it.plan.kind === 'flow' ? ' → ' : ', ';
+    const bell = it.plan.kind === 'flow' && typeof it.bell === 'number' ? ` @${it.bell} lb` : '';
+    const what = it.plan.kind === 'flow' ? `${p.sets} × ${p.target} cycles${it.plan.perSide ? '/side' : ''}` : `${p.sets} rounds of ${p.target} each`;
+    return { name: `${p.name} (${parts.join(joiner)})`, text: `${what}${bell}` };
+  }
   const unit = it.plan.kind === 'time' ? ' s' : '';
   const side = it.plan.perSide ? '/side' : '';
   const bell = it.bell === null ? '' : it.bell === 'BW' ? ' bodyweight' : ` @${it.bell} lb`;
@@ -240,10 +256,10 @@ export function buildReport(r: ReportInput): string {
   out.push(r.copyPhotoDates ? `Stats copied from the kettlebell app on ${r.today}.` : `Check-in date: ${r.today}`);
   out.push(`Journey started: ${start} (week ${weeksIn} of the journey).`);
   out.push(
-    `Program: now in "${r.program.name}", program week ${r.program.week}${r.program.effort ? `, target effort ${r.program.effort}` : ''}. Rotation: ${r.program.rotation.join(', ')} (missed days don't skip workouts; the rotation picks up where it left off).`,
+    `Program: ${r.program.level ? `Level ${r.program.level}${r.program.levelName ? ` (${r.program.levelName})` : ''}, ` : ''}routine "${r.program.name}", week ${r.program.week}${r.program.weeks ? ` of ${r.program.weeks}` : ''}${r.program.effort ? `, target effort ${r.program.effort}` : ''}. Rotation: ${r.program.rotation.join(', ')} (missed days don't skip workouts; the rotation picks up where it left off).`,
   );
   out.push(
-    `Program phases loaded so far: ${r.program.phases.map((p) => `${p.name} (weeks ${p.weeks[0]}–${p.weeks[1]}${p.effort ? `, effort ${p.effort}` : ''})`).join('; ')}. More phases get added as the journey goes on.`,
+    `Levels (each holds several 4-week routines; when a routine ends, the next one at the same level starts unless they pick another): ${r.program.levels.map((l) => `${l.n} ${l.name}, ${l.summary}: ${l.routines.join(', ')}`).join('; ')}.`,
   );
   if (r.restSeconds !== undefined) {
     const own = (r.restByMove ?? []).map((m) => `${m.name} ${m.seconds} s`);

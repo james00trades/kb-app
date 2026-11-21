@@ -1,10 +1,10 @@
 import type { ComponentChildren } from 'preact';
 import { useState } from 'preact/hooks';
-import { isItemComplete, type PlannedSession, type RoutinePlan } from '../engine/engine';
+import { isItemComplete, nextRoutine, type PlannedSession, type RoutinePlan } from '../engine/engine';
 import { dayKept } from '../engine/streak';
 import {
-  backOneDay, backupDue, bodyDue, bodySheet, currentStreak, data, draft, meta, openDay, passToday, setPart, startWorkout, tab, today,
-  week, workoutOpen, type DayPlan,
+  backOneDay, backupDue, bodyDue, bodySheet, currentStreak, data, draft, meta, openDay, passToday, routinePicker, setPart, startWorkout, tab,
+  today, week, workoutOpen, type DayPlan,
 } from '../lib/store';
 import { intervalSpec, startTimer } from '../lib/timer';
 import { BodyCheckIn } from './Body';
@@ -48,9 +48,7 @@ function Home() {
           session ends pain-free.
         </div>
       )}
-      {s.beyondPlan && (
-        <div class="note">The plan data ends here, so the app repeats the final week until the next month is loaded.</div>
-      )}
+      <RoutineBanner s={s} />
 
       <BodyCheckIn />
 
@@ -96,6 +94,40 @@ function Home() {
         </div>
       )}
     </div>
+  );
+}
+
+/** Level, routine and week, with a way to change them (Nov 20). In a routine's last week: what comes next. */
+function RoutineBanner({ s }: { s: PlannedSession }) {
+  const routine = data.routineById.get(s.phaseId);
+  if (!routine) return null;
+  const level = data.plan.levels.find((l) => l.n === routine.level);
+  const next = nextRoutine(data, routine);
+  const open = () => {
+    routinePicker.value = { welcome: false };
+    window.scrollTo(0, 0);
+  };
+  return (
+    <>
+      <button class="card routine-banner" onClick={open}>
+        <span class="level-num">{routine.level}</span>
+        <span class="level-text">
+          <span class="eyebrow">
+            Level {routine.level} · {level?.name}
+          </span>
+          <span class="day-title">
+            {routine.name} <span class="muted small">Week {s.week} of {routine.weeks[1]}</span>
+          </span>
+        </span>
+        <span class="link-btn small">Change</span>
+      </button>
+      {s.finalWeekOfPhase && (
+        <div class="note">
+          Last week of {routine.name}. Next up: {next.id === routine.id ? `${routine.name} again` : next.name}, still Level {routine.level}. Ready
+          for more? Tap above to move up a level.
+        </div>
+      )}
+    </>
   );
 }
 
@@ -233,8 +265,8 @@ function DayScreen({ day, index }: { day: DayPlan; index: number }) {
 
       {!rest && s.finalWeekOfPhase && s.checks && (
         <section class="card">
-          <h3>End-of-month checks</h3>
-          <p class="muted small">All must pass before moving on.</p>
+          <h3>Before you move up</h3>
+          <p class="muted small">Last week of this routine: check these before picking the next level.</p>
           <ul class="checks">
             {s.checks.map((c) => (
               <li key={c}>{c}</li>

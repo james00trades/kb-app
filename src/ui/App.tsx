@@ -1,7 +1,7 @@
 import { useEffect } from 'preact/hooks';
 import { updateReady } from '../lib/pwa';
 import { streakHeat, streakParts, streakPartsDone } from '../engine/streak';
-import { currentStreak, draft, loadError, logDueCount, photoSession, ready, tab, type Tab } from '../lib/store';
+import { currentStreak, draft, loadError, logDueCount, photoSession, ready, routinePicker, tab, type Tab } from '../lib/store';
 import { timer } from '../lib/timer';
 import { setAwake } from '../lib/wakelock';
 import { BodySheet } from './Body';
@@ -9,6 +9,7 @@ import { Icon } from './common';
 import { PhotoSession } from './PhotoSession';
 import { History } from './History';
 import { Library, MoveSheet } from './Library';
+import { RoutinePicker } from './RoutinePicker';
 import { Settings } from './Settings';
 import { Sparks } from './Sparks';
 import { UpdateOrb } from './UpdateOrb';
@@ -47,20 +48,27 @@ export function App() {
           Never mid-workout; it bursts in when the workout ends. */}
       {updateReady.value && !draft.value && <UpdateOrb />}
       <main class="main">
-        {t === 'today' && <Today />}
-        {t === 'timers' && <Timers />}
-        {t === 'library' && <Library />}
-        {t === 'history' && <History />}
-        {t === 'settings' && <Settings />}
+        {routinePicker.value ? (
+          <RoutinePicker />
+        ) : (
+          <>
+            {t === 'today' && <Today />}
+            {t === 'timers' && <Timers />}
+            {t === 'library' && <Library />}
+            {t === 'history' && <History />}
+            {t === 'settings' && <Settings />}
+          </>
+        )}
       </main>
       <RestBar />
-      <nav class="tabbar">
+      <nav class={`tabbar ${routinePicker.value?.welcome ? 'hidden' : ''}`}>
         {TABS.map((x) => (
           <button
             key={x.id}
             class={`tab ${t === x.id ? 'active' : ''}`}
             onClick={() => {
               tab.value = x.id;
+              routinePicker.value = null;
               window.scrollTo(0, 0);
             }}
           >
