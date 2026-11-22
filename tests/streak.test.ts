@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { loadData } from '../src/engine/data';
 import { initialState, upcoming, type SessionStatus } from '../src/engine/engine';
-import { addDays, seededFix, seedApplies, streak, streakHeat, streakParts, streakPartsDone, type DayExtras } from '../src/engine/streak';
+import { addDays, heatReached, seededFix, seedApplies, streak, streakHeat, streakParts, streakPartsDone, type DayExtras } from '../src/engine/streak';
 
 describe('the flame heats up with the streak (James, Nov 19)', () => {
   it('steps at 2, 4, 6, 8, 10, 12, 14 and 16 days, and stays at the top after 16', () => {
@@ -193,5 +193,16 @@ describe('sparks off the flame (James, Nov 19)', () => {
     expect(a).toEqual(sparkVars(SPARKS[14], 3));
     expect(a).not.toEqual(sparkVars(SPARKS[14], 4));
     expect(parseFloat(a['--dy'])).toBeLessThan(0); // shoots upward first
+  });
+
+  it('a new streak level fills the screen only when the flame steps up (Nov 22)', () => {
+    expect(heatReached(1, 2)).toBe(2); // first flame
+    expect(heatReached(7, 8)).toBe(8);
+    expect(heatReached(15, 16)).toBe(16); // the supernova
+    expect(heatReached(8, 9)).toBe(0); // same step
+    expect(heatReached(16, 17)).toBe(0); // nothing past the top step
+    expect(heatReached(8, 8)).toBe(0); // nothing new today
+    expect(heatReached(9, 4)).toBe(0); // a lower count (e.g. a correction) never celebrates
+    expect(heatReached(0, 1)).toBe(0);
   });
 });

@@ -66,6 +66,13 @@ export function streakHeat(days: number): number {
   return heat;
 }
 
+/** The flame step just reached, going from `before` to `after` days in a row, or 0 if it didn't
+ *  step up (James, Nov 22: a new streak level fills the screen). */
+export function heatReached(before: number, after: number): number {
+  const heat = streakHeat(after);
+  return after > before && heat > streakHeat(before) ? heat : 0;
+}
+
 /** James's own correction (Nov 10): "as of `through`, I'd kept `count` days in a row".
  *  Days the app didn't see (or saw wrongly) before then don't matter. */
 export interface StreakFix {

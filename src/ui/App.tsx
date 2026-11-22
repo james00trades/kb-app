@@ -1,13 +1,14 @@
 import { useEffect } from 'preact/hooks';
 import { updateReady } from '../lib/pwa';
 import { streakHeat, streakParts, streakPartsDone } from '../engine/streak';
-import { currentStreak, draft, loadError, logDueCount, photoSession, ready, routinePicker, tab, type Tab } from '../lib/store';
+import { currentStreak, draft, levelUp, loadError, logDueCount, photoSession, ready, routinePicker, tab, type Tab } from '../lib/store';
 import { timer } from '../lib/timer';
 import { setAwake } from '../lib/wakelock';
 import { BodySheet } from './Body';
 import { Icon } from './common';
 import { PhotoSession } from './PhotoSession';
 import { History } from './History';
+import { LevelUp } from './LevelUp';
 import { Library, MoveSheet } from './Library';
 import { RoutinePicker } from './RoutinePicker';
 import { Settings } from './Settings';
@@ -45,8 +46,8 @@ export function App() {
     <>
       <StreakBar />
       {/* New version ready: a circle that bursts into the top right corner, then pulses (James, Nov 19).
-          Never mid-workout; it bursts in when the workout ends. */}
-      {updateReady.value && !draft.value && <UpdateOrb />}
+          Never mid-workout; it bursts in when the workout ends, after any new streak level. */}
+      {updateReady.value && !draft.value && !levelUp.value && <UpdateOrb />}
       <main class="main">
         {routinePicker.value ? (
           <RoutinePicker />
@@ -88,6 +89,7 @@ export function App() {
       <BodySheet />
       <TimerOverlay />
       <PhotoSession />
+      <LevelUp />
     </>
   );
 }

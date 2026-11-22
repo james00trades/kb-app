@@ -5,7 +5,7 @@ import {
   back, finishSession, initialState, localDate, migrateState, passDay, planSession, startDraft, startRoutine, upcoming, withLatestEvening,
   type EngineState, type PlannedSession, type SessionDraft, type SessionLog,
 } from '../engine/engine';
-import { addDays, seededFix, seedApplies, streak, type StreakFix } from '../engine/streak';
+import { addDays, heatReached, seededFix, seedApplies, streak, type StreakFix } from '../engine/streak';
 import { bodyDue as dueNow, weightSummary, weightTrend } from '../engine/body';
 import { db, getKV, putKV, type BodyEntry, type Daily, type PhotoMeta, type Pose } from './db';
 import { setAudioSession, setVoice } from './sound';
@@ -131,6 +131,17 @@ export const logDueCount = computed(() => {
   return [d.weight, d.photos, d.waist, checkinDue.value].filter(Boolean).length;
 });
 
+/** A new streak level just reached (James, Nov 22): the flame fills the screen until tapped. */
+export const levelUp = signal<{ days: number; heat: number } | null>(null);
+
+/** After something that can finish today (the workout, the warm-up, the rest-day walk): did the
+ *  streak's flame just step up? `before` is the streak count from just before it. */
+function noteLevelUp(before: number) {
+  const days = currentStreak.value.current;
+  const heat = heatReached(before, days);
+  if (heat) levelUp.value = { days, heat };
+}
+
 export const currentStreak = computed(() =>
   streak(sessions.value, daily.value, todayStr.value, streakFix.value, today.value.day === 'REST'),
 );
@@ -245,6 +256,7 @@ export async function discardWorkout() {
 export async function finishWorkout(effort: number, pain: boolean) {
   const d = draft.value;
   if (!d) return;
+  const before = currentStreak.value.current;
   const r = finishSession(data.plan, engine.value, d, { effort, pain }, Date.now());
   await db.sessions.put(r.log);
   sessions.value = [r.log, ...sessions.value];
@@ -255,15 +267,18 @@ export async function finishWorkout(effort: number, pain: boolean) {
   }
   await saveEngine(r.state);
   await discardWorkout();
+  noteLevelUp(before);
 }
 
 // ---------- Rotation ----------
 
 export async function passToday(kind: 'rest' | 'skipped', walk?: boolean) {
+  const before = currentStreak.value.current;
   const r = passDay(data.plan, engine.value, today.value, kind, uid(), Date.now(), walk);
   await db.sessions.put(r.log);
   sessions.value = [r.log, ...sessions.value];
   await saveEngine(r.state);
+  noteLevelUp(before);
 }
 
 /** Start a routine now: its Week 1, Day A is the next workout (James, Nov 20). */
@@ -281,10 +296,12 @@ export async function backOneDay() {
 
 /** Mark today's wake-up, warm-up or evening holds done (or undo it). */
 export async function setPart(kind: 'morning' | 'warmup' | 'evening', done: boolean) {
+  const before = currentStreak.value.current;
   const date = localDate(Date.now());
   const row: Daily = { ...(daily.value[date] ?? { date }), [kind]: done ? Date.now() : undefined };
   daily.value = { ...daily.value, [date]: row };
   await db.daily.put(row);
+  if (done) noteLevelUp(before);
 }
 
 /** Settings → Streak: "I'd kept this many days in a row before today" (James, Nov 10).

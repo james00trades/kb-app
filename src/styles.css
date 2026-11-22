@@ -115,11 +115,11 @@ p {
   gap: 6px;
 }
 .streak .flame {
-  color: var(--accent);
+  color: var(--heat, var(--accent));
   display: grid;
 }
 .streak.cold .flame {
-  color: var(--muted);
+  color: var(--heat, var(--muted));
 }
 
 /* ---------- Streak heat (James, Nov 19) ----------
@@ -127,52 +127,53 @@ p {
    2 dim red, 4 brighter red, 6 orange with a slight flicker, 8 orange more intense, 10 yellow more
    intense, 12 sky blue with the most intense campfire sparks, 14+ white-hot blue with welding sparks.
    Hollow until today is done, solid after, at every step. */
+/* Each step's color, as --heat, so the full-screen level-up (LevelUp.tsx) can use it too */
+.heat-2 {
+  --heat: #a13b3b;
+}
+.heat-4 {
+  --heat: #ef4444;
+}
+.heat-6,
+.heat-8 {
+  --heat: #f97316;
+}
+.heat-10 {
+  --heat: #facc15;
+}
+.heat-12 {
+  --heat: #38bdf8;
+}
+.heat-14,
+.heat-16 {
+  --heat: #e0f2fe;
+}
 .streak .flame {
   position: relative;
 }
-.streak .flame svg {
+:is(.streak, .levelup) .flame svg {
   position: relative;
   z-index: 1;
   transform-origin: 50% 85%;
 }
-.streak .flame.heat-2 {
-  color: #a13b3b;
-}
-.streak .flame.heat-4 {
-  color: #ef4444;
-}
-.streak .flame.heat-6,
-.streak .flame.heat-8 {
-  color: #f97316;
-}
-.streak .flame.heat-6 svg {
+:is(.streak, .levelup) .flame.heat-6 svg {
   animation: flame-sway 2.6s ease-in-out infinite;
 }
-.streak .flame.heat-8 svg {
+:is(.streak, .levelup) .flame.heat-8 svg {
   animation: flame-flicker 1.3s ease-in-out infinite, glow-orange 1.3s ease-in-out infinite;
 }
-.streak .flame.heat-10 {
-  color: #facc15;
-}
-.streak .flame.heat-10 svg {
+:is(.streak, .levelup) .flame.heat-10 svg {
   animation: flame-flicker 0.8s ease-in-out infinite, glow-yellow 0.8s ease-in-out infinite;
 }
-.streak .flame.heat-12 {
-  color: #38bdf8;
-}
-.streak .flame.heat-12 svg {
+:is(.streak, .levelup) .flame.heat-12 svg {
   animation: flame-flicker 0.6s ease-in-out infinite, glow-sky 0.6s ease-in-out infinite;
 }
-.streak .flame.heat-14,
-.streak .flame.heat-16 {
-  color: #e0f2fe;
-}
-.streak .flame.heat-14 svg,
-.streak .flame.heat-16 svg {
+:is(.streak, .levelup) .flame.heat-14 svg,
+:is(.streak, .levelup) .flame.heat-16 svg {
   animation: flame-roar 0.5s ease-in-out infinite, glow-white-hot 0.7s ease-in-out infinite;
 }
-.streak .flame.heat-14::before,
-.streak .flame.heat-16::before {
+:is(.streak, .levelup) .flame.heat-14::before,
+:is(.streak, .levelup) .flame.heat-16::before {
   content: '';
   position: absolute;
   inset: -9px;
@@ -474,9 +475,9 @@ p {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .streak .flame svg,
-  .streak .flame.heat-14::before,
-  .streak .flame.heat-16::before,
+  :is(.streak, .levelup) .flame svg,
+  :is(.streak, .levelup) .flame.heat-14::before,
+  :is(.streak, .levelup) .flame.heat-16::before,
   .nova i {
     animation: none;
   }
@@ -484,11 +485,11 @@ p {
   .nova .nova-ring {
     display: none;
   }
-  .streak .flame.heat-8 svg,
-  .streak .flame.heat-10 svg,
-  .streak .flame.heat-12 svg,
-  .streak .flame.heat-14 svg,
-  .streak .flame.heat-16 svg {
+  :is(.streak, .levelup) .flame.heat-8 svg,
+  :is(.streak, .levelup) .flame.heat-10 svg,
+  :is(.streak, .levelup) .flame.heat-12 svg,
+  :is(.streak, .levelup) .flame.heat-14 svg,
+  :is(.streak, .levelup) .flame.heat-16 svg {
     filter: drop-shadow(0 0 6px currentColor);
   }
 }
@@ -2494,4 +2495,215 @@ div.stats {
   color: var(--accent);
   font-weight: 800;
   padding: 0 6px;
+}
+
+/* ---------- New streak level (LevelUp.tsx, James, Nov 22) ----------
+   The streak bar's flame at its new step, zoomed to fill the screen (zoom keeps the vector flame sharp and
+   scales its sparks, glare and supernova with it). It pops in with a white flash, shockwaves and a burst
+   of sparks in the step's color (--heat), then keeps its usual motion until tapped. */
+.levelup {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 26px;
+  padding: calc(var(--safe-t) + 16px) 16px calc(var(--safe-b) + 64px);
+  background: rgba(4, 5, 8, 0.96);
+  background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--heat) 24%, #050608) 0%, #050608 62%);
+  touch-action: none;
+  overscroll-behavior: contain;
+  cursor: pointer;
+  animation: lu-in 0.3s ease-out both;
+}
+.levelup .flame {
+  position: relative;
+  display: grid;
+  color: var(--heat);
+}
+.levelup-zoom {
+  position: relative;
+  zoom: 8;
+  animation: lu-pop 0.85s cubic-bezier(0.2, 1.5, 0.45, 1) 0.05s both;
+}
+.levelup-glow {
+  position: absolute;
+  left: 50%;
+  top: 58%;
+  width: 4px;
+  height: 4px;
+  margin: -2px 0 0 -2px;
+  border-radius: 50%;
+  background: var(--heat);
+  box-shadow: 0 0 30px 15px var(--heat);
+  opacity: 0.3;
+  animation: lu-breathe 2.4s ease-in-out infinite;
+}
+.levelup-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 0.5px solid var(--heat);
+  box-shadow: 0 0 2px var(--heat), inset 0 0 2px var(--heat);
+  opacity: 0;
+  animation: lu-ring 1.3s cubic-bezier(0.15, 0.6, 0.3, 1) 0.3s both;
+}
+.levelup-ring.late {
+  border-color: #fff;
+  animation: lu-ring 2.4s cubic-bezier(0.15, 0.6, 0.3, 1) 0.55s infinite;
+}
+.levelup-burst {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+.levelup-burst i {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 1.6px;
+  height: 1.6px;
+  margin: -0.8px 0 0 -0.8px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 1.5px 0.6px var(--heat);
+  opacity: 0;
+  animation: lu-burst var(--dur) cubic-bezier(0.1, 0.75, 0.3, 1) var(--delay) both;
+}
+.levelup-flash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 40%, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0) 55%);
+  opacity: 0;
+  animation: lu-flash 0.7s ease-out 0.3s both;
+}
+.levelup-text {
+  position: relative;
+  text-align: center;
+  animation: lu-rise 0.5s ease-out 0.6s both;
+}
+.levelup-n {
+  font-size: 92px;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+  text-shadow: 0 0 6px var(--heat), 0 0 26px var(--heat);
+}
+.levelup-label {
+  margin-top: 4px;
+  font-size: 24px;
+  font-weight: 700;
+}
+.levelup-sub {
+  margin-top: 12px;
+  font-size: 14px;
+  font-weight: 650;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.levelup-tap {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--safe-b) + 28px);
+  text-align: center;
+  font-size: 14px;
+  color: var(--muted);
+  animation: lu-in 0.6s ease-out 1.6s both;
+}
+@keyframes lu-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes lu-pop {
+  0% {
+    scale: 0.05;
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    scale: 1;
+    opacity: 1;
+  }
+}
+@keyframes lu-ring {
+  0% {
+    scale: 0.3;
+    opacity: 1;
+  }
+  75% {
+    opacity: 0.2;
+  }
+  100% {
+    scale: 7;
+    opacity: 0;
+  }
+}
+@keyframes lu-burst {
+  0% {
+    translate: 0 0;
+    scale: 1.5;
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    translate: var(--dx) var(--dy);
+    scale: 0.3;
+    opacity: 0;
+  }
+}
+@keyframes lu-flash {
+  0% {
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes lu-breathe {
+  0%,
+  100% {
+    opacity: 0.22;
+    scale: 0.9;
+  }
+  50% {
+    opacity: 0.38;
+    scale: 1.12;
+  }
+}
+@keyframes lu-rise {
+  from {
+    opacity: 0;
+    translate: 0 18px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .levelup-zoom,
+  .levelup-text,
+  .levelup-tap {
+    animation: lu-in 0.3s ease-out both;
+  }
+  .levelup-flash,
+  .levelup-ring,
+  .levelup-burst {
+    display: none;
+  }
+  .levelup-glow {
+    animation: none;
+  }
 }
