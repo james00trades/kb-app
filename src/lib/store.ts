@@ -174,8 +174,8 @@ export async function init() {
       getKV<boolean>('routineChosen'),
     ]);
     if (eng) {
-      // Saved before levels and routines (Nov 20): Month 1 carries on as Level 1's first routine
-      const migrated = migrateState({ ...initialState(), ...eng, planVersion: eng.planVersion }, data);
+      // Older saves (levels and routines, Nov 20; hold times by move, Nov 22) catch up, from the logs if need be
+      const migrated = migrateState({ ...initialState(), ...eng, planVersion: eng.planVersion }, data, sess);
       engine.value = migrated;
       if (migrated.planVersion !== eng.planVersion) await putKV('engine', migrated);
     } else {

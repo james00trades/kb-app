@@ -49,7 +49,7 @@ export interface EngineState {
   hold: Hold | null;
   progress: Record<string, ProgressEntry>;
   bellPrefs: Record<string, BellPref>;
-  /** By progress key. Missing in state saved before Nov 9, 2026. */
+  /** Hold times: by move since Nov 22, 2026 (holdKey); by progress key before. Missing before Nov 9. */
   levels: Record<string, Level>;
   /** Missing in state saved before Nov 20, 2026: the first Level 1 routine, from the very start. */
   routine?: RoutinePick;
@@ -57,8 +57,9 @@ export interface EngineState {
   planVersion?: number;
 }
 
-/** Progress steps add sets since Nov 20 (James: "more sets of lower reps"). */
-export const PLAN_VERSION = 2;
+/** 2: progress steps add sets (Nov 20, James: "more sets of lower reps"). 3: hold times by move, and
+ *  what a bug in the Nov 20 update could lose rebuilt from the logs (Nov 22). */
+export const PLAN_VERSION = 3;
 
 export const initialState = (): EngineState => ({
   pointer: { cycle: 0, slot: 0 },
@@ -69,15 +70,20 @@ export const initialState = (): EngineState => ({
   planVersion: PLAN_VERSION,
 });
 
-/** State saved before routines (Nov 20): Month 1 is now Level 1's first routine, picked up at the same
- *  week. Old progress steps were reps on a range; they'd read as extra sets now, so they start over. */
-export function migrateState(saved: EngineState, data: AppData): EngineState {
-  if ((saved.planVersion ?? 1) >= PLAN_VERSION) return saved;
+/** Bring saved state up to date. Before routines (Nov 20): Month 1 is now Level 1's first routine, picked
+ *  up at the same week, and old progress steps (more reps) start over. From Nov 20 to 22 a finished
+ *  workout dropped the routine and the plan version, and the next open wiped the hold times and steps:
+ *  all of that comes back from the logs (Nov 22, James: the dead hang went from his 35s to 15s). */
+export function migrateState(saved: EngineState, data: AppData, logs: SessionLog[] = []): EngineState {
+  const version = saved.planVersion ?? 1;
+  if (version >= PLAN_VERSION) return saved;
+  const learned = relearn(logs);
   return {
     ...saved,
-    progress: {},
-    levels: {},
-    routine: saved.routine ?? { id: firstRoutine(data).id, start: 0 },
+    // Kept when it came through intact (2); otherwise rebuilt from the routines' logs
+    progress: version === 2 ? saved.progress : learned.progress,
+    levels: learned.levels,
+    routine: saved.routine ?? routineFromLogs(data, logs) ?? { id: firstRoutine(data).id, start: 0 },
     planVersion: PLAN_VERSION,
   };
 }
@@ -401,7 +407,7 @@ function planItem(
   const progressKey = section === 'main' ? `${ctx.phase.id}/${item.progressKey ?? r.move ?? item.id}` : undefined;
   const entry = progressKey ? state.progress[progressKey] : undefined;
   const step = Math.min(Math.max(entry?.step ?? 0, 0), ladder.length - 1);
-  const level = progressKey ? state.levels?.[progressKey] : undefined;
+  const level = progressKey && r.kind === 'time' ? state.levels?.[holdKey(r.move, progressKey)] : undefined;
   const stay = adapt(prescribe(r, ladder[step], data, state.bellPrefs), level, r.kind);
   const canOffer = !ctx.held && !!entry?.ready && step + 1 < ladder.length;
   let up = canOffer ? adapt(prescribe(r, ladder[step + 1], data, state.bellPrefs), level, r.kind) : undefined;
@@ -760,43 +766,54 @@ export interface FinishResult {
   trained: string[];
 }
 
-export function finishSession(
-  plan: PlanFile,
-  state: EngineState,
-  draft: SessionDraft,
-  answers: { effort: number; pain: boolean },
-  now: number,
-): FinishResult {
-  const progress = { ...state.progress };
-  const bellPrefs = { ...state.bellPrefs };
-  const levels = { ...(state.levels ?? {}) };
-  const trained = new Set<string>();
+/** What the workouts teach the plan (Nov 9–22): move-up steps, hold times and bell picks. */
+interface Learned {
+  progress: Record<string, ProgressEntry>;
+  bellPrefs: Record<string, BellPref>;
+  levels: Record<string, Level>;
+}
 
-  for (const it of draft.items) {
+/** Hold times are kept by move (James, Nov 22: "is the dead hang remembering my time preferences?"), so
+ *  they carry over from routine to routine. A hold without a move of its own keeps its progress key. */
+export const holdKey = (move: string | undefined, progressKey: string) => move ?? progressKey;
+
+/** One logged workout's lessons, added to what was learned before it. */
+function learn(before: Learned, items: DraftItem[], pain: boolean): Learned {
+  const progress = { ...before.progress };
+  const bellPrefs = { ...before.bellPrefs };
+  const levels = { ...(before.levels ?? {}) };
+
+  for (const it of items) {
     const p = chosen(it);
     const didAny = it.sets.some((s) => s.done);
-    if (p.move && didAny) trained.add(p.move);
+    const key = it.plan.progressKey;
 
-    if (it.plan.section === 'main' && it.plan.progressKey && didAny) {
-      const used = it.choice === 'up' && it.plan.up ? it.plan.step + 1 : it.plan.step;
-      // Totals: the whole total done. Sets: every set done to plan.
-      const allToPlan =
-        p.total !== undefined
-          ? !it.skipped && repsDone(it.sets) >= p.total
-          : !it.skipped && it.sets.length > 0 && it.sets.every((s) => s.done && s.actual >= s.target);
-      // Counted work is ready for another set once his own set sizes creep up to 8+ (Nov 20)
-      const counted = it.plan.kind === 'reps' || it.plan.kind === 'circuit' || it.plan.kind === 'flow';
-      progress[it.plan.progressKey] = { step: used, ready: allToPlan && !answers.pain && (!counted || creepingUp(it)) };
+    if (it.plan.section === 'main' && key && didAny) {
+      // Move-up steps belong to a routine ("routine/item" keys, Nov 20). Older keys counted reps: skipped.
+      if (key.includes('/')) {
+        const used = it.choice === 'up' && it.plan.up ? it.plan.step + 1 : it.plan.step;
+        // Totals: the whole total done. Sets: every set done to plan.
+        const allToPlan =
+          p.total !== undefined
+            ? !it.skipped && repsDone(it.sets) >= p.total
+            : !it.skipped && it.sets.length > 0 && it.sets.every((s) => s.done && s.actual >= s.target);
+        // Counted work is ready for another set once his own set sizes creep up to 8+ (Nov 20)
+        const counted = it.plan.kind === 'reps' || it.plan.kind === 'circuit' || it.plan.kind === 'flow';
+        progress[key] = { step: used, ready: allToPlan && !pain && (!counted || creepingUp(it)) };
+      }
 
-      // Adapt to what James did (Nov 9): every set done and no joint pain. Holds only since totals
-      // came in (Nov 19): a total can't be beaten, it moves up through the plan's steps instead.
-      if (it.plan.kind === 'time' && !answers.pain && !it.skipped && it.sets.length > 0 && it.sets.every((s) => s.done)) {
+      // Holds follow the seconds he held (Nov 9): every set done and no joint pain. A new best with the
+      // same bell (beating the time he was asked for, or the one he'd already reached), or a heavier bell.
+      if (it.plan.kind === 'time' && !pain && !it.skipped && it.sets.length > 0 && it.sets.every((s) => s.done)) {
         const lastBell = it.sets[it.sets.length - 1].bell;
         const withBell = it.sets.filter((s) => s.bell === lastBell);
         const best = Math.min(...withBell.map((s) => s.actual));
-        const beat = lastBell === p.bell && best > p.target;
+        const hk = holdKey(p.move, key);
+        const cur = levels[hk];
+        const bar = cur && cur.bell === p.bell ? Math.max(p.target, cur.amount) : p.target;
+        const beat = lastBell === p.bell && best > bar;
         const heavier = heft(lastBell) > heft(p.bell);
-        if (beat || heavier) levels[it.plan.progressKey] = { amount: best, bell: lastBell, sets: withBell.length };
+        if (beat || heavier) levels[hk] = { amount: best, bell: lastBell, sets: withBell.length };
       }
     }
 
@@ -808,13 +825,42 @@ export function finishSession(
     }
   }
 
-  let hold = state.hold;
-  if (answers.pain) {
-    hold = { week: draft.session.effectiveWeek, since: localDate(now) };
-    for (const k of Object.keys(progress)) progress[k] = { ...progress[k], ready: false };
-  } else {
-    hold = null;
+  if (pain) for (const k of Object.keys(progress)) progress[k] = { ...progress[k], ready: false };
+  return { progress, bellPrefs, levels };
+}
+
+/** Everything the logs teach, oldest first (Nov 22): rebuilds hold times and move-up steps that a
+ *  bug in the Nov 20 update could wipe. */
+export function relearn(logs: SessionLog[]): Pick<Learned, 'progress' | 'levels'> {
+  let acc: Learned = { progress: {}, bellPrefs: {}, levels: {} };
+  for (const log of [...logs].sort((a, b) => a.startedAt - b.startedAt)) {
+    if (log.status === 'done' || log.status === 'partial') acc = learn(acc, log.items ?? [], !!log.pain);
   }
+  return { progress: acc.progress, levels: acc.levels };
+}
+
+/** The routine of the latest logged day, at the same week (Nov 22: a finished workout could drop it). */
+export function routineFromLogs(data: AppData, logs: SessionLog[]): RoutinePick | undefined {
+  const last = [...logs].sort((a, b) => b.startedAt - a.startedAt).find((l) => data.routineById.has(l.session?.phaseId));
+  if (!last) return undefined;
+  const r = data.routineById.get(last.session.phaseId)!;
+  return { id: r.id, start: last.session.cycle - (last.session.week - r.weeks[0]) };
+}
+
+export function finishSession(
+  plan: PlanFile,
+  state: EngineState,
+  draft: SessionDraft,
+  answers: { effort: number; pain: boolean },
+  now: number,
+): FinishResult {
+  const trained = new Set<string>();
+  for (const it of draft.items) {
+    const p = chosen(it);
+    if (p.move && it.sets.some((s) => s.done)) trained.add(p.move);
+  }
+  const { progress, bellPrefs, levels } = learn(state, draft.items, answers.pain);
+  const hold = answers.pain ? { week: draft.session.effectiveWeek, since: localDate(now) } : null;
 
   const allDone = draft.items.every(isItemComplete) && draft.items.every((it) => !it.skipped);
   const log: SessionLog = {
@@ -833,7 +879,8 @@ export function finishSession(
   return {
     log,
     trained: [...trained],
-    state: { pointer: advance(plan, state.pointer), hold, progress, bellPrefs, levels },
+    // Everything else (the routine, the plan version) carries on as it was
+    state: { ...state, pointer: advance(plan, state.pointer), hold, progress, bellPrefs, levels },
   };
 }
 

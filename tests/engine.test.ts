@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { loadData } from '../src/engine/data';
 import {
   advance, back, chosen, completeNext, completeSetAt, creepingUp, finishSession, firstRoutine, initialState, isItemComplete, kbReps,
-  lastAndBest, migrateState, moveTime, nextRoutine, passDay, planSession, repsDone, restAfter, restKey, routineAt, setChoice, stampTimes,
+  lastAndBest, migrateState, moveTime, nextRoutine, passDay, PLAN_VERSION, planSession, repsDone, restAfter, restKey, routineAt, setChoice, stampTimes,
   startDraft, startRoutine, timesFor, undoSet, upcoming, withLatestEvening, workOf,
   type DraftItem, type EngineState, type PlannedSession, type SessionDraft,
 } from '../src/engine/engine';
@@ -147,7 +147,7 @@ describe('levels and routines (James, Nov 20)', () => {
       levels: { deadlift: { amount: 10, bell: 45 as const, sets: 3 } },
     } as EngineState;
     const m = migrateState(old, data);
-    expect(m).toMatchObject({ routine: { id: FOUNDATIONS, start: 0 }, progress: {}, levels: {}, planVersion: 2 });
+    expect(m).toMatchObject({ routine: { id: FOUNDATIONS, start: 0 }, progress: {}, levels: {}, planVersion: PLAN_VERSION });
     expect(m.bellPrefs).toEqual(old.bellPrefs); // his bell picks stay
     expect(planSession(data, m)).toMatchObject({ phaseId: FOUNDATIONS, week: 3, day: 'B' });
     expect(migrateState(m, data)).toBe(m); // once only
@@ -412,18 +412,39 @@ describe('holds follow the seconds held (Nov 9); reps moves follow the plan (Nov
   });
 
   it('a session with joint pain changes nothing', () => {
-    expect(held(at(2, 'A'), [45, 45, 45], true).state.levels[key('suitcase-carry')]).toBeUndefined();
+    expect(held(at(2, 'A'), [45, 45, 45], true).state.levels['suitcase-carry']).toBeUndefined();
   });
 
   it('one short hold means no change', () => {
     const r = held(at(2, 'A'), [45, 45, 25]);
-    expect(r.state.levels[key('suitcase-carry')]).toBeUndefined();
+    expect(r.state.levels['suitcase-carry']).toBeUndefined();
     expect(item(planSession(data, at(2, 'A', r.state)), 'a-suitcase-carry')!.stay.target).toBe(30);
   });
 
   it('works with state saved before levels existed', () => {
     const { levels: _, ...old } = at(2, 'A');
-    expect(held(old as EngineState, [40, 40, 40]).state.levels[key('suitcase-carry')]).toMatchObject({ amount: 40, sets: 3 });
+    expect(held(old as EngineState, [40, 40, 40]).state.levels['suitcase-carry']).toMatchObject({ amount: 40, sets: 3 });
+  });
+
+  /** Finish a week's Day B with the dead hang held this long on every set. */
+  const hung = (state: EngineState, seconds: number) =>
+    runSession(state, false, withItem('b-dead-hang', (it) => ({ ...it, sets: it.sets.map((s) => ({ ...s, actual: seconds })) })));
+
+  it('a hold time belongs to the move, so it carries over to other routines (James, Nov 22: the dead hang)', () => {
+    const r = hung(at(2, 'B'), 35);
+    expect(r.state.levels['dead-hang']).toMatchObject({ amount: 35, bell: null });
+    expect(item(planSession(data, at(2, 'B', r.state)), 'b-dead-hang')!.stay.target).toBe(35);
+    const other = data.routines.find((x) => x.id !== FOUNDATIONS && x.days.B.items?.some((i) => i.id === 'b-dead-hang'))!;
+    const moved = startRoutine(r.state, other.id);
+    const dayB = { ...moved, pointer: { cycle: moved.routine!.start, slot: plan.rotation.indexOf('B') } };
+    expect(planSession(data, dayB).phaseId).toBe(other.id);
+    expect(item(planSession(data, dayB), 'b-dead-hang')!.stay.target).toBe(35);
+  });
+
+  it('a later, shorter hold never lowers the time', () => {
+    const r = hung(at(2, 'B'), 35);
+    const again = hung(at(3, 'B', r.state), 30);
+    expect(again.state.levels['dead-hang']).toMatchObject({ amount: 35 });
   });
 
   it('during a workout, the next timed set starts at what was just done, never below the plan', () => {
@@ -437,6 +458,65 @@ describe('holds follow the seconds held (Nov 9); reps moves follow the plan (Nov
     expect(Object.keys(r.state.levels)).toEqual([]);
     const st = { ...at(2, 'A'), levels: { [key('deadlift')]: { amount: 10, bell: 45 as const, sets: 3 } } };
     expect(item(planSession(data, st), 'a-deadlift')!.stay).toMatchObject({ target: 6, total: 18 });
+  });
+});
+
+describe('nothing learned gets lost (Nov 22 fix)', () => {
+  /** A finished workout's log, at its own time. */
+  const logOf = (state: EngineState, startedAt: number, edit?: (d: SessionDraft) => SessionDraft) => ({
+    ...runSession(state, false, edit).log,
+    startedAt,
+  });
+  const deadHang = (seconds: number) => withItem('b-dead-hang', (it) => ({ ...it, sets: it.sets.map((s) => ({ ...s, actual: seconds })) }));
+
+  it('a finished workout keeps the routine and the plan version', () => {
+    const st = at(2, 'A', initialState(), 'l2-anvil');
+    const r = runSession(st);
+    expect(r.state.routine).toEqual(st.routine);
+    expect(r.state.planVersion).toBe(PLAN_VERSION);
+    expect(planSession(data, r.state).phaseId).toBe('l2-anvil');
+  });
+
+  it('state that lost its routine and version gets them, its steps and its hold times back from the logs', () => {
+    const logs = [
+      logOf(at(2, 'B'), NOW, deadHang(35)), // Foundations: the dead hang at 35 s
+      logOf(at(2, 'A', initialState(), 'l2-anvil'), NOW + 864e5), // then a day of Anvil
+    ];
+    const lost = { ...at(2, 'B', initialState(), 'l2-anvil'), routine: undefined, planVersion: undefined, progress: {}, levels: {} };
+    const m = migrateState(lost, data, logs);
+    expect(m.routine).toEqual({ id: 'l2-anvil', start: 0 });
+    expect(m.planVersion).toBe(PLAN_VERSION);
+    expect(m.levels['dead-hang']).toMatchObject({ amount: 35 });
+    expect(Object.keys(m.progress).some((k) => k.startsWith('l2-anvil/'))).toBe(true);
+    expect(planSession(data, m)).toMatchObject({ phaseId: 'l2-anvil', week: 2, day: 'B' });
+    expect(migrateState(m, data, logs)).toBe(m); // once only
+  });
+
+  it('a hold time wiped, then a short hold after it: the best time still comes back', () => {
+    const logs = [logOf(at(2, 'B'), NOW, deadHang(35)), logOf(at(3, 'B'), NOW + 7 * 864e5, deadHang(20))];
+    const m = migrateState({ ...at(4, 'A'), planVersion: undefined, levels: {} }, data, logs);
+    expect(m.levels['dead-hang']).toMatchObject({ amount: 35 });
+    expect(item(planSession(data, at(4, 'B', m)), 'b-dead-hang')!.stay.target).toBe(35);
+  });
+
+  it('state saved intact on Nov 20 keeps its steps; its hold times move to the move', () => {
+    const logs = [logOf(at(2, 'B'), NOW, deadHang(35))];
+    const steps = { [key('deadlift')]: { step: 1, ready: false } };
+    const m = migrateState({ ...at(3, 'A'), planVersion: 2, progress: steps, levels: { [key('dead-hang')]: { amount: 35, bell: null } } }, data, logs);
+    expect(m.progress).toEqual(steps);
+    expect(m.levels).toEqual({ 'dead-hang': { amount: 35, bell: null, sets: 3 } });
+  });
+
+  it('logs from before routines (steps that meant more reps) add no steps', () => {
+    const old = logOf(at(2, 'A'), NOW);
+    const pre = {
+      ...old,
+      session: { ...old.session, phaseId: 'm1' },
+      items: old.items.map((it) => ({ ...it, plan: { ...it.plan, progressKey: it.plan.progressKey?.split('/')[1] } })),
+    };
+    const m = migrateState({ ...at(3, 'A'), routine: undefined, planVersion: undefined }, data, [pre]);
+    expect(m.progress).toEqual({});
+    expect(m.routine).toEqual({ id: FOUNDATIONS, start: 0 });
   });
 });
 
