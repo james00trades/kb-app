@@ -34,6 +34,9 @@ export interface TimerSpec {
   cycle?: number;
   /** Called after a ±15 tap with the phase's new full length, so a workout can remember it (Nov 13). */
   onAdjust?: (seconds: number) => void;
+  /** Called once when the timer ends for any reason (ran out, skipped, stopped or replaced), with how
+   *  long it ran in ms, pauses included: the rest taken after a set (Nov 23). */
+  onEnd?: (ms: number) => void;
 }
 
 export interface TimerState {
@@ -53,6 +56,14 @@ export const timer = signal<TimerState | null>(null);
 export const clock = signal(Date.now());
 
 let interval: ReturnType<typeof setInterval> | null = null;
+const ended = new WeakSet<TimerSpec>();
+
+/** Run the timer's onEnd once. A timer that ran out ran its full length; one cut short ran until now. */
+function ending(t: TimerState | null, at = Date.now()) {
+  if (!t || !t.spec.onEnd || ended.has(t.spec)) return;
+  ended.add(t.spec);
+  t.spec.onEnd(Math.max(0, at - t.startedAt));
+}
 let lastCue = { index: -1, second: -1 };
 
 const COUNTDOWN_KINDS: PhaseKind[] = ['prep', 'work', 'rest', 'switch'];
@@ -71,6 +82,7 @@ function startPhase(t: TimerState, index: number, at: number, announce: boolean)
 }
 
 function finish(t: TimerState) {
+  ending(t, t.endsAt);
   const next = t.spec.then?.(false);
   if (next) {
     // Straight into the next timer; its own "Go" replaces this one's end cue
@@ -141,6 +153,7 @@ function stopLoop() {
 }
 
 export function startTimer(spec: TimerSpec) {
+  ending(timer.value);
   const now = Date.now();
   const base: TimerState = { spec, index: 0, endsAt: now, pausedLeft: null, startedAt: now, done: false, rounds: 0, added: 0 };
   timer.value = startPhase(base, 0, now, true);
@@ -149,6 +162,7 @@ export function startTimer(spec: TimerSpec) {
 }
 
 export function stopTimer() {
+  ending(timer.value);
   stopLoop();
   stopVoice();
   timer.value = null;

@@ -91,7 +91,7 @@ export function refreshDate() {
 
 const planData = (): AppData => ({ ...data, plan: { ...data.plan, defaultRest: settings.value.defaultRest } });
 
-export const today = computed<PlannedSession>(() => planSession(planData(), engine.value));
+export const today = computed<PlannedSession>(() => planSession(planData(), engine.value, settings.value.bells));
 
 export interface DayPlan {
   date: string;
@@ -105,7 +105,7 @@ export interface DayPlan {
 export const week = computed<DayPlan[]>(() => {
   const log = sessions.value.find((s) => s.date === todayStr.value && s.status !== 'skipped');
   const days: DayPlan[] = log ? [{ date: todayStr.value, session: withLatestEvening(data, log.session), log }] : [];
-  for (const session of upcoming(planData(), engine.value, 7 - days.length)) {
+  for (const session of upcoming(planData(), engine.value, 7 - days.length, settings.value.bells)) {
     days.push({ date: addDays(todayStr.value, days.length), session });
   }
   return days;

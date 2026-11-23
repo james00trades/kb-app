@@ -208,3 +208,33 @@ describe('timed set after rest (James, Nov 7)', () => {
     expect(timer.value).toBeNull();
   });
 });
+
+describe('the rest taken after each set (James, Nov 23)', () => {
+  it('a rest that runs out reports its full length, ±15 taps included', () => {
+    const end = vi.fn();
+    startTimer({ ...restSpec(60), onEnd: end });
+    adjust(15);
+    vi.advanceTimersByTime(80_000);
+    expect(end).toHaveBeenCalledOnce();
+    expect(end).toHaveBeenCalledWith(75_000);
+  });
+
+  it('Skip, stop, or the next timer taking over report how long it ran, once', () => {
+    const skip = vi.fn();
+    startTimer({ ...restSpec(60), onEnd: skip });
+    vi.advanceTimersByTime(20_000);
+    skipRest();
+    expect(skip).toHaveBeenCalledWith(20_000);
+    const next = vi.fn();
+    startTimer({ ...restSpec(60, undefined, () => holdSpec('Carry', 30, false, undefined, true, false)), onEnd: next });
+    vi.advanceTimersByTime(60_300);
+    expect(next).toHaveBeenCalledWith(60_000); // then the timed set starts
+    stopTimer();
+    expect(next).toHaveBeenCalledOnce();
+    const replaced = vi.fn();
+    startTimer({ ...restSpec(90), onEnd: replaced });
+    vi.advanceTimersByTime(45_000);
+    startTimer(restSpec(60));
+    expect(replaced).toHaveBeenCalledWith(45_000);
+  });
+});

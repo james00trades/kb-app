@@ -100,6 +100,19 @@ function Workouts() {
   );
 }
 
+/** Each set's bell when they weren't all the same, and the rest after each set (Nov 23). */
+function setBellsAndRests(it: SessionLog['items'][number]): string {
+  if (it.plan.kind === 'breath' || it.plan.kind === 'routine') return '';
+  const done = it.sets.filter((x) => x.done);
+  const bells = done.map((x) => x.bell);
+  const mixed = new Set(bells.map(String)).size > 1;
+  const out: string[] = [];
+  if (mixed) out.push(`bells ${bells.map((b) => (b === null ? '–' : b === 'BW' ? 'BW' : String(b))).join(', ')}`);
+  const rests = done.map((x) => x.rest);
+  if (rests.some((r) => r !== undefined)) out.push(`rests ${rests.map((r) => (r === undefined ? '–' : fmtTime(r * 1000))).join(', ')}`);
+  return out.map((x) => ` · ${x}`).join('');
+}
+
 function SessionDetail({ s, onClose }: { s: SessionLog; onClose: () => void }) {
   return (
     <Sheet onClose={onClose} title={`${fmtDay(s.date)} · ${s.session.title}`}>
@@ -135,6 +148,7 @@ function SessionDetail({ s, onClose }: { s: SessionLog; onClose: () => void }) {
                         (it.plan.perSide ? ` ${it.plan.sideLabel ?? 'per side'}` : '') +
                         (it.bell !== null ? ` · ${bellText(done[done.length - 1].bell ?? it.bell)}` : '')
                       : 'not done'}
+                  {setBellsAndRests(it)}
                   {it.choice === 'up' && it.plan.up ? ' · moved up' : ''}
                   {moveTime(it) !== undefined && ` · ${fmtTime(moveTime(it)!)}`}
                 </div>

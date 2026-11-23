@@ -104,7 +104,7 @@ describe('check-in report', () => {
     expect(text).toContain('- 2026-11-14: 232.0 / 232.0');
     expect(text).toContain('2026-11-12 · Day A (Hinge and press) · done (every move) · effort 6/10 · 34 min');
     expect(text).toContain('warm-up done · evening holds done');
-    expect(text).toContain('Deadlift 3/3 sets [8, 8, 9] planned 3×8 @45 lb');
+    expect(text).toContain('Deadlift 3/3 sets [8 @45, 8 @45, 9 @45] planned 3×8 @45 lb');
     expect(text).toContain('ended early · effort 8/10 · 34 min · 25 kettlebell reps · JOINT PAIN reported');
     expect(text).toContain('Latest photo set (2026-11-14): front, side');
   });
@@ -191,7 +191,14 @@ describe('long-run helpers', () => {
       '- Deadlift: 2026-11-12 3×8 @45 lb → 2026-11-19 24 total @45 lb (last done 2026-11-19)',
     ]);
     const text = buildReport(input({ sessions: [s] }));
-    expect(text).toContain('Deadlift 24/24 reps in 3 sets [10, 10, 4] planned 24 total @45 lb');
+    expect(text).toContain('Deadlift 24/24 reps in 3 sets [10 @45, 10 @45, 4 @45] planned 24 total @45 lb');
+  });
+
+  it('each set reads with its bell and the rest after it (Nov 23)', () => {
+    const s = session('2026-11-23');
+    const it = s.items[0];
+    s.items = [{ ...it, sets: [{ actual: 8, bell: 35, rest: 75 }, { actual: 8, bell: 45, rest: 60 }, { actual: 9, bell: 45 }].map((x) => ({ target: 8, done: true, ...x })) }];
+    expect(buildReport(input({ sessions: [s] }))).toContain('Deadlift 3/3 sets [8 @35 rest 75s, 8 @45 rest 60s, 9 @45] planned');
   });
 
   it('sends photos from the start, about a month ago, and now', () => {

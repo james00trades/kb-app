@@ -110,7 +110,8 @@ Choosing the lever:
 Rules:
 - Intensity suggestions must fit the program: move up one dial at a time (harder variation, heavier bell, faster tempo, or more sets); weekly kettlebell volume up no more than 10 to 15 percent; if joint pain was reported, hold volume rather than increase it. Do not invent a new program or change its overall structure.
 - Never suggest more than 10 reps in a set. To add work, add sets of 10 or fewer.
-- Volume goes up with more sets, circuit rounds or flow cycles, never more reps in a set: they prefer more sets of lower reps, and when their own set sizes creep up to 8–10 that's the sign they're ready for another set.
+- Never suggest more than 5 sets of one exercise (circuit rounds and flow sets count too).
+- How the app progresses them: when they do more than the total prescribed, the next total is what they did, split evenly over 3 to 5 sets (about 8 a set). Once a total reaches 40 reps (5 sets of 8 to 10; 40 cycles for a flow), or a hold reaches 3 minutes in all (per side), the next step is a heavier bell or a harder move, not more volume.
 - Circuits and flows are counted, never timed: don't suggest EMOMs, AMRAPs, timed rounds or "for time" work.
 - For a bigger change, suggest another routine at the same level or the next level up (the levels are listed in the report), rather than a new program.
 - Diet suggestions should be simple, specific habits they can start this week. No crash diets or extreme restriction.
@@ -203,11 +204,14 @@ function sessionLine(s: SessionLog, daily?: Daily): string {
       const ms = moveTime(it);
       const up = (it.choice === 'up' && it.plan.up ? ' (moved up)' : '') + (ms !== undefined ? ` · took ${clock(ms)}` : '');
       const total = chosen(it).total;
+      // Each set with its bell and the rest after it (Nov 23): "8 @45 rest 60s"
+      const set = (x: (typeof done)[number]) =>
+        `${x.actual}${unit}${typeof x.bell === 'number' ? ` @${x.bell}` : ''}${x.rest !== undefined ? ` rest ${x.rest}s` : ''}`;
       if (total !== undefined) {
         const side = it.plan.perSide ? '/side' : '';
-        return `${m.name} ${repsDone(it.sets)}/${total}${side} reps in ${done.length} sets [${done.map((x) => x.actual).join(', ')}] planned ${m.text}${up}`;
+        return `${m.name} ${repsDone(it.sets)}/${total}${side} reps in ${done.length} sets [${done.map(set).join(', ')}] planned ${m.text}${up}`;
       }
-      return `${m.name} ${done.length}/${it.sets.length} sets [${done.map((x) => `${x.actual}${unit}`).join(', ')}] planned ${m.text}${up}`;
+      return `${m.name} ${done.length}/${it.sets.length} sets [${done.map(set).join(', ')}] planned ${m.text}${up}`;
     });
   if (moves.length) line += `\n    ${moves.join('; ')}`;
   return line;

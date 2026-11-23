@@ -11,6 +11,17 @@ const NumOrRange = z.union([z.number().positive(), Range]);
 /** The most reps the app asks for in one set. More work means more sets, not more reps (James, Nov 13, 2026). */
 export const MAX_REPS = 10;
 
+/** The most sets the app asks for on one exercise, circuit or flow (James, Nov 23: "I never want more than
+ *  5 sets per exercise"). */
+export const MAX_SETS = 5;
+
+/** A total this big (5 sets of 8–10) means a heavier bell or a harder move next, not more reps (James,
+ *  Nov 23: "if we hit that 40-50 rep range then that's our trigger"). Flows count cycles. */
+export const COUNT_GOAL = 40;
+
+/** Holds: 3 minutes in all (per side for one-sided holds) is the goal, then heavier or harder (Nov 23). */
+export const HOLD_GOAL = 180;
+
 export const Pattern = z.enum([
   'hinge', 'squat', 'lunge', 'push', 'pull', 'carry', 'rotation', 'mobility', 'compound',
 ]);

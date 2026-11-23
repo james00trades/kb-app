@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { loadData } from '../src/engine/data';
 import {
-  advance, back, chosen, completeNext, completeSetAt, creepingUp, finishSession, firstRoutine, initialState, isItemComplete, kbReps,
-  lastAndBest, migrateState, moveTime, nextRoutine, passDay, PLAN_VERSION, planSession, repsDone, restAfter, restKey, routineAt, setChoice, stampTimes,
+  addSet, advance, back, chosen, completeNext, completeSetAt, dropExtra, evenSplit, finishSession, firstRoutine, initialState, isItemComplete, kbReps,
+  lastAndBest, lastTime, migrateState, moveTime, nextRoutine, passDay, PLAN_VERSION, planSession, repsDone, restAfter, restKey, routineAt, setChoice, splitSets, stampTimes,
   startDraft, startRoutine, timesFor, undoSet, upcoming, withLatestEvening, workOf,
   type DraftItem, type EngineState, type PlannedSession, type SessionDraft,
 } from '../src/engine/engine';
@@ -35,10 +35,12 @@ function finishItem(it: DraftItem): DraftItem {
   return x;
 }
 
-/** Log sets of these sizes on a reps move (Rest taps), in totals mode. */
+/** Log sets of these sizes on a reps move (Rest taps), in totals mode. Past the total, each one is an
+ *  extra set ("Did more? Log another set", Nov 23). */
 function logSets(it: DraftItem, sizes: number[]): DraftItem {
   let x = it;
   for (const n of sizes) {
+    if (!x.sets.some((s) => !s.done)) x = addSet(x);
     x = { ...x, sets: x.sets.map((s) => (s.done ? s : { ...s, actual: n })) };
     x = completeNext(x);
   }
@@ -194,21 +196,19 @@ describe('levels and routines (James, Nov 20)', () => {
     expect(chains).toContain('single-arm-swing > high-pull > goblet-squat > single-arm-press');
   });
 
-  it('volume grows by sets, rounds and cycles, never by reps in a set', () => {
+  it('volume never drops week to week, and nothing asks for more than 5 sets (Nov 23)', () => {
+    const work = (x: PlannedSession['items'][number]) => x.stay.total ?? x.stay.sets * x.stay.target;
     for (const r of data.routines) {
       for (const day of ['A', 'B', 'C'] as const) {
         const byWeek = [2, 3, 4].map((w) => planSession(data, at(w, day, initialState(), r.id)).items.filter((i) => i.section === 'main'));
         for (const it of byWeek[0]) {
           if (it.kind === 'time') continue;
           const later = byWeek.slice(1).map((items) => items.find((x) => x.itemId === it.itemId && x.stay.move === it.stay.move));
-          for (const x of later) {
-            if (!x) continue;
-            expect(x.stay.target, `${r.id} ${day} ${it.itemId}`).toBe(it.stay.target);
-            expect(x.stay.sets, `${r.id} ${day} ${it.itemId}`).toBeGreaterThanOrEqual(it.stay.sets);
-          }
+          for (const x of later) if (x) expect(work(x), `${r.id} ${day} ${it.itemId}`).toBeGreaterThanOrEqual(work(it));
         }
       }
     }
+    for (const { routine, s } of everyDay()) for (const i of s.items) expect(i.stay.sets, `${routine} ${i.itemId}`).toBeLessThanOrEqual(5);
   });
 });
 
@@ -287,16 +287,16 @@ describe('Level 1 · Foundations', () => {
   it('week 3: hinge drill gone, dead-stop swings, one more set instead of more reps (James, Nov 20)', () => {
     const a = planSession(data, at(3, 'A'));
     expect(item(a, 'a-hinge-drill')).toBeUndefined();
-    expect(item(a, 'a-swing')!.stay).toMatchObject({ move: 'full-stop-swing', sets: 6, target: 5 });
+    expect(item(a, 'a-swing')!.stay).toMatchObject({ move: 'full-stop-swing', sets: 5, target: 6, total: 30 }); // the plan's 6 × 5, over 5 sets (Nov 23)
     expect(item(a, 'a-deadlift')!.stay).toMatchObject({ sets: 4, target: 6, total: 24 });
     expect(item(a, 'a-goblet-squat')!.stay).toMatchObject({ sets: 4, target: 6, total: 24 });
     expect(item(a, 'a-press')!.stay).toMatchObject({ sets: 4, target: 5, total: 20 });
     expect(item(planSession(data, at(3, 'B')), 'b-swing')!.stay.move).toBe('full-stop-swing');
   });
 
-  it('week 4: two-hand swings 6 × 6 on the 45; deadlifts and goblet squats 5 × 6', () => {
+  it('week 4: two-hand swings 6 × 6 on the 45, done in 5 sets; deadlifts and goblet squats 5 × 6', () => {
     const s = planSession(data, at(4, 'A'));
-    expect(item(s, 'a-swing')!.stay).toMatchObject({ move: 'two-hand-swing', sets: 6, target: 6, bell: 45, total: 36 });
+    expect(item(s, 'a-swing')!.stay).toMatchObject({ move: 'two-hand-swing', sets: 5, target: 8, bell: 45, total: 36 });
     expect(item(s, 'a-deadlift')!.stay.total).toBe(30);
     expect(item(s, 'a-goblet-squat')!.stay.total).toBe(30);
   });
@@ -314,69 +314,105 @@ describe('Level 1 · Foundations', () => {
   });
 });
 
-describe('moving up: one more set once your sets creep up to 8+ (James, Nov 20)', () => {
-  const creep = withItem('a-deadlift', () => logSets(draftItem('a-deadlift'), [8, 8, 2])); // 18, mostly in 8s
+describe('beat the total and it goes up; 40 means heavier or harder (James, Nov 23)', () => {
+  /** Week 2 Day A deadlift (3 × 6 = 18 on the 45), done in sets of these sizes. */
+  const dl = (sizes: number[]) => withItem('a-deadlift', () => logSets(draftItem('a-deadlift'), sizes));
+  const fresh = (st: EngineState, id: string) => startDraft(planSession(data, st), 'x', NOW).items.find((x) => x.plan.itemId === id)!;
 
-  it('sets at the plan size: done, but nothing offered', () => {
-    const r = runSession(at(2, 'A'));
-    expect(r.log.status).toBe('done');
-    expect(r.state.progress[key('deadlift')]).toEqual({ step: 0, ready: false });
-    expect(item(planSession(data, at(2, 'A', r.state)), 'a-deadlift')!.up).toBeUndefined();
+  it('just the total, whatever the set sizes: nothing changes', () => {
+    for (const sizes of [[6, 6, 6], [9, 9], [10, 8]]) {
+      const r = runSession(at(2, 'A'), false, dl(sizes));
+      expect(r.log.status).toBe('done');
+      expect(r.state.progress[key('deadlift')], String(sizes)).toEqual({ step: 0, ready: false, total: 18 });
+      expect(item(planSession(data, at(2, 'A', r.state)), 'a-deadlift')!.up).toBeUndefined();
+    }
   });
 
-  it('sets creeping up to 8+: one more set next time, same reps a set', () => {
-    const r = runSession(at(2, 'A'), false, creep);
-    expect(r.state.progress[key('deadlift')]).toEqual({ step: 0, ready: true });
-    const dl = item(planSession(data, at(2, 'A', r.state)), 'a-deadlift')!;
-    expect(dl.stay).toMatchObject({ sets: 3, target: 6, total: 18 });
-    expect(dl.up).toMatchObject({ sets: 4, target: 6, total: 24 });
-    // Moving up is pre-selected; finishing records the new step
+  it('more than the total: next time offers what he did, evened out at about 8 a set', () => {
+    const r = runSession(at(2, 'A'), false, dl([8, 8, 7])); // 23
+    expect(r.state.progress[key('deadlift')]).toEqual({ step: 0, ready: true, total: 18, next: 23 });
+    const next = item(planSession(data, at(2, 'A', r.state)), 'a-deadlift')!;
+    expect(next.offer).toBe('more');
+    expect(next.stay).toMatchObject({ total: 18, sets: 3, target: 6 });
+    expect(next.up).toMatchObject({ total: 23, sets: 3, target: 8, bell: 45 });
+    // Moving up is pre-selected; doing it makes 23 the total to start from
     const r2 = runSession(at(2, 'A', r.state));
-    expect(r2.state.progress[key('deadlift')].step).toBe(1);
-    expect(item(planSession(data, at(3, 'A', r2.state)), 'a-deadlift')!.stay.sets).toBe(5); // Week 3's 4 sets + his 1
+    expect(r2.state.progress[key('deadlift')]).toEqual({ step: 0, ready: false, total: 23 });
+    const after = item(planSession(data, at(2, 'A', r2.state)), 'a-deadlift')!;
+    expect(after.stay).toMatchObject({ total: 23, sets: 3, target: 8, fromLast: true });
+    expect(after.up).toBeUndefined();
+    // The plan's own number wins when it's bigger: week 3 asks 4 × 6
+    expect(item(planSession(data, at(3, 'A', r2.state)), 'a-deadlift')!.stay).toMatchObject({ total: 24, sets: 4, target: 6 });
   });
 
-  it('the last set of a total is often just what was left, so it doesn’t count', () => {
-    expect(creepingUp(logSets(draftItem('a-deadlift'), [8, 8, 2]))).toBe(true);
-    expect(creepingUp(logSets(draftItem('a-deadlift'), [7, 7, 4]))).toBe(false);
-    expect(creepingUp(logSets(draftItem('a-deadlift'), [6, 6, 6]))).toBe(false);
+  it('splits: 3 to 5 sets at about 8 a set; 5 or fewer go one at a time', () => {
+    expect([3, 4, 6, 11, 19, 23, 32, 36, 40, 50].map(splitSets)).toEqual([3, 4, 3, 3, 3, 3, 4, 5, 5, 5]);
+    expect(evenSplit(23, 3)).toEqual([8, 8, 7]);
+    expect(evenSplit(32, 4)).toEqual([8, 8, 8, 8]);
+    expect(evenSplit(36, 5)).toEqual([8, 7, 7, 7, 7]);
   });
 
-  it('choosing "stay" keeps the step', () => {
-    const r = runSession(at(2, 'A'), false, creep);
-    const r2 = runSession(at(2, 'A', r.state), false, withItem('a-deadlift', (it) => setChoice(it, 'stay')));
-    expect(r2.state.progress[key('deadlift')].step).toBe(0);
+  it('choosing "stay" keeps the total where it was', () => {
+    const r = runSession(at(2, 'A'), false, dl([8, 8, 7]));
+    const stay = () => logSets(setChoice(fresh(at(2, 'A', r.state), 'a-deadlift'), 'stay'), [6, 6, 6]);
+    const r2 = runSession(at(2, 'A', r.state), false, withItem('a-deadlift', stay));
+    expect(r2.state.progress[key('deadlift')]).toEqual({ step: 0, ready: false, total: 18 });
   });
 
   it('falling short of the total: no offer, however big the sets', () => {
-    const short = runSession(at(2, 'A'), false, withItem('a-deadlift', () => logSets(draftItem('a-deadlift'), [9, 7])));
+    const short = runSession(at(2, 'A'), false, dl([9, 7]));
     expect(short.log.status).toBe('partial');
-    expect(short.state.progress[key('deadlift')].ready).toBe(false);
+    expect(short.state.progress[key('deadlift')]).toEqual({ step: 0, ready: false, total: 18 });
   });
 
-  it('at most 2 sets over the plan', () => {
-    let st = at(2, 'A');
-    for (let i = 0; i < 4; i++) {
-      const s = planSession(data, st);
-      const dl = startDraft(s, 'x', NOW).items.find((x) => x.plan.itemId === 'a-deadlift')!;
-      const sizes = Array.from({ length: Math.ceil(chosen(dl).total! / 8) }, () => 8);
-      st = { ...runSession(st, false, withItem('a-deadlift', () => logSets(dl, sizes))).state, pointer: st.pointer };
-    }
-    const dl = item(planSession(data, st), 'a-deadlift')!;
-    expect(dl.stay.sets).toBe(5); // Week 2's 3 + 2
-    expect(dl.up).toBeUndefined();
+  it('reaching 40: the next bell up, back to the plan\'s own total', () => {
+    const gs = () => logSets(draftItem('a-goblet-squat'), [10, 10, 10, 10]); // 3 × 6 on the 35
+    const r = runSession(at(2, 'A'), false, withItem('a-goblet-squat', gs));
+    expect(r.state.progress[key('goblet-squat')]).toEqual({ step: 0, ready: true, total: 18, heavier: true });
+    const next = item(planSession(data, at(2, 'A', r.state)), 'a-goblet-squat')!;
+    expect(next.offer).toBe('heavier');
+    expect(next.stay).toMatchObject({ bell: 35, total: 18 });
+    expect(next.up).toMatchObject({ bell: 45, total: 18, sets: 3, target: 6 });
+    // Not picked for him; taking it, the 45 sticks and the total starts from the plan's again
+    expect(fresh(at(2, 'A', r.state), 'a-goblet-squat').choice).toBe('stay');
+    const r2 = runSession(at(2, 'A', r.state), false, withItem('a-goblet-squat', () => logSets(setChoice(fresh(at(2, 'A', r.state), 'a-goblet-squat'), 'up'), [6, 6, 6])));
+    expect(r2.state.bellPrefs['goblet-squat']).toEqual({ bell: 45, planBell: 35 });
+    expect(r2.state.progress[key('goblet-squat')]).toEqual({ step: 0, ready: false, total: 18 });
+    expect(item(planSession(data, at(2, 'A', r2.state)), 'a-goblet-squat')!.stay).toMatchObject({ bell: 45, total: 18 });
+    // Only his own bells: with a 53 in Settings, that's the one after the 45
+    const heavy = item(planSession(data, at(2, 'A', r2.state), [18, 35, 45, 53]), 'a-goblet-squat')!;
+    expect(heavy.up).toBeUndefined();
   });
 
-  it('bodyweight → 18 ladder offers the bell', () => {
-    const lunges = () => logSets(draftItem('b-reverse-lunge', 2, 'B'), [8, 7]);
+  it('reaching 40 on the heaviest bell: a harder move, as a note with nothing to pick', () => {
+    const r = runSession(at(2, 'A'), false, dl([10, 10, 10, 10]));
+    const next = item(planSession(data, at(2, 'A', r.state)), 'a-deadlift')!;
+    expect(next.offer).toBe('harder');
+    expect(next.up).toBeUndefined();
+    const lighter = runSession(at(2, 'A'), false, dl([8, 8, 8, 8]));
+    expect(lighter.state.progress[key('deadlift')]).toMatchObject({ next: 32 });
+  });
+
+  it("bodyweight → 18: the plan's own ladder bell is the heavier step", () => {
+    const lunges = () => logSets(draftItem('b-reverse-lunge', 2, 'B'), [10, 10, 10, 10]);
     const r = runSession(at(2, 'B'), false, withItem('b-reverse-lunge', lunges));
     const lunge = item(planSession(data, at(2, 'B', r.state)), 'b-reverse-lunge')!;
+    expect(lunge).toMatchObject({ offer: 'heavier', step: 0, upStep: 1 });
     expect(lunge.stay.bell).toBe('BW');
     expect(lunge.up!.bell).toBe(18);
+    const take = () => logSets(setChoice(fresh(at(2, 'B', r.state), 'b-reverse-lunge'), 'up'), [10, 10]);
+    const r2 = runSession(at(2, 'B', r.state), false, withItem('b-reverse-lunge', take));
+    expect(r2.state.progress[key('reverse-lunge')].step).toBe(1);
+    expect(item(planSession(data, at(2, 'B', r2.state)), 'b-reverse-lunge')!.stay.bell).toBe(18);
   });
 
-  it('a new routine starts from its own plan, not the steps of the last one', () => {
-    const r = runSession(at(2, 'A'), false, creep);
+  it('joint pain: no offers, and the total stays', () => {
+    const r = runSession(at(2, 'A'), true, dl([8, 8, 7]));
+    expect(r.state.progress[key('deadlift')]).toEqual({ step: 0, ready: false, total: 18 });
+  });
+
+  it('a new routine starts from its own plan, not the totals of the last one', () => {
+    const r = runSession(at(2, 'A'), false, dl([8, 8, 7]));
     const ironwood = startRoutine(r.state, 'l1-ironwood');
     expect(item(planSession(data, { ...ironwood, pointer: { cycle: ironwood.pointer.cycle + 1, slot: 0 } }), 'a-goblet-squat')!.up).toBeUndefined();
     expect(Object.keys(r.state.progress).every((k) => k.startsWith(`${FOUNDATIONS}/`))).toBe(true);
@@ -406,19 +442,28 @@ describe('holds follow the seconds held (Nov 9); reps moves follow the plan (Nov
   const held = (state: EngineState, actual: number[], pain = false) =>
     runSession(state, pain, withItem('a-suitcase-carry', (it) => ({ ...it, sets: it.sets.map((s, k) => ({ ...s, actual: actual[k] })) })));
 
-  it('a hold done longer on every set: next time starts there', () => {
-    const r = held(at(2, 'A'), [40, 45, 40]);
-    expect(item(planSession(data, at(2, 'A', r.state)), 'a-suitcase-carry')!.stay.target).toBe(40);
+  it('held longer than planned: next time is his total time, evened out over his sets (Nov 23)', () => {
+    const r = held(at(2, 'A'), [40, 45, 40]); // 2:05 in all, against 3 × 30
+    expect(item(planSession(data, at(2, 'A', r.state)), 'a-suitcase-carry')!.stay).toMatchObject({ sets: 3, target: 42, fromLast: true });
   });
 
   it('a session with joint pain changes nothing', () => {
     expect(held(at(2, 'A'), [45, 45, 45], true).state.levels['suitcase-carry']).toBeUndefined();
   });
 
-  it('one short hold means no change', () => {
-    const r = held(at(2, 'A'), [45, 45, 25]);
-    expect(r.state.levels['suitcase-carry']).toBeUndefined();
-    expect(item(planSession(data, at(2, 'A', r.state)), 'a-suitcase-carry')!.stay.target).toBe(30);
+  it('one short hold still counts: it is the total time that matters (Nov 23)', () => {
+    const r = held(at(2, 'A'), [45, 45, 25]); // 1:55 in all
+    expect(r.state.levels['suitcase-carry']).toMatchObject({ amount: 39, sets: 3 });
+    const under = held(at(2, 'A'), [35, 30, 20]); // 1:25, under the 1:30 asked
+    expect(under.state.levels['suitcase-carry']).toBeUndefined();
+  });
+
+  it('3 minutes in all (per side) is the goal: then heavier or harder', () => {
+    const r = held(at(2, 'A'), [60, 60, 60]); // the carry is on the 45, the heaviest bell
+    expect(r.state.progress[key('suitcase-carry')]).toMatchObject({ ready: true, heavier: true });
+    expect(item(planSession(data, at(2, 'A', r.state)), 'a-suitcase-carry')).toMatchObject({ offer: 'harder', up: undefined });
+    const almost = held(at(2, 'A'), [60, 60, 55]);
+    expect(almost.state.progress[key('suitcase-carry')].ready).toBe(false);
   });
 
   it('works with state saved before levels existed', () => {
@@ -499,12 +544,18 @@ describe('nothing learned gets lost (Nov 22 fix)', () => {
     expect(item(planSession(data, at(4, 'B', m)), 'b-dead-hang')!.stay.target).toBe(35);
   });
 
-  it('state saved intact on Nov 20 keeps its steps; its hold times move to the move', () => {
-    const logs = [logOf(at(2, 'B'), NOW, deadHang(35))];
-    const steps = { [key('deadlift')]: { step: 1, ready: false } };
-    const m = migrateState({ ...at(3, 'A'), planVersion: 2, progress: steps, levels: { [key('dead-hang')]: { amount: 35, bell: null } } }, data, logs);
-    expect(m.progress).toEqual(steps);
-    expect(m.levels).toEqual({ 'dead-hang': { amount: 35, bell: null, sets: 3 } });
+  it('state from before Nov 23 is rebuilt under the new rule, keeping the sets he had moved up to', () => {
+    // An old-style move-up: one more set (4 × 6 = 24), with no upStep
+    const old = runSession(at(2, 'A'), false, withItem('a-deadlift', (it) => {
+      const up = { ...chosen(it), sets: 4, total: 24 };
+      return logSets({ ...it, choice: 'up', plan: { ...it.plan, up, upStep: undefined }, sets: [{ target: 6, actual: 6, done: false, bell: 45 }] }, [6, 6, 6, 6]);
+    })).log;
+    const logs = [old, logOf(at(2, 'B'), NOW, deadHang(35))];
+    const m = migrateState({ ...at(3, 'A'), planVersion: 3, progress: { [key('deadlift')]: { step: 1, ready: false } } }, data, logs);
+    expect(m.planVersion).toBe(PLAN_VERSION);
+    expect(m.progress[key('deadlift')]).toEqual({ step: 1, ready: false, total: 24 });
+    expect(m.levels['dead-hang']).toEqual({ amount: 35, bell: null, sets: 3 });
+    expect(item(planSession(data, at(2, 'A', m)), 'a-deadlift')!.stay).toMatchObject({ total: 24, sets: 3, target: 8 }); // his own total now, so about 8 a set
   });
 
   it('logs from before routines (steps that meant more reps) add no steps', () => {
@@ -547,11 +598,12 @@ describe('totals: reps moves are a total, done in sets ended by Rest (James, Nov
     expect(dl.sets.every((s) => s.done)).toBe(true);
   });
 
-  it('a set can never log more than 10, or more than what is left', () => {
-    let dl = logSets(draftItem('a-deadlift'), [25]);
-    expect(dl.sets[0]).toMatchObject({ actual: 10, done: true });
-    dl = logSets(dl, [12]);
-    expect(dl.sets.map((s) => s.actual)).toEqual([10, 8]);
+  it('a set can log more than 10, or more than what is left (James, Nov 23)', () => {
+    let dl = logSets(draftItem('a-deadlift'), [12]); // 18
+    expect(dl.sets.map((s) => [s.actual, s.done])).toEqual([[12, true], [6, false]]); // the next set starts at what's left
+    dl = logSets(dl, [9]);
+    expect(dl.sets.map((s) => s.actual)).toEqual([12, 9]);
+    expect(repsDone(dl.sets)).toBe(21);
     expect(isItemComplete(dl)).toBe(true);
   });
 
@@ -564,16 +616,126 @@ describe('totals: reps moves are a total, done in sets ended by Rest (James, Nov
   });
 
   it('switching between move up and stay keeps the sets done and resizes what is left', () => {
-    const r = runSession(at(2, 'A'), false, withItem('a-deadlift', () => logSets(draftItem('a-deadlift'), [8, 8, 2])));
+    const r = runSession(at(2, 'A'), false, withItem('a-deadlift', () => logSets(draftItem('a-deadlift'), [8, 8, 7])));
     const d = startDraft(planSession(data, at(2, 'A', r.state)), 'x', NOW);
     let dl = d.items.find((it) => it.plan.itemId === 'a-deadlift')!;
     expect(dl.choice).toBe('up');
-    expect(chosen(dl).total).toBe(24);
+    expect(chosen(dl).total).toBe(23);
     dl = logSets(dl, [9]);
     dl = setChoice(dl, 'stay'); // 18: 9 done, 9 left, in sets of the plan's 6
     expect(dl.sets.map((s) => [s.actual, s.done])).toEqual([[9, true], [6, false]]);
     dl = setChoice(logSets(dl, [9]), 'up');
-    expect(isItemComplete(dl)).toBe(false); // 18 of 24
+    expect(isItemComplete(dl)).toBe(false); // 18 of 23
+  });
+});
+
+describe('logging more than prescribed (James, Nov 23: "that\'s feedback to the app")', () => {
+  const getUp = () => draftItem('c-get-up', 2, 'C'); // 3 x 1 per side: a total of 3
+  const day = (st: EngineState) => at(2, 'C', st);
+
+  it('get-ups: 2 on the last set, past the total of 3', () => {
+    const g = logSets(getUp(), [1, 1, 2]);
+    expect(repsDone(g.sets)).toBe(4);
+    expect(isItemComplete(g)).toBe(true);
+  });
+
+  it('one more set after the total: it starts at the size of the last one and is logged like any set', () => {
+    let g = logSets(getUp(), [1, 1, 1]);
+    expect(isItemComplete(g)).toBe(true);
+    g = addSet(g);
+    expect(g.sets.at(-1)).toMatchObject({ actual: 1, done: false, extra: true });
+    expect(isItemComplete(g)).toBe(true); // an open extra set doesn't hold the move up
+    g = completeNext(g);
+    expect(g.sets.map((x) => [x.actual, x.done])).toEqual([[1, true], [1, true], [1, true], [1, true]]);
+    expect(repsDone(g.sets)).toBe(4);
+    // Only once the planned work is done, and only one open set at a time
+    expect(addSet(getUp())).toEqual(getUp());
+    expect(addSet(addSet(g)).sets).toHaveLength(5);
+  });
+
+  it('"never mind" takes back an extra set that was not done; an open one is dropped at the finish', () => {
+    const g = addSet(logSets(getUp(), [1, 1, 1]));
+    expect(dropExtra(g).sets).toHaveLength(3);
+    const r = runSession(day(initialState()), false, withItem('c-get-up', () => g));
+    expect(r.log.items.find((x) => x.plan.itemId === 'c-get-up')!.sets).toHaveLength(3);
+    expect(r.log.status).toBe('done');
+    expect(r.state.progress[key('get-up-pieces')]).toEqual({ step: 0, ready: false, total: 3 });
+  });
+
+  it('get-ups past the total: next time offers what he did, one at a time', () => {
+    const r = runSession(day(initialState()), false, withItem('c-get-up', () => logSets(getUp(), [1, 1, 2])));
+    expect(r.state.progress[key('get-up-pieces')]).toEqual({ step: 0, ready: true, total: 3, next: 4 });
+    const next = item(planSession(data, day(r.state)), 'c-get-up')!;
+    expect(next.offer).toBe('more');
+    expect(next.up).toMatchObject({ total: 4, sets: 4, target: 1 });
+    // Just the total: nothing offered
+    const plain = runSession(day(initialState()));
+    expect(plain.state.progress[key('get-up-pieces')].ready).toBe(false);
+    expect(item(planSession(data, day(plain.state)), 'c-get-up')!.offer).toBeUndefined();
+  });
+
+  it('circuits: an extra round raises the total; flows: an extra set', () => {
+    const st = at(2, 'A', initialState(), 'l2-anvil'); // 3 rounds of 5
+    const r = runSession(st, false, withItem('a-c1', (it) => completeNext(addSet(it))));
+    expect(r.state.progress[key('a-c1', 'l2-anvil')]).toEqual({ step: 0, ready: true, total: 15, next: 20 });
+    expect(item(planSession(data, at(2, 'A', r.state, 'l2-anvil')), 'a-c1')!.up).toMatchObject({ sets: 3, target: 7 });
+    const ft = at(2, 'A', initialState(), 'l3-raider');
+    const f = runSession(ft, false, withItem('a-f1', (it) => completeNext(addSet(it))));
+    expect(f.state.progress[key('a-f1', 'l3-raider')]).toMatchObject({ ready: true, next: 12 }); // 3 sets of 3, and a 4th
+  });
+
+  it('holds: an extra set counts toward the total time, evened out next time; a short one never spoils it', () => {
+    const hang = (secs: number[]) => (it: DraftItem): DraftItem => {
+      let x: DraftItem = { ...it, sets: it.sets.map((z, k) => ({ ...z, actual: secs[k], done: true })) };
+      for (const extra of secs.slice(it.sets.length)) {
+        x = addSet(x);
+        x = completeNext({ ...x, sets: x.sets.map((z) => (z.done ? z : { ...z, actual: extra })) });
+      }
+      return x;
+    };
+    const b = at(2, 'B');
+    const r = runSession(b, false, withItem('b-dead-hang', hang([35, 35, 35, 15]))); // 2:00 in all
+    expect(r.state.levels['dead-hang']).toMatchObject({ amount: 30, sets: 4 });
+    expect(item(planSession(data, at(2, 'B', r.state)), 'b-dead-hang')!.stay).toMatchObject({ sets: 4, target: 30 });
+  });
+});
+
+describe('each set remembered: last time is the benchmark (James, Nov 23)', () => {
+  const log = (date: string, startedAt: number, d: SessionDraft) => ({ date, startedAt, items: d.items });
+  const dlWith = (sets: { actual: number; bell: number; rest?: number }[], extra: Partial<DraftItem> = {}) =>
+    withItem('a-deadlift', (it) => ({ ...it, ...extra, sets: sets.map((x) => ({ target: 6, done: true, ...x })) }));
+
+  it("gives the newest workout's sets for the same move, each with its count, bell and rest", () => {
+    const base = completeAll(startDraft(planSession(data, at(2, 'A')), 'x', NOW));
+    const older = log('2026-11-10', NOW - 2 * 86_400_000, dlWith([{ actual: 6, bell: 35 }])(base));
+    const newer = log('2026-11-12', NOW - 86_400_000, dlWith([{ actual: 8, bell: 45, rest: 75 }, { actual: 7, bell: 45 }])(base));
+    const today = draftItem('a-deadlift');
+    expect(lastTime([newer, older], today)).toEqual({
+      date: '2026-11-12',
+      sets: [{ target: 6, actual: 8, done: true, bell: 45, rest: 75 }, { target: 6, actual: 7, done: true, bell: 45 }],
+    });
+    expect(lastTime([older, newer], today)!.date).toBe('2026-11-12'); // newest wins, whatever the order
+    // A skipped move doesn't count; neither does a move never done
+    const skipped = log('2026-11-13', NOW, dlWith([{ actual: 9, bell: 45 }], { skipped: true })(base));
+    expect(lastTime([skipped, older], today)!.date).toBe('2026-11-10');
+    expect(lastTime([], today)).toBeUndefined();
+  });
+
+  it('holds too; and only like for like (a hold never stands in for counted sets of the same move)', () => {
+    const base = completeAll(startDraft(planSession(data, at(2, 'B')), 'x', NOW));
+    const hang = base.items.find((x) => x.plan.itemId === 'b-dead-hang')!;
+    expect(lastTime([log('2026-11-12', NOW, base)], hang)!.sets).toHaveLength(hang.sets.length);
+    const counted = { ...hang, plan: { ...hang.plan, kind: 'reps' as const } };
+    expect(lastTime([log('2026-11-12', NOW, base)], counted)).toBeUndefined();
+  });
+
+  it('circuits are matched by their place in the routine', () => {
+    const st = at(2, 'A', initialState(), 'l2-anvil');
+    const base = completeAll(startDraft(planSession(data, st), 'x', NOW));
+    const c = base.items.find((x) => x.plan.itemId === 'a-c1')!;
+    expect(lastTime([log('2026-11-12', NOW, base)], c)!.sets).toHaveLength(c.sets.length);
+    const other = completeAll(startDraft(planSession(data, at(2, 'A', initialState(), 'l3-raider')), 'x', NOW));
+    expect(lastTime([log('2026-11-12', NOW, other)], c)).toBeUndefined();
   });
 });
 
@@ -611,14 +773,17 @@ describe('circuits and flows (James, Nov 20)', () => {
     expect(d.sets.map((s) => s.actual)).toEqual([6, 6, 6, 6]);
   });
 
-  it('counts raised to 8+ mean another round next time', () => {
-    const st = at(2, 'A', initialState(), 'l2-anvil');
-    const done = runSession(st, false, withItem('a-c1', (it) => ({ ...it, sets: it.sets.map((s) => ({ ...s, actual: 8, done: true })) })));
-    expect(done.state.progress[key('a-c1', 'l2-anvil')]).toEqual({ step: 0, ready: true });
+  it('counts raised in the rounds raise the total: next time it is evened out (Nov 23)', () => {
+    const st = at(2, 'A', initialState(), 'l2-anvil'); // 3 rounds of 5
+    const done = runSession(st, false, withItem('a-c1', (it) => ({ ...it, sets: it.sets.map((s, k) => ({ ...s, actual: k ? 6 : 7, done: true })) })));
+    expect(done.state.progress[key('a-c1', 'l2-anvil')]).toEqual({ step: 0, ready: true, total: 15, next: 19 });
     const next = item(planSession(data, at(2, 'A', done.state, 'l2-anvil')), 'a-c1')!;
-    expect([next.stay.sets, next.up!.sets]).toEqual([3, 4]);
+    expect([next.stay.sets, next.stay.target, next.up!.sets, next.up!.target]).toEqual([3, 5, 3, 7]);
     // At the plan's count: no offer
     expect(runSession(st).state.progress[key('a-c1', 'l2-anvil')].ready).toBe(false);
+    // 40 a move (5 rounds of 8): heavier bells or harder moves, as a note
+    const big = runSession(st, false, withItem('a-c1', (it) => ({ ...it, sets: it.sets.map((s) => ({ ...s, actual: 14, done: true })) })));
+    expect(item(planSession(data, at(2, 'A', big.state, 'l2-anvil')), 'a-c1')).toMatchObject({ offer: 'harder', up: undefined });
   });
 
   it('flows: 3 more cycles than planned is the sign', () => {

@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import {
-  chosen, completeNext, isItemComplete, isTimedMove, lastAndBest, moveTime, repsDone, restAfter, restKey, setCap, setChoice, stampTimes, timesFor,
-  undoSet as undoSetAt, workOf, type DraftItem, type SessionDraft,
+  addSet, canAddSet, chosen, completeNext, dropExtra, evenSplit, isItemComplete, isTimedMove, lastAndBest, lastTime, moveTime, repsDone, restAfter, restKey,
+  setChoice, stampTimes, timesFor, undoSet as undoSetAt, workOf, type DraftItem, type SessionDraft,
 } from '../engine/engine';
-import { MAX_REPS, type Bell } from '../engine/schema';
+import { COUNT_GOAL, MAX_REPS, type Bell } from '../engine/schema';
 import { discardWorkout, draft, finishWorkout, moveSheet, sessions, setMoveRest, settings, updateDraft, workoutOpen } from '../lib/store';
 import { breathSpec, fmtClock, holdSpec, intervalSpec, restSpec, startTimer, stopTimer, timer, type TimerSpec } from '../lib/timer';
-import { Icon, Sheet, Stepper, bellShort, fmtSeconds, fmtTime, prescText, sideText, upText } from './common';
+import { Icon, Sheet, Stepper, bellShort, fmtDay, fmtSeconds, fmtTime, prescText, sideText, upText } from './common';
 
 const SECTION_TITLES = { warmup: 'Warm-up', main: 'Main work', cooldown: 'Breathwork' } as const;
 
@@ -77,9 +77,11 @@ export function Workout() {
     const before = draft.value;
     if (!before) return;
     const it = before.items[i];
-    if (!it.sets.some((x) => !x.done)) return;
+    const k = it.sets.findIndex((x) => !x.done);
+    if (k < 0) return;
     await patchItem(i, (x) => stampTimes(completeNext(x), Date.now()));
     const after = draft.value!;
+    const at = after.items[i].sets[k]?.at;
     const itemDone = isItemComplete(after.items[i]);
     const workoutDone = after.items.every(isItemComplete);
     const rest = restAfter(it, settings.value.restByMove);
@@ -88,10 +90,17 @@ export function Workout() {
       // A ±15 tap on this rest is remembered for this move (James, Nov 13)
       const key = restKey(it);
       const spec = restSpec(rest, undefined, (skipped) => timedSetAfterRest(n, skipped));
-      startTimer({ ...spec, onAdjust: (s) => void setMoveRest(key, s) });
+      startTimer({ ...spec, onAdjust: (s) => void setMoveRest(key, s), onEnd: (ms) => void saveRest(i, k, at, ms) });
     }
     if (itemDone && n >= 0) setActive(n);
   };
+
+  /** The rest taken after set k goes on that set (Nov 23), if it's still the same logged set. */
+  const saveRest = (i: number, k: number, at: number | undefined, ms: number) =>
+    patchItem(i, (x) => ({
+      ...x,
+      sets: x.sets.map((s, j) => (j === k && s.done && s.at === at ? { ...s, rest: Math.round(ms / 1000) } : s)),
+    }));
 
   /** When the rest ends and the next set is a timed one, start its timer (James, Nov 7). */
   const timedSetAfterRest = (n: number, skipped: boolean): TimerSpec | null => {
@@ -190,6 +199,8 @@ function ActiveItem({ it, i, onComplete }: { it: DraftItem; i: number; onComplet
   const p = chosen(it);
   const cur = it.sets.findIndex((s) => !s.done);
   const complete = cur < 0;
+  /** An extra set he added after the plan's work (Nov 23), not done yet. */
+  const extraOpen = cur >= 0 && !!it.sets[cur].extra;
   const bells: Bell[] = [];
   if (it.bell !== null) {
     if (it.plan.stay.planBell === 'BW' || it.plan.up?.planBell === 'BW' || it.bell === 'BW') bells.push('BW');
@@ -228,21 +239,22 @@ function ActiveItem({ it, i, onComplete }: { it: DraftItem; i: number; onComplet
       {it.plan.parts && <Parts it={it} count={cur >= 0 ? it.sets[cur].actual : p.target} />}
       {p.notes && <div class="muted small">{p.notes}</div>}
 
-      {it.plan.up && (
+      {it.plan.offer && (
         <div class="offer">
           <div class="small">
-            <Icon name="up" size={14} />{' '}
-            {it.plan.kind === 'time' ? 'Last time went to plan.' : 'Your sets crept up to 8+ last time: ready for more.'} Move up:{' '}
-            {upText(it.plan)}?
+            <Icon name="up" size={14} /> {offerText(it)}
+            {it.plan.up && <> Move up: {upText(it.plan)}?</>}
           </div>
-          <div class="seg">
-            <button class={it.choice === 'up' ? 'selected' : ''} onClick={() => patchItem(i, (x) => setChoice(x, 'up'))}>
-              Move up
-            </button>
-            <button class={it.choice === 'stay' ? 'selected' : ''} onClick={() => patchItem(i, (x) => setChoice(x, 'stay'))}>
-              Stay
-            </button>
-          </div>
+          {it.plan.up && (
+            <div class="seg">
+              <button class={it.choice === 'up' ? 'selected' : ''} onClick={() => patchItem(i, (x) => setChoice(x, 'up'))}>
+                Move up
+              </button>
+              <button class={it.choice === 'stay' ? 'selected' : ''} onClick={() => patchItem(i, (x) => setChoice(x, 'stay'))}>
+                Stay
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -255,6 +267,8 @@ function ActiveItem({ it, i, onComplete }: { it: DraftItem; i: number; onComplet
           ))}
         </div>
       )}
+
+      {!it.skipped && <LastTime it={it} complete={complete} />}
 
       {total !== undefined && !it.skipped && <TotalLine it={it} total={total} />}
 
@@ -281,8 +295,8 @@ function ActiveItem({ it, i, onComplete }: { it: DraftItem; i: number; onComplet
 
       {!complete && it.plan.kind === 'reps' && total !== undefined && cur >= 0 && (
         <>
-          <Stepper value={it.sets[cur].actual} onChange={setActual} min={1} max={setCap(it)} unit={sideText(it.plan) ? ' / side' : ''} />
-          <div class="muted small center">Reps before you rest: aim for 5–10, 10 at most.</div>
+          <Stepper value={it.sets[cur].actual} onChange={setActual} min={1} unit={sideText(it.plan) ? ' / side' : ''} />
+          <div class="muted small center">{splitHint(it, total)}</div>
           <button class="big-btn primary" onClick={onComplete}>
             {it.sets[cur].actual + repsDone(it.sets) >= total ? (
               <>
@@ -310,11 +324,13 @@ function ActiveItem({ it, i, onComplete }: { it: DraftItem; i: number; onComplet
             value={it.sets[cur].actual}
             onChange={setActual}
             min={1}
-            max={MAX_REPS}
             unit={it.plan.kind === 'circuit' ? ' each' : it.plan.perSide ? ' cycles / side' : ' cycles'}
           />
           <button class="big-btn primary" onClick={onComplete}>
-            <Icon name="check" /> {it.plan.kind === 'circuit' ? 'Round' : 'Set'} {cur + 1} of {it.sets.length} done
+            <Icon name="check" />{' '}
+            {extraOpen
+              ? `Extra ${it.plan.kind === 'circuit' ? 'round' : 'set'} done`
+              : `${it.plan.kind === 'circuit' ? 'Round' : 'Set'} ${cur + 1} of ${it.sets.length} done`}
           </button>
         </>
       )}
@@ -368,7 +384,12 @@ function ActiveItem({ it, i, onComplete }: { it: DraftItem; i: number; onComplet
         </>
       )}
 
-      {!complete && !it.skipped && (
+      {extraOpen && (
+        <button class="link-btn muted" onClick={() => patchItem(i, (x) => stampTimes(dropExtra(x), Date.now()))}>
+          Never mind, no extra set
+        </button>
+      )}
+      {!complete && !extraOpen && !it.skipped && (
         <button class="link-btn muted" onClick={() => patchItem(i, (x) => ({ ...x, skipped: true }))}>
           Skip this move
         </button>
@@ -385,6 +406,11 @@ function ActiveItem({ it, i, onComplete }: { it: DraftItem; i: number; onComplet
       )}
       {complete && !it.skipped && it.plan.kind !== 'routine' && it.plan.kind !== 'breath' && (
         <div class="good-text small">Done. Tap a set above to undo it.</div>
+      )}
+      {complete && !it.skipped && canAddSet(it) && (
+        <button class="link-btn" onClick={() => patchItem(i, addSet)}>
+          + Did more? Log {it.plan.kind === 'circuit' ? 'another round' : 'another set'}
+        </button>
       )}
     </section>
   );
@@ -452,6 +478,54 @@ function PastTimes({ it, move }: { it: DraftItem; move: string }) {
   return null;
 }
 
+/** Last time's sets for this move, each with its bell and rest: the benchmark to beat (James, Nov 23).
+ *  The one for the set he's on now is outlined. */
+function LastTime({ it, complete }: { it: DraftItem; complete: boolean }) {
+  const last = lastTime(sessions.value, it);
+  if (!last) return null;
+  const now = it.sets.filter((s) => s.done).length;
+  const unit = it.plan.kind === 'time' ? ' s' : '';
+  const word = it.plan.kind === 'circuit' ? 'Round' : 'Set';
+  return (
+    <div class="last-time">
+      <div class="last-time-head">Last time · {fmtDay(last.date)}</div>
+      <div class="set-chips">
+        {last.sets.map((s, k) => (
+          <div key={k} class={`set-chip past ${!complete && k === now ? 'current' : ''}`}>
+            <span class="set-n">
+              {word} {k + 1}
+            </span>
+            <span class="set-v">
+              {s.actual}
+              {unit}
+            </span>
+            {s.bell !== null && <span class="set-x">{s.bell === 'BW' ? 'BW' : `${s.bell} lb`}</span>}
+            {s.rest !== undefined && <span class="set-x">rest {fmtTime(s.rest * 1000)}</span>}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Why last time earned an offer (Nov 23). */
+function offerText(it: DraftItem): string {
+  const { kind, offer } = it.plan;
+  const goal = kind === 'time' ? 'You held 3 minutes last time' : `You reached ${COUNT_GOAL} ${kind === 'flow' ? 'cycles' : 'reps'} last time`;
+  if (offer === 'more') return 'You did more than planned last time: ready for more.';
+  if (offer === 'heavier') return `${goal}: ready for a heavier bell.`;
+  return kind === 'circuit' ? `${goal}: ready for heavier bells or harder moves.` : `${goal}: ready for a harder move.`;
+}
+
+/** The total split evenly over the sets that are left (Nov 23): "Suggested: 8, 8, 7". */
+function splitHint(it: DraftItem, total: number): string {
+  const done = it.sets.filter((s) => s.done);
+  const left = total - repsDone(it.sets);
+  if (left <= 0) return 'Log what you did. 10 a set at most is the plan.';
+  const sets = Math.max(1, chosen(it).sets - done.length, Math.ceil(left / MAX_REPS));
+  return `Suggested: ${evenSplit(left, sets).filter((n) => n > 0).join(', ')}. Never more than 10 a set.`;
+}
+
 /** "16 of 24 · 8 to go" (Nov 19). */
 function TotalLine({ it, total }: { it: DraftItem; total: number }) {
   const done = repsDone(it.sets);
@@ -460,7 +534,11 @@ function TotalLine({ it, total }: { it: DraftItem; total: number }) {
     <div class="total-line">
       <b>{done}</b> of {total}
       {it.plan.perSide ? ` ${it.plan.sideLabel ?? 'per side'}` : ''}
-      {left > 0 ? <span class="muted"> · {left} to go</span> : <span class="good-text"> · total done</span>}
+      {left > 0 ? (
+        <span class="muted"> · {left} to go</span>
+      ) : (
+        <span class="good-text"> · total done{done > total ? `, ${done - total} extra` : ''}</span>
+      )}
     </div>
   );
 }

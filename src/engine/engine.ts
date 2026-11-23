@@ -1,7 +1,7 @@
 // The plan engine: turns plan data + saved state into today's session,
 // and folds a finished session back into state. Pure functions only.
 import type { AppData } from './data';
-import { MAX_REPS, type Bell, type BreathPattern, type DayKey, type Item, type LadderStep, type Phase, type PlanFile, type Station } from './schema';
+import { COUNT_GOAL, HOLD_GOAL, MAX_REPS, MAX_SETS, type Bell, type BreathPattern, type DayKey, type Item, type LadderStep, type Phase, type PlanFile, type Station } from './schema';
 
 // ---------- State ----------
 
@@ -19,8 +19,17 @@ export interface Hold {
 }
 
 export interface ProgressEntry {
+  /** Ladder step (the plan's bell ladders, e.g. bodyweight → 18). */
   step: number;
+  /** Last time earned an offer: more (next), or heavier or harder (heavier). */
   ready: boolean;
+  /** Counted work (Nov 23): the total he worked at last time, which next time starts from (never below
+   *  the plan's). Missing before Nov 23 and for holds. */
+  total?: number;
+  /** Counted work: he beat the total last time, so next time offers this, what he did (Nov 23). */
+  next?: number;
+  /** He reached the goal (40 reps or cycles, or a 3-minute hold): a heavier bell or a harder move next. */
+  heavier?: boolean;
 }
 
 /** A bell the user picked. Sticks only while the plan's bell for that move is unchanged. */
@@ -58,8 +67,10 @@ export interface EngineState {
 }
 
 /** 2: progress steps add sets (Nov 20, James: "more sets of lower reps"). 3: hold times by move, and
- *  what a bug in the Nov 20 update could lose rebuilt from the logs (Nov 22). */
-export const PLAN_VERSION = 3;
+ *  what a bug in the Nov 20 update could lose rebuilt from the logs (Nov 22). 4: beat the total and next
+ *  time's total is what you did, up to 40 or a 3-minute hold, then heavier or harder (Nov 23): rebuilt
+ *  from the logs under the new rule. */
+export const PLAN_VERSION = 4;
 
 export const initialState = (): EngineState => ({
   pointer: { cycle: 0, slot: 0 },
@@ -80,8 +91,8 @@ export function migrateState(saved: EngineState, data: AppData, logs: SessionLog
   const learned = relearn(logs);
   return {
     ...saved,
-    // Kept when it came through intact (2); otherwise rebuilt from the routines' logs
-    progress: version === 2 ? saved.progress : learned.progress,
+    // Rebuilt from the routines' logs under the newest rule (Nov 23)
+    progress: learned.progress,
     levels: learned.levels,
     routine: saved.routine ?? routineFromLogs(data, logs) ?? { id: firstRoutine(data).id, start: 0 },
     planVersion: PLAN_VERSION,
@@ -178,26 +189,36 @@ export function resolveItem(item: Item, week: number, phase: Phase, section: Sec
   return r;
 }
 
+/** The plan's own steps (its bell ladders, e.g. bodyweight → 18). Everything else grows from what James
+ *  does (Nov 23): beat the total and next time's total is what you did; holds follow the time held. */
 export function ladderOf(r: Resolved): LadderStep[] {
-  if (r.ladder?.length) return r.ladder;
-  if (r.kind === 'reps' && Array.isArray(r.reps)) {
-    const [a, b] = r.reps;
-    return Array.from({ length: b - a + 1 }, (_, i) => ({ reps: a + i }));
-  }
-  if (r.kind === 'time' && Array.isArray(r.seconds)) {
-    const [a, b] = r.seconds;
-    const steps: LadderStep[] = [];
-    for (let s = a; s < b; s += 5) steps.push({ seconds: s });
-    steps.push({ seconds: b });
-    return steps;
-  }
-  // Counted work moves up by sets, never by reps (James, Nov 20): one more set a step, at most 2 over the plan
-  if (r.kind === 'reps' || r.kind === 'circuit' || r.kind === 'flow') {
-    const sets = r.sets ?? 1;
-    return [0, 1, 2].map((k) => ({ sets: sets + k }));
-  }
-  return [{}];
+  return r.ladder?.length ? r.ladder : [{}];
 }
+
+const isCounted = (kind: Item['kind']) => kind === 'reps' || kind === 'circuit' || kind === 'flow';
+
+/** How many sets a total is split into (Nov 23): about 8 a set, 3 to 5 sets; a total of 5 or less is
+ *  done one at a time (get-ups). */
+export function splitSets(total: number): number {
+  if (total <= MAX_SETS) return Math.max(1, total);
+  return Math.min(MAX_SETS, Math.max(3, Math.round(total / 8)));
+}
+
+/** A total split evenly over the sets, bigger sets first: 23 over 3 → [8, 8, 7]. */
+export function evenSplit(total: number, sets: number): number[] {
+  const n = Math.max(1, sets);
+  const base = Math.floor(total / n);
+  return Array.from({ length: n }, (_, k) => base + (k < total % n ? 1 : 0));
+}
+
+/** The next bell up from his own bells, if there is one. Bodyweight and no-bell moves have none: past
+ *  the goal they need a harder move. */
+function nextBell(bell: Bell | null, bells: number[]): number | undefined {
+  if (typeof bell !== 'number') return undefined;
+  return [...bells].sort((a, b) => a - b).find((b) => b > bell);
+}
+
+export const DEFAULT_BELLS = [18, 35, 45];
 
 export interface Prescription {
   name: string;
@@ -260,23 +281,32 @@ const heft = (b: Bell | null) => (typeof b === 'number' ? b : 0);
  *  a lighter one), never ask for less than he hit on every set. With a heavier bell than the
  *  plan's, ask for what he managed with it, even if that's below the plan's number.
  *  Never more than 10 reps a set (Nov 13): past that, the same work comes as more sets of 10. */
-function adapt(p: Prescription, level: Level | undefined, kind: Item['kind']): Prescription {
-  // A reps move is a total (Nov 19): the plan's sets × reps. It no longer follows the reps he did last
-  // time (Nov 20: more sets of lower reps), so the plan's set size stays the default.
-  if (kind === 'reps') return { ...p, total: p.sets * p.target };
-  if (kind === 'time') return adaptSets(p, level, kind); // holds follow the seconds he held
-  return p; // circuits and flows: rounds and sets, as planned
+function adapt(p: Prescription, level: Level | undefined, kind: Item['kind'], total?: number): Prescription {
+  if (kind === 'time') return adaptHold(p, level); // holds follow the time he held
+  if (isCounted(kind)) return withTotal(p, kind, total);
+  return p;
 }
 
-function adaptSets(p: Prescription, level: Level | undefined, kind: Item['kind']): Prescription {
+/** Counted work as a total (Nov 19, Nov 23): the plan's sets × reps, or the total he's reached when that's
+ *  more, split evenly at about 8 a set. Never more than 5 sets: a plan with more is evened out over 5.
+ *  Reps moves carry the total; circuits and flows become rounds (or sets) × an even count. */
+function withTotal(p: Prescription, kind: Item['kind'], reached?: number): Prescription {
+  const planned = p.sets * p.target;
+  const total = Math.max(planned, reached ?? 0);
+  const own = total > planned;
+  const sets = own ? splitSets(total) : Math.min(p.sets, MAX_SETS);
+  const out: Prescription = { ...p, sets, target: Math.ceil(total / sets), ...(own ? { fromLast: true } : {}) };
+  return kind === 'reps' ? { ...out, total } : out;
+}
+
+/** Holds follow the time he held (Nov 9, Nov 23): his total time over his sets (5 at most). With the plan's
+ *  bell (or a lighter one), never less than the plan asks; with a heavier bell, what he managed with it. */
+function adaptHold(p: Prescription, level: Level | undefined): Prescription {
   if (!level || level.bell !== p.bell) return p;
+  const sets = Math.min(MAX_SETS, level.sets ?? p.sets);
   const heavier = heft(p.bell) > heft(p.planBell);
-  if (heavier ? level.amount === p.target : level.amount <= p.target) return p;
-  if (kind === 'reps' && level.amount > MAX_REPS) {
-    const sets = Math.max(p.sets, Math.ceil(((level.sets ?? p.sets) * level.amount) / MAX_REPS));
-    return { ...p, target: MAX_REPS, sets, fromLast: true, moreSets: sets > p.sets };
-  }
-  return { ...p, target: level.amount, fromLast: true };
+  if (heavier ? level.amount === p.target && sets === p.sets : level.amount * sets <= p.sets * p.target) return p;
+  return { ...p, sets, target: level.amount, fromLast: true };
 }
 
 export interface BreathPlan {
@@ -323,6 +353,11 @@ export interface PlannedItem {
   stay: Prescription;
   /** The next ladder step, offered when the last session went to plan. */
   up?: Prescription;
+  /** Why there's an offer (Nov 23): he beat the total ("more"), or reached the goal and a heavier bell
+   *  is next ("heavier"), or reached it with no heavier bell to go to ("harder": a note, no offer). */
+  offer?: 'more' | 'heavier' | 'harder';
+  /** The ladder step the offer is on (the next one for a ladder bell, else the same). */
+  upStep?: number;
   breath?: BreathPlan;
   routine?: RoutinePlan;
   /** Circuits and flows (Nov 20). */
@@ -363,6 +398,7 @@ function planItem(
   ctx: WeekContext,
   data: AppData,
   state: EngineState,
+  bells: number[],
 ): PlannedItem | null {
   const r = resolveItem(item, ctx.effectiveWeek, ctx.phase, section);
   if (!r) return null;
@@ -408,13 +444,31 @@ function planItem(
   const entry = progressKey ? state.progress[progressKey] : undefined;
   const step = Math.min(Math.max(entry?.step ?? 0, 0), ladder.length - 1);
   const level = progressKey && r.kind === 'time' ? state.levels?.[holdKey(r.move, progressKey)] : undefined;
-  const stay = adapt(prescribe(r, ladder[step], data, state.bellPrefs), level, r.kind);
-  const canOffer = !ctx.held && !!entry?.ready && step + 1 < ladder.length;
-  let up = canOffer ? adapt(prescribe(r, ladder[step + 1], data, state.bellPrefs), level, r.kind) : undefined;
-  // Already doing more than the plan's next step? Then there's nothing to move up to.
-  const noMore = (u: Prescription) =>
-    u.total !== undefined && stay.total !== undefined ? u.total <= stay.total : u.target <= stay.target && u.sets <= stay.sets;
-  if (up && up.bell === stay.bell && noMore(up)) up = undefined;
+  const own = prescribe(r, ladder[step], data, state.bellPrefs);
+  const stay = adapt(own, level, r.kind, entry?.total);
+  // What last time earned (Nov 23): beat the total → what he did; reached the goal → a heavier bell (the
+  // plan's next ladder bell, or his next bell up), back to the plan's own numbers; no heavier bell → a note
+  let up: Prescription | undefined;
+  let upStep: number | undefined;
+  let offer: PlannedItem['offer'];
+  if (!ctx.held && entry?.ready) {
+    if (entry.heavier) {
+      const ladderBell = ladder[step + 1]?.bell;
+      const bell = r.kind === 'circuit' ? undefined : nextBell(stay.bell, bells);
+      if (ladderBell !== undefined) {
+        up = adapt(prescribe(r, ladder[step + 1], data, state.bellPrefs), undefined, r.kind);
+        upStep = step + 1;
+      } else if (bell !== undefined) {
+        up = { ...adapt(own, undefined, r.kind), bell };
+        upStep = step;
+      }
+      offer = up ? 'heavier' : 'harder';
+    } else if (isCounted(r.kind) && entry.next !== undefined && entry.next > (stay.total ?? stay.sets * stay.target)) {
+      up = adapt(own, undefined, r.kind, entry.next);
+      upStep = step;
+      offer = 'more';
+    }
+  }
   const parts =
     r.kind === 'circuit' || r.kind === 'flow'
       ? (r.parts ?? []).map(
@@ -428,10 +482,12 @@ function planItem(
           }),
         )
       : undefined;
-  return { ...base, progressKey, ladderLen: ladder.length, step, stay, up, ...(parts ? { parts } : {}) };
+  const why = offer ? { offer, ...(up ? { upStep } : {}) } : {};
+  return { ...base, progressKey, ladderLen: ladder.length, step, stay, up, ...why, ...(parts ? { parts } : {}) };
 }
 
-export function planSession(data: AppData, state: EngineState): PlannedSession {
+/** `bells`: his own bells (Settings), for the heavier-bell offer (Nov 23). */
+export function planSession(data: AppData, state: EngineState, bells: number[] = DEFAULT_BELLS): PlannedSession {
   const { plan } = data;
   const ctx = weekContext(data, state);
   const day = dayAt(plan, state.pointer);
@@ -439,7 +495,7 @@ export function planSession(data: AppData, state: EngineState): PlannedSession {
   const items: PlannedItem[] = [];
   const add = (list: Item[], section: Section) => {
     for (const it of list) {
-      const p = planItem(it, section, ctx, data, state);
+      const p = planItem(it, section, ctx, data, state, bells);
       if (p) items.push(p);
     }
   };
@@ -450,7 +506,7 @@ export function planSession(data: AppData, state: EngineState): PlannedSession {
     // Guided warm-up timers are their own part, not workout moves.
     const guided: RoutinePlan[] = [];
     for (const it of ctx.phase.warmup) {
-      const p = planItem(it, 'warmup', ctx, data, state);
+      const p = planItem(it, 'warmup', ctx, data, state, bells);
       if (p?.routine) guided.push(p.routine);
       else if (p) items.push(p);
     }
@@ -501,11 +557,11 @@ export function withLatestEvening(data: AppData, session: PlannedSession): Plann
 }
 
 /** The next n sessions in rotation order, starting with the current one. */
-export function upcoming(data: AppData, state: EngineState, n: number): PlannedSession[] {
+export function upcoming(data: AppData, state: EngineState, n: number, bells: number[] = DEFAULT_BELLS): PlannedSession[] {
   const out: PlannedSession[] = [];
   let pointer = state.pointer;
   for (let i = 0; i < n; i++) {
-    out.push(planSession(data, { ...state, pointer }));
+    out.push(planSession(data, { ...state, pointer }, bells));
     pointer = advance(data.plan, pointer);
   }
   return out;
@@ -520,6 +576,11 @@ export interface SetLog {
   bell: Bell | null;
   /** When the set was logged (Nov 19, 2026). Missing before. */
   at?: number;
+  /** A set added after the plan's work was done: more than prescribed (James, Nov 23). */
+  extra?: boolean;
+  /** Seconds rested after this set, from the rest timer: its full length if it ran out (±15 taps
+   *  included), or until Skip (Nov 23). Missing when no rest followed. */
+  rest?: number;
 }
 
 export interface DraftItem {
@@ -568,11 +629,10 @@ function setsFor(p: Prescription, bell: Bell | null): SetLog[] {
 /** Reps done so far (per side when perSide). */
 export const repsDone = (sets: SetLog[]): number => sets.reduce((sum, s) => sum + (s.done ? s.actual : 0), 0);
 
-/** Most reps the next set can log: what's left of the total, and never more than 10 (Nov 13, Nov 19). */
-export const setCap = (it: DraftItem): number => Math.min(MAX_REPS, Math.max(0, (chosen(it).total ?? 0) - repsDone(it.sets)));
-
 /** Totals mode: the sets done, then one open set to fill in, sized like the last set (or the plan's
- *  reps a set), never past what's left or 10. None once the total is reached. */
+ *  reps a set), never past what's left or 10. None once the total is reached. That's only where the
+ *  set starts: he can log more than what's left, or more than 10 (James, Nov 23: "I need the ability
+ *  to log more reps/time than is prescribed… that's feedback to the app"). */
 function withPending(sets: SetLog[], p: Prescription, bell: Bell | null, size?: number): SetLog[] {
   const done = sets.filter((s) => s.done);
   const left = (p.total ?? 0) - repsDone(done);
@@ -587,7 +647,8 @@ export function startDraft(session: PlannedSession, id: string, now: number): Se
     startedAt: now,
     session,
     items: session.items.map((plan) => {
-      const choice = plan.up ? 'up' : 'stay';
+      // "More" is pre-picked; a heavier bell is his to pick (18 → 35 nearly doubles it), Nov 23
+      const choice = plan.up && plan.offer !== 'heavier' ? 'up' : 'stay';
       const p = choice === 'up' ? plan.up! : plan.stay;
       return { plan, choice, bell: p.bell, sets: setsFor(p, p.bell) };
     }),
@@ -611,10 +672,26 @@ export function completeNext(it: DraftItem): DraftItem {
   if (k < 0) return it;
   const p = chosen(it);
   if (p.total === undefined) return completeSetAt(it, k);
-  const actual = Math.max(0, Math.min(it.sets[k].actual, setCap(it)));
+  const actual = Math.max(0, it.sets[k].actual);
   const done = [...it.sets.filter((s) => s.done), { ...it.sets[k], actual, done: true, bell: it.bell }];
   return { ...it, sets: withPending(done, p, it.bell, actual) };
 }
+
+/** Moves that can take one more set than planned (Nov 23): counted work and holds. */
+export const canAddSet = (it: DraftItem) => ['reps', 'time', 'circuit', 'flow'].includes(it.plan.kind);
+
+/** One more set after the plan's work is done (James, Nov 23), sized like the last one he did. */
+export function addSet(it: DraftItem): DraftItem {
+  if (!canAddSet(it) || it.skipped || it.sets.some((s) => !s.done)) return it;
+  const last = [...it.sets].reverse().find((s) => s.done);
+  const size = last?.actual ?? chosen(it).target;
+  const target = chosen(it).total !== undefined ? size : chosen(it).target;
+  return { ...it, sets: [...it.sets, { target, actual: size, done: false, bell: it.bell, extra: true }] };
+}
+
+/** Take back an extra set that wasn't done. */
+export const dropExtra = (it: DraftItem): DraftItem =>
+  it.sets.some((s) => s.extra && !s.done) ? { ...it, sets: it.sets.filter((s) => s.done || !s.extra) } : it;
 
 /** Undo a set: in totals mode it's taken out and its reps go back on what's left. */
 export function undoSet(it: DraftItem, k: number): DraftItem {
@@ -650,7 +727,7 @@ export function restAfter(it: DraftItem, restByMove: Record<string, number>): nu
 export function isItemComplete(it: DraftItem): boolean {
   if (it.skipped) return true;
   const total = chosen(it).total;
-  return total !== undefined ? repsDone(it.sets) >= total : it.sets.every((s) => s.done);
+  return total !== undefined ? repsDone(it.sets) >= total : it.sets.every((s) => s.done || s.extra);
 }
 
 // ---------- Move times (Nov 19) ----------
@@ -696,6 +773,26 @@ export function workOf(it: DraftItem): string {
   return amount + bell;
 }
 
+/** Same move from one workout to the next: the move, or for a circuit or flow, its place in the routine. */
+const sameWork = (it: Pick<DraftItem, 'plan' | 'choice'>) => chosen(it).move ?? it.plan.progressKey ?? it.plan.itemId;
+
+/** Last time's sets for this move, each with its count, bell and rest: the benchmark to beat (James,
+ *  Nov 23: "I need each set … to have memory. So I have a benchmark to improve upon always"). */
+export function lastTime(
+  sessions: Pick<SessionLog, 'date' | 'startedAt' | 'items'>[],
+  it: Pick<DraftItem, 'plan' | 'choice'>,
+): { date: string; sets: SetLog[] } | undefined {
+  if (!['reps', 'time', 'circuit', 'flow'].includes(it.plan.kind)) return undefined;
+  const key = sameWork(it);
+  let best: { date: string; startedAt: number; sets: SetLog[] } | undefined;
+  for (const s of sessions) {
+    if (best && s.startedAt <= best.startedAt) continue;
+    const x = s.items.find((y) => y.plan.kind === it.plan.kind && !y.skipped && sameWork(y) === key && y.sets.some((z) => z.done));
+    if (x) best = { date: s.date, startedAt: s.startedAt, sets: x.sets.filter((z) => z.done) };
+  }
+  return best && { date: best.date, sets: best.sets };
+}
+
 export interface MoveTime {
   date: string;
   startedAt: number;
@@ -722,17 +819,6 @@ export function lastAndBest(times: MoveTime[], work: string): { last?: MoveTime;
   return { last: same[0], best, lastAny: times[0] };
 }
 
-/** "Once my manual edits are creeping up to 8, 9, 10… that's a sign that I'm ready for more sets" (James,
- *  Nov 20). True when his sets averaged 8 or more (or 3 over a smaller planned count, e.g. flow cycles).
- *  In a total the last set is often just what was left, so it doesn't count. */
-export function creepingUp(it: DraftItem): boolean {
-  const done = it.sets.filter((s) => s.done);
-  if (!done.length) return false;
-  const p = chosen(it);
-  const full = p.total !== undefined && done.length > 1 ? done.slice(0, -1) : done;
-  const avg = full.reduce((sum, s) => sum + s.actual, 0) / full.length;
-  return avg >= Math.min(MAX_REPS - 2, p.target + 3);
-}
 
 export function kbReps(items: DraftItem[]): number {
   let total = 0;
@@ -787,33 +873,45 @@ function learn(before: Learned, items: DraftItem[], pain: boolean): Learned {
     const p = chosen(it);
     const didAny = it.sets.some((s) => s.done);
     const key = it.plan.progressKey;
+    // The plan's sets; extra sets (Nov 23) are more than it asked, so they never count against it
+    const planned = it.sets.filter((s) => !s.extra);
 
     if (it.plan.section === 'main' && key && didAny) {
       // Move-up steps belong to a routine ("routine/item" keys, Nov 20). Older keys counted reps: skipped.
       if (key.includes('/')) {
-        const used = it.choice === 'up' && it.plan.up ? it.plan.step + 1 : it.plan.step;
-        // Totals: the whole total done. Sets: every set done to plan.
-        const allToPlan =
-          p.total !== undefined
-            ? !it.skipped && repsDone(it.sets) >= p.total
-            : !it.skipped && it.sets.length > 0 && it.sets.every((s) => s.done && s.actual >= s.target);
-        // Counted work is ready for another set once his own set sizes creep up to 8+ (Nov 20)
-        const counted = it.plan.kind === 'reps' || it.plan.kind === 'circuit' || it.plan.kind === 'flow';
-        progress[key] = { step: used, ready: allToPlan && !pain && (!counted || creepingUp(it)) };
+        // Logs from before Nov 23 have no upStep: their offer was the next ladder step
+        const step = it.choice === 'up' && it.plan.up ? it.plan.upStep ?? it.plan.step + 1 : it.plan.step;
+        progress[key] = { step, ready: false };
+        // Counted work (Nov 23, James: "If I do more reps in a particular set AND the total rep load
+        // increases… next time we increase the total rep load"): the total done, with no joint pain. Past
+        // the total → next time's offer is what he did; at 40 or more → a heavier bell or a harder move.
+        if (isCounted(it.plan.kind)) {
+          const asked = p.total ?? p.sets * p.target;
+          const did = repsDone(it.sets);
+          const finished = !it.skipped && did >= asked && (p.total !== undefined || planned.every((s) => s.done));
+          const heavier = finished && !pain && did >= COUNT_GOAL;
+          const more = finished && !pain && !heavier && did > asked;
+          progress[key] = { step, ready: heavier || more, total: asked, ...(heavier ? { heavier } : more ? { next: did } : {}) };
+        }
       }
 
-      // Holds follow the seconds he held (Nov 9): every set done and no joint pain. A new best with the
-      // same bell (beating the time he was asked for, or the one he'd already reached), or a heavier bell.
-      if (it.plan.kind === 'time' && !pain && !it.skipped && it.sets.length > 0 && it.sets.every((s) => s.done)) {
-        const lastBell = it.sets[it.sets.length - 1].bell;
-        const withBell = it.sets.filter((s) => s.bell === lastBell);
-        const best = Math.min(...withBell.map((s) => s.actual));
+      // Holds follow the time he held (Nov 9, Nov 23): every planned set done and no joint pain. More time
+      // in all than he was asked for with the same bell (extra sets count), or a heavier bell: next time is
+      // his total time evened out over his sets, 5 at most. 3 minutes in all (per side) → heavier or harder.
+      if (it.plan.kind === 'time' && !pain && !it.skipped && planned.length > 0 && planned.every((s) => s.done)) {
+        const lastBell = planned[planned.length - 1].bell;
+        const withBell = it.sets.filter((s) => s.done && s.bell === lastBell);
+        const held = withBell.reduce((sum, s) => sum + s.actual, 0);
+        const sets = Math.min(MAX_SETS, withBell.length);
         const hk = holdKey(p.move, key);
+        // The bar: what he was asked for, or the time he'd already reached with this bell (a log replayed
+        // after a wipe was planned without it)
         const cur = levels[hk];
-        const bar = cur && cur.bell === p.bell ? Math.max(p.target, cur.amount) : p.target;
-        const beat = lastBell === p.bell && best > bar;
+        const reached = cur && cur.bell === p.bell ? cur.amount * Math.min(MAX_SETS, cur.sets ?? p.sets) : 0;
+        const beat = lastBell === p.bell && held > Math.max(p.sets * p.target, reached);
         const heavier = heft(lastBell) > heft(p.bell);
-        if (beat || heavier) levels[hk] = { amount: best, bell: lastBell, sets: withBell.length };
+        if (beat || heavier) levels[hk] = { amount: Math.ceil(held / sets), bell: lastBell, sets };
+        if (key.includes('/') && held >= HOLD_GOAL) progress[key] = { ...progress[key], ready: true, heavier: true };
       }
     }
 
@@ -825,7 +923,10 @@ function learn(before: Learned, items: DraftItem[], pain: boolean): Learned {
     }
   }
 
-  if (pain) for (const k of Object.keys(progress)) progress[k] = { ...progress[k], ready: false };
+  // Joint pain: no offers; the total he was working at stays
+  if (pain)
+    for (const [k, e] of Object.entries(progress))
+      progress[k] = { step: e.step, ready: false, ...(e.total !== undefined ? { total: e.total } : {}) };
   return { progress, bellPrefs, levels };
 }
 
@@ -854,6 +955,8 @@ export function finishSession(
   answers: { effort: number; pain: boolean },
   now: number,
 ): FinishResult {
+  // An extra set added but not done is dropped (Nov 23)
+  draft = { ...draft, items: draft.items.map(dropExtra) };
   const trained = new Set<string>();
   for (const it of draft.items) {
     const p = chosen(it);
