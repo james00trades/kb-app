@@ -42,10 +42,10 @@ describe('data files', () => {
     const added = ['tactical-crossover', 'front-to-back-raise', 'gravedigger', 'uppercut', 'curl-to-press', 'woodchop', 'clean-to-squat',
       'side-to-front-raise', 'pullover-to-side-pull', 'hammer-curl', 'around-the-world-to-curl', 'curl-to-pullover', 'hand-to-hand-curl',
       'over-shoulder-pull', 'supported-row'];
-    expect(movements).toHaveLength(110); // 107 + standing push-out, couch stretch (Nov 14), lying spinal twist (Nov 16)
+    expect(movements).toHaveLength(120); // 107 + standing push-out, couch stretch (Nov 14), lying spinal twist (Nov 16), 10 on Nov 23
     for (const id of added) expect(moveById.get(id)?.cues?.length, id).toBeGreaterThan(0);
     // Shoulder hold: the ⚠ moves from his notes
-    expect(movements.filter((m) => m.shoulder).map((m) => m.id).sort()).toEqual(
+    expect(added.filter((id) => moveById.get(id)!.shoulder).sort()).toEqual(
       ['curl-to-press', 'curl-to-pullover', 'front-to-back-raise', 'over-shoulder-pull', 'pullover-to-side-pull', 'side-to-front-raise']);
     // Best guesses: the medium-confidence moves, so he can find and check them (more joined on Nov 20: the
     // cues written for moves the new routines use)
@@ -58,6 +58,37 @@ describe('data files', () => {
     expect(added.filter((id) => moveById.get(id)!.unlocked)).toEqual(['supported-row']);
   });
 
+  it('Deee_Fit and Savage rotational additions (James, Nov 23): 10 moves for the pool, none in the plan', () => {
+    const { moveById, routines } = loadData();
+    const deee = ['clean-to-halo', 'rotation-pullover', 'gorilla-swing', 'over-shoulder-toss', 'curl-to-goblet-press'];
+    const savage = ['alternating-rotational-clean', 'side-toss-to-rotational-snatch', 'cross-body-drop-to-pull', 'held-figure-8',
+      'extended-figure-8-chop'];
+    const added = [...deee, ...savage];
+    for (const id of added) {
+      const m = moveById.get(id)!;
+      expect(m.cues!.length, id).toBeGreaterThan(3);
+      expect(m.unlocked, id).toBe(false);
+      expect(m.guess, id).toBeUndefined(); // high confidence or confirmed by James
+    }
+    // Shoulder hold: the ⚠ moves from his notes, each with its swap as the last cue
+    const held = added.filter((id) => moveById.get(id)!.shoulder);
+    expect(held.sort()).toEqual(['clean-to-halo', 'curl-to-goblet-press', 'extended-figure-8-chop', 'over-shoulder-toss',
+      'rotation-pullover', 'side-toss-to-rotational-snatch']);
+    for (const id of held) expect(moveById.get(id)!.cues!.at(-1), id).toMatch(/^Shoulder hold: /);
+    // Same start-bell rule as Nov 10: 35 lb for the leg-driven ones, 18 lb for the rest
+    expect(added.filter((id) => moveById.get(id)!.startBell === 35).sort()).toEqual(['gorilla-swing', 'over-shoulder-toss']);
+    expect(added.filter((id) => moveById.get(id)!.startBell === 18)).toHaveLength(8);
+    // The Savage five are Month 9+
+    for (const id of savage) expect(moveById.get(id)!.level, id).toBe('advanced');
+    // The links his notes give
+    expect(moveById.get('over-shoulder-toss')!.related).toEqual(['gravedigger']);
+    expect(moveById.get('curl-to-goblet-press')!.related).toEqual(['curl-to-press']);
+    expect(moveById.get('extended-figure-8-chop')!.prereqs).toEqual(['held-figure-8']);
+    // A pool only: no routine uses them yet
+    const used = JSON.stringify(routines);
+    for (const id of added) expect(used, id).not.toContain(`"${id}"`);
+  });
+
   it("standing push-out (James, Nov 14): in the library, not in the plan, light bell", () => {
     const m = loadData().moveById.get('standing-push-out')!;
     expect(m).toMatchObject({ name: 'Standing push-out', pattern: 'push', unlocked: false, startBell: 18 });
@@ -67,7 +98,7 @@ describe('data files', () => {
   it('every move has a difficulty level (James, Nov 18) that matches the routines and the unlock order', () => {
     const { moveById, movements, routines } = loadData();
     const count = (l: string) => movements.filter((m) => m.level === l).length;
-    expect([count('beginner'), count('intermediate'), count('advanced')]).toEqual([57, 37, 16]);
+    expect([count('beginner'), count('intermediate'), count('advanced')]).toEqual([59, 40, 21]);
     const movesOf = (level: number) =>
       routines.filter((r) => r.level === level).flatMap((r) => [...JSON.stringify(r).matchAll(/"move":"([a-z0-9-]+)"/g)].map((x) => x[1]));
     // Everything in Level 1 (warm-up, days, flows, evening holds) is Beginner
