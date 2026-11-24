@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { daysBetween, round1, type WeightPoint } from '../engine/body';
 import { chosen, moveTime, repsDone, type SessionLog } from '../engine/engine';
 import { addDays } from '../engine/streak';
+import { hasBell } from '../engine/schema';
 import type { BodyEntry, Daily, Pose } from './db';
 
 export const CHECKIN_MODEL = 'claude-opus-5-5';
@@ -167,11 +168,11 @@ const trained = (s: SessionLog) => s.status === 'done' || s.status === 'partial'
 /** One line per main move: "3×8/side @45 lb". */
 function moveText(it: SessionLog['items'][number]): { name: string; text: string } {
   const p = chosen(it);
-  // Circuits and flows (Nov 20): "goblet squat @35, two-hand swing @45 …: 5 rounds of 5"
+  // Circuits and flows (Nov 20): "goblet squat @30, two-hand swing @45 …: 5 rounds of 5"
   if (it.plan.kind === 'circuit' || it.plan.kind === 'flow') {
-    const parts = (it.plan.parts ?? []).map((pt) => `${pt.name.toLowerCase()}${pt.reps ? ` ×${pt.reps}` : ''}${typeof pt.bell === 'number' ? ` @${pt.bell}` : ''}`);
+    const parts = (it.plan.parts ?? []).map((pt) => `${pt.name.toLowerCase()}${pt.reps ? ` ×${pt.reps}` : ''}${hasBell(pt.bell) ? ` @${pt.bell}` : ''}`);
     const joiner = it.plan.kind === 'flow' ? ' → ' : ', ';
-    const bell = it.plan.kind === 'flow' && typeof it.bell === 'number' ? ` @${it.bell} lb` : '';
+    const bell = it.plan.kind === 'flow' && hasBell(it.bell) ? ` @${it.bell} lb` : '';
     const what = it.plan.kind === 'flow' ? `${p.sets} × ${p.target} cycles${it.plan.perSide ? '/side' : ''}` : `${p.sets} rounds of ${p.target} each`;
     return { name: `${p.name} (${parts.join(joiner)})`, text: `${what}${bell}` };
   }
@@ -206,7 +207,7 @@ function sessionLine(s: SessionLog, daily?: Daily): string {
       const total = chosen(it).total;
       // Each set with its bell and the rest after it (Nov 23): "8 @45 rest 60s"
       const set = (x: (typeof done)[number]) =>
-        `${x.actual}${unit}${typeof x.bell === 'number' ? ` @${x.bell}` : ''}${x.rest !== undefined ? ` rest ${x.rest}s` : ''}`;
+        `${x.actual}${unit}${hasBell(x.bell) ? ` @${x.bell}` : ''}${x.rest !== undefined ? ` rest ${x.rest}s` : ''}`;
       if (total !== undefined) {
         const side = it.plan.perSide ? '/side' : '';
         return `${m.name} ${repsDone(it.sets)}/${total}${side} reps in ${done.length} sets [${done.map(set).join(', ')}] planned ${m.text}${up}`;

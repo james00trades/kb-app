@@ -201,6 +201,13 @@ describe('long-run helpers', () => {
     expect(buildReport(input({ sessions: [s] }))).toContain('Deadlift 3/3 sets [8 @35 rest 75s, 8 @45 rest 60s, 9 @45] planned');
   });
 
+  it('two bells at once read as both (Nov 24)', () => {
+    const s = session('2026-11-24');
+    const it = s.items[0];
+    s.items = [{ ...it, bell: '45+30', sets: [{ actual: 8, bell: 45 as const }, { actual: 8, bell: '45+30' as const }].map((x) => ({ target: 8, done: true, ...x })) }];
+    expect(buildReport(input({ sessions: [s] }))).toContain('[8 @45, 8 @45+30]');
+  });
+
   it('sends photos from the start, about a month ago, and now', () => {
     const dates = ['2026-09-06', '2026-09-13', '2026-10-11', '2026-10-18', '2026-11-08', '2026-11-14'];
     expect(pickPhotoDates(dates, TODAY).map((p) => p.date)).toEqual(['2026-09-06', '2026-10-18', '2026-11-14']);

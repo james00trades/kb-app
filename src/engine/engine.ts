@@ -1,7 +1,7 @@
 // The plan engine: turns plan data + saved state into today's session,
 // and folds a finished session back into state. Pure functions only.
 import type { AppData } from './data';
-import { COUNT_GOAL, HOLD_GOAL, MAX_REPS, MAX_SETS, type Bell, type BreathPattern, type DayKey, type Item, type LadderStep, type Phase, type PlanFile, type Station } from './schema';
+import { COUNT_GOAL, HOLD_GOAL, MAX_REPS, MAX_SETS, bellsIn, hasBell, heft, isPair, pairOf, pairsFrom, type Bell, type BreathPattern, type DayKey, type Item, type LadderStep, type Phase, type PlanFile, type Station } from './schema';
 
 // ---------- State ----------
 
@@ -211,14 +211,35 @@ export function evenSplit(total: number, sets: number): number[] {
   return Array.from({ length: n }, (_, k) => base + (k < total % n ? 1 : 0));
 }
 
-/** The next bell up from his own bells, if there is one. Bodyweight and no-bell moves have none: past
- *  the goal they need a harder move. */
-function nextBell(bell: Bell | null, bells: number[]): number | undefined {
+/** The next bell up from his own bells, if there is one; with two bells, the next heavier pair of his.
+ *  Bodyweight and no-bell moves have none: past the goal they need a harder move. */
+function nextBell(bell: Bell | null, bells: number[]): Bell | undefined {
+  if (isPair(bell)) return pairsFrom(bells).find((b) => heft(b) > heft(bell));
   if (typeof bell !== 'number') return undefined;
   return [...bells].sort((a, b) => a - b).find((b) => b > bell);
 }
 
-export const DEFAULT_BELLS = [18, 35, 45];
+/** James's bells: 18, 30 and 45 lb (Nov 24: "I don't have a 35lb bell"). */
+export const DEFAULT_BELLS = [18, 30, 45];
+
+/** James has no 35 lb bell (Nov 24: "Switch to 30. I don't have a 35lb bell"). The plan said 35 until then,
+ *  so a 35 in his logs, progress or picks was his 30: every bell field (`bell`, `planBell`, pairs too)
+ *  that says 35 says 30 instead. Everything else is left as it is. */
+export function no35<T>(x: T): T {
+  const swap = (b: number) => (b === 35 ? 30 : b);
+  const fix = (v: unknown): unknown => {
+    if (v === 35) return 30;
+    if (!isPair(v as Bell)) return v;
+    const [a, b] = bellsIn(v as Bell);
+    return pairOf(swap(a), swap(b));
+  };
+  const walk = (v: unknown, key?: string): unknown => {
+    if (Array.isArray(v)) return v.map((y) => walk(y));
+    if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).map(([k, y]) => [k, walk(y, k)]));
+    return key === 'bell' || key === 'planBell' ? fix(v) : v;
+  };
+  return walk(x) as T;
+}
 
 export interface Prescription {
   name: string;
@@ -273,9 +294,6 @@ function prescribe(
     notes: r.notes,
   };
 }
-
-/** Bell weight for comparing: bodyweight and no bell count as 0. */
-const heft = (b: Bell | null) => (typeof b === 'number' ? b : 0);
 
 /** Fit the target to what James did last time with this bell (Nov 9). With the plan's bell (or
  *  a lighter one), never ask for less than he hit on every set. With a heavier bell than the
@@ -629,16 +647,17 @@ function setsFor(p: Prescription, bell: Bell | null): SetLog[] {
 /** Reps done so far (per side when perSide). */
 export const repsDone = (sets: SetLog[]): number => sets.reduce((sum, s) => sum + (s.done ? s.actual : 0), 0);
 
-/** Totals mode: the sets done, then one open set to fill in, sized like the last set (or the plan's
- *  reps a set), never past what's left or 10. None once the total is reached. That's only where the
- *  set starts: he can log more than what's left, or more than 10 (James, Nov 23: "I need the ability
- *  to log more reps/time than is prescribed… that's feedback to the app"). */
-function withPending(sets: SetLog[], p: Prescription, bell: Bell | null, size?: number): SetLog[] {
+/** Totals mode: the sets done, then a box for every set still to do, each with its planned reps
+ *  (James, Nov 24: "I need to see boxes for each set WITH the prescribed reps"). What's left is split
+ *  evenly over the plan's sets still to do (bigger sets first, 10 at most, one more set when that's
+ *  not enough), so each finished set re-splits the rest. None once the total is reached. A box is only
+ *  where the set starts: he can log more than what's left, or more than 10 (Nov 23). */
+function withPending(sets: SetLog[], p: Prescription, bell: Bell | null): SetLog[] {
   const done = sets.filter((s) => s.done);
   const left = (p.total ?? 0) - repsDone(done);
   if (left <= 0) return done;
-  const n = Math.max(1, Math.min(size ?? p.target, left, MAX_REPS));
-  return [...done, { target: n, actual: n, done: false, bell }];
+  const n = Math.max(1, p.sets - done.length, Math.ceil(left / MAX_REPS));
+  return [...done, ...evenSplit(left, n).filter((r) => r > 0).map((r) => ({ target: r, actual: r, done: false, bell }))];
 }
 
 export function startDraft(session: PlannedSession, id: string, now: number): SessionDraft {
@@ -647,12 +666,22 @@ export function startDraft(session: PlannedSession, id: string, now: number): Se
     startedAt: now,
     session,
     items: session.items.map((plan) => {
-      // "More" is pre-picked; a heavier bell is his to pick (18 → 35 nearly doubles it), Nov 23
+      // "More" is pre-picked; a heavier bell is his to pick (18 → 30 is a big jump), Nov 23
       const choice = plan.up && plan.offer !== 'heavier' ? 'up' : 'stay';
       const p = choice === 'up' ? plan.up! : plan.stay;
       return { plan, choice, bell: p.bell, sets: setsFor(p, p.bell) };
     }),
   };
+}
+
+/** Pick a bell (one or two) for a move. While sets are left, it's the bell for those sets; sets already
+ *  done keep theirs (he can switch bells partway). Once every set is done, picking a bell corrects the
+ *  sets done with the old one (James, Nov 24: he picked "2 bells" after finishing and the green boxes
+ *  kept the single bell). */
+export function pickBell(it: DraftItem, bell: Bell): DraftItem {
+  const left = it.sets.some((s) => !s.done);
+  const fix = (s: SetLog) => !s.done || (!left && s.bell === it.bell);
+  return { ...it, bell, sets: it.sets.map((s) => (fix(s) ? { ...s, bell } : s)) };
 }
 
 /** Switch between "move up" and "stay". Sets already done are kept. */
@@ -674,7 +703,7 @@ export function completeNext(it: DraftItem): DraftItem {
   if (p.total === undefined) return completeSetAt(it, k);
   const actual = Math.max(0, it.sets[k].actual);
   const done = [...it.sets.filter((s) => s.done), { ...it.sets[k], actual, done: true, bell: it.bell }];
-  return { ...it, sets: withPending(done, p, it.bell, actual) };
+  return { ...it, sets: withPending(done, p, it.bell) };
 }
 
 /** Moves that can take one more set than planned (Nov 23): counted work and holds. */
@@ -699,18 +728,23 @@ export function undoSet(it: DraftItem, k: number): DraftItem {
   if (p.total === undefined || it.plan.kind !== 'reps') {
     return { ...it, skipped: false, sets: it.sets.map((s, j) => (j === k ? { ...s, done: false } : s)) };
   }
-  const open = it.sets.find((s) => !s.done);
   const kept = it.sets.filter((s, j) => s.done && j !== k);
-  return { ...it, skipped: false, sets: withPending(kept, p, it.bell, open?.actual ?? it.sets[k]?.actual) };
+  return { ...it, skipped: false, sets: withPending(kept, p, it.bell) };
 }
 
 /** Mark set k done with the item's bell. The sets after it start at what was just done,
- *  never below their own target (James, Nov 9). */
+ *  never below the plan's (James, Nov 9); their boxes show that as the planned number (Nov 24). */
 export function completeSetAt(it: DraftItem, k: number): DraftItem {
   const done = { ...it.sets[k], done: true, bell: it.bell };
+  const floor = chosen(it).target;
   return {
     ...it,
-    sets: it.sets.map((s, j) => (j === k ? done : j > k && !s.done ? { ...s, actual: Math.max(s.target, done.actual) } : s)),
+    sets: it.sets.map((s, j) => {
+      if (j === k) return done;
+      if (j < k || s.done) return s;
+      const n = Math.max(floor, done.actual);
+      return { ...s, target: n, actual: n };
+    }),
   };
 }
 
@@ -773,26 +807,6 @@ export function workOf(it: DraftItem): string {
   return amount + bell;
 }
 
-/** Same move from one workout to the next: the move, or for a circuit or flow, its place in the routine. */
-const sameWork = (it: Pick<DraftItem, 'plan' | 'choice'>) => chosen(it).move ?? it.plan.progressKey ?? it.plan.itemId;
-
-/** Last time's sets for this move, each with its count, bell and rest: the benchmark to beat (James,
- *  Nov 23: "I need each set … to have memory. So I have a benchmark to improve upon always"). */
-export function lastTime(
-  sessions: Pick<SessionLog, 'date' | 'startedAt' | 'items'>[],
-  it: Pick<DraftItem, 'plan' | 'choice'>,
-): { date: string; sets: SetLog[] } | undefined {
-  if (!['reps', 'time', 'circuit', 'flow'].includes(it.plan.kind)) return undefined;
-  const key = sameWork(it);
-  let best: { date: string; startedAt: number; sets: SetLog[] } | undefined;
-  for (const s of sessions) {
-    if (best && s.startedAt <= best.startedAt) continue;
-    const x = s.items.find((y) => y.plan.kind === it.plan.kind && !y.skipped && sameWork(y) === key && y.sets.some((z) => z.done));
-    if (x) best = { date: s.date, startedAt: s.startedAt, sets: x.sets.filter((z) => z.done) };
-  }
-  return best && { date: best.date, sets: best.sets };
-}
-
 export interface MoveTime {
   date: string;
   startedAt: number;
@@ -825,12 +839,12 @@ export function kbReps(items: DraftItem[]): number {
   for (const it of items) {
     for (const s of it.sets) {
       if (!s.done) continue;
-      if (it.plan.kind === 'reps' && typeof s.bell === 'number') total += s.actual * (it.plan.perSide ? 2 : 1);
+      if (it.plan.kind === 'reps' && hasBell(s.bell)) total += s.actual * (it.plan.perSide ? 2 : 1);
       // A circuit round: each move with a bell, at its own count or the round's
       if (it.plan.kind === 'circuit')
-        for (const pt of it.plan.parts ?? []) if (typeof pt.bell === 'number') total += (pt.reps ?? s.actual) * (pt.perSide ? 2 : 1);
+        for (const pt of it.plan.parts ?? []) if (hasBell(pt.bell)) total += (pt.reps ?? s.actual) * (pt.perSide ? 2 : 1);
       // A flow set: every move in the cycle, times the cycles
-      if (it.plan.kind === 'flow' && typeof s.bell === 'number') {
+      if (it.plan.kind === 'flow' && hasBell(s.bell)) {
         const perCycle = (it.plan.parts ?? []).reduce((n, pt) => n + (pt.reps ?? 1), 0);
         total += s.actual * perCycle * (it.plan.perSide ? 2 : 1);
       }

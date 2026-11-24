@@ -2,8 +2,38 @@
 // Validated by the tests on every build, and again when the app starts.
 import { z } from 'zod';
 
-export const Bell = z.union([z.literal('BW'), z.number().positive()]);
+/** Two bells at once, heavier first: "45+30" (James, Nov 24: deadlifts holding his 45 and 30 together). */
+export type BellPair = `${number}+${number}`;
+const PAIR = /^\d+(\.\d+)?\+\d+(\.\d+)?$/;
+const Pair = z.custom<BellPair>((v) => typeof v === 'string' && PAIR.test(v), 'Two bells, like "45+30"');
+
+export const Bell = z.union([z.literal('BW'), z.number().positive(), Pair]);
 export type Bell = z.infer<typeof Bell>;
+
+export const isPair = (b: Bell | null | undefined): b is BellPair => typeof b === 'string' && PAIR.test(b);
+
+/** The bells in hand: one, two, or none for bodyweight and no-bell work. */
+export function bellsIn(b: Bell | null | undefined): number[] {
+  if (typeof b === 'number') return [b];
+  return isPair(b) ? b.split('+').map(Number) : [];
+}
+
+/** Bell weight for comparing: a pair counts both bells; bodyweight and no bell count as 0. */
+export const heft = (b: Bell | null | undefined) => bellsIn(b).reduce((n, x) => n + x, 0);
+
+/** Kettlebell work: one bell or two, not bodyweight. */
+export const hasBell = (b: Bell | null | undefined) => heft(b) > 0;
+
+/** A pair, written heavier first so the same two bells always match. */
+export const pairOf = (a: number, b: number): BellPair => `${Math.max(a, b)}+${Math.min(a, b)}`;
+
+/** Every two of his bells together, lightest pair first. One of each bell, so no doubles. */
+export function pairsFrom(bells: number[]): BellPair[] {
+  const own = [...new Set(bells)].sort((a, b) => a - b);
+  const out: BellPair[] = [];
+  for (let i = 0; i < own.length; i++) for (let j = i + 1; j < own.length; j++) out.push(pairOf(own[i], own[j]));
+  return out.sort((a, b) => heft(a) - heft(b) || bellsIn(a)[0] - bellsIn(b)[0]);
+}
 
 const Range = z.tuple([z.number().positive(), z.number().positive()]);
 const NumOrRange = z.union([z.number().positive(), Range]);

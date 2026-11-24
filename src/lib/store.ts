@@ -2,8 +2,8 @@
 import { computed, signal } from '@preact/signals';
 import { loadData, type AppData } from '../engine/data';
 import {
-  back, finishSession, initialState, localDate, migrateState, passDay, planSession, startDraft, startRoutine, upcoming, withLatestEvening,
-  type EngineState, type PlannedSession, type SessionDraft, type SessionLog,
+  back, finishSession, initialState, localDate, migrateState, no35, passDay, planSession, startDraft, startRoutine, upcoming, withLatestEvening,
+  type DraftItem, type EngineState, type PlannedSession, type SessionDraft, type SessionLog,
 } from '../engine/engine';
 import { addDays, heatReached, seededFix, seedApplies, streak, type StreakFix } from '../engine/streak';
 import { bodyDue as dueNow, weightSummary, weightTrend } from '../engine/body';
@@ -33,7 +33,7 @@ const defaultSettings = (): Settings => ({
   throughSilent: false,
   defaultRest: data.plan.defaultRest,
   restByMove: {},
-  bells: [18, 35, 45],
+  bells: [18, 30, 45],
 });
 
 export type Tab = 'today' | 'timers' | 'library' | 'history' | 'settings';
@@ -71,6 +71,8 @@ export const streakFix = signal<StreakFix | null>(null);
 /** Set for James in an update (he asked on Nov 10, 2026): 5 days in a row, Nov 10 included. Applied once. */
 const STREAK_SEED: StreakFix = { through: '2026-11-10', count: 5 };
 const STREAK_SEED_KEY = 'streakSeed-2026-11-10';
+/** Set once the logs' 35 lb bells have become 30 (Nov 24, no35). */
+const NO_35_KEY = 'no35-2026-11-24';
 export const checkinRunning = signal(false);
 export const checkinError = signal<string | null>(null);
 /** Move id whose card (cues) is open. */
@@ -81,6 +83,24 @@ export const workoutOpen = signal(false);
 export const routinePicker = signal<{ welcome: boolean } | null>(null);
 /** Which of the next 7 days is open (0 = today), or null for the 7-day list. */
 export const openDay = signal<number | null>(null);
+
+/** A look at a workout that isn't running: another day's plan, or one already done (James, Nov 24: "I want
+ *  to be able to tap into future or past workouts… I shouldn't be able to start the workout, but tapping
+ *  in should be fine"). Read only. */
+export interface WorkoutLook {
+  eyebrow: string;
+  title: string;
+  note?: string;
+  items: DraftItem[];
+}
+export const lookAt = signal<WorkoutLook | null>(null);
+
+/** Open a look at a session: the sets as the workout would start them, or the sets he logged. */
+export function lookAtWorkout(eyebrow: string, session: PlannedSession, log?: SessionLog, note?: string) {
+  const items = log && log.items.length ? log.items : startDraft(session, 'look', Date.now()).items;
+  lookAt.value = { eyebrow, title: `Day ${session.day} · ${session.title}`, note, items };
+  window.scrollTo(0, 0);
+}
 /** Today's local date. Kept current when the app comes back from the background (see refreshDate). */
 export const todayStr = signal(localDate(Date.now()));
 
@@ -156,7 +176,7 @@ const uid = () =>
 
 export async function init() {
   try {
-    const [eng, set, met, unl, dr, sess, days, bodyRows, photoRows, key, about, cks, fix, seeded, chose] = await Promise.all([
+    let [eng, set, met, unl, dr, sess, days, bodyRows, photoRows, key, about, cks, fix, seeded, chose, fixed35] = await Promise.all([
       getKV<EngineState>('engine'),
       getKV<Settings>('settings'),
       getKV<Meta>('meta'),
@@ -172,7 +192,19 @@ export async function init() {
       getKV<StreakFix>('streakFix'),
       getKV<boolean>(STREAK_SEED_KEY),
       getKV<boolean>('routineChosen'),
+      getKV<boolean>(NO_35_KEY),
     ]);
+    // Once (Nov 24): James has no 35 lb bell, so a 35 in the logs, progress or a workout in progress was
+    // his 30 (no35). Not on a phone whose own bells include a 35.
+    if (!fixed35) {
+      if (!{ ...defaultSettings(), ...set }.bells.includes(35)) {
+        sess = sess.map(no35);
+        await db.sessions.bulkPut(sess);
+        if (eng) await putKV('engine', (eng = no35(eng)));
+        if (dr) await putKV('draft', (dr = no35(dr)));
+      }
+      await putKV(NO_35_KEY, true);
+    }
     if (eng) {
       // Older saves (levels and routines, Nov 20; hold times by move, Nov 22) catch up, from the logs if need be
       const migrated = migrateState({ ...initialState(), ...eng, planVersion: eng.planVersion }, data, sess);
@@ -182,7 +214,7 @@ export async function init() {
       engine.value = initialState();
     }
     const saved = { ...defaultSettings(), ...set };
-    // James's bells are 18, 35 and 45 lb (Nov 7). Swap out the old starting list if it was never edited.
+    // James's bells are 18, 30 and 45 lb (Nov 24). Swap out the old starting list if it was never edited.
     if (saved.bells.join() === '25,45') {
       saved.bells = defaultSettings().bells;
       await putKV('settings', saved);

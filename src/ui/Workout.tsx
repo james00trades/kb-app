@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import {
-  addSet, canAddSet, chosen, completeNext, dropExtra, evenSplit, isItemComplete, isTimedMove, lastAndBest, lastTime, moveTime, repsDone, restAfter, restKey,
+  addSet, canAddSet, chosen, completeNext, dropExtra, isItemComplete, pickBell, isTimedMove, lastAndBest, moveTime, repsDone, restAfter, restKey,
   setChoice, stampTimes, timesFor, undoSet as undoSetAt, workOf, type DraftItem, type SessionDraft,
 } from '../engine/engine';
-import { COUNT_GOAL, MAX_REPS, type Bell } from '../engine/schema';
+import { COUNT_GOAL, bellsIn, hasBell, isPair, pairsFrom, type Bell } from '../engine/schema';
 import { discardWorkout, draft, finishWorkout, moveSheet, sessions, setMoveRest, settings, updateDraft, workoutOpen } from '../lib/store';
 import { breathSpec, fmtClock, holdSpec, intervalSpec, restSpec, startTimer, stopTimer, timer, type TimerSpec } from '../lib/timer';
-import { Icon, Sheet, Stepper, bellShort, fmtDay, fmtSeconds, fmtTime, prescText, sideText, upText } from './common';
+import { Icon, Sheet, Stepper, bellShort, bellText, fmtSeconds, fmtTime, prescText, sideText, upText } from './common';
 
-const SECTION_TITLES = { warmup: 'Warm-up', main: 'Main work', cooldown: 'Breathwork' } as const;
+export const SECTION_TITLES = { warmup: 'Warm-up', main: 'Main work', cooldown: 'Breathwork' } as const;
 
 const nextIncomplete = (d: SessionDraft, from: number): number => {
   for (let k = 1; k <= d.items.length; k++) {
@@ -207,6 +207,10 @@ function ActiveItem({ it, i, onComplete }: { it: DraftItem; i: number; onComplet
     for (const b of settings.value.bells) bells.push(b);
     if (typeof it.bell === 'number' && !bells.includes(it.bell)) bells.push(it.bell);
   }
+  // Two bells at once (James, Nov 24: deadlifts holding his 45 and 30): every pair of his bells, behind "2 bells"
+  const pairs = it.bell !== null && settings.value.bells.length > 1 ? pairsFrom(settings.value.bells) : [];
+  if (isPair(it.bell) && !pairs.includes(it.bell)) pairs.push(it.bell);
+  const [twoOpen, setTwoOpen] = useState(() => isPair(it.bell));
 
   const setActual = (v: number) =>
     patchItem(i, (x) => ({ ...x, sets: x.sets.map((s, k) => (k === cur ? { ...s, actual: v } : s)) }));
@@ -214,8 +218,7 @@ function ActiveItem({ it, i, onComplete }: { it: DraftItem; i: number; onComplet
   const undoSet = (k: number) => patchItem(i, (x) => stampTimes(undoSetAt(x, k), Date.now()));
   const total = p.total;
 
-  const setBell = (b: Bell) =>
-    patchItem(i, (x) => ({ ...x, bell: b, sets: x.sets.map((s) => (s.done ? s : { ...s, bell: b })) }));
+  const setBell = (b: Bell) => patchItem(i, (x) => pickBell(x, b));
 
   return (
     <section class="item-card active">
@@ -265,38 +268,40 @@ function ActiveItem({ it, i, onComplete }: { it: DraftItem; i: number; onComplet
               {bellShort(b)}
             </button>
           ))}
+          {pairs.length > 0 && (
+            <button
+              class={`bell-chip two ${twoOpen ? 'open' : ''}`}
+              aria-expanded={twoOpen}
+              onClick={() => {
+                // Closing it with two bells picked goes back to the heavier one
+                if (twoOpen && isPair(it.bell)) setBell(bellsIn(it.bell)[0]);
+                setTwoOpen(!twoOpen);
+              }}
+            >
+              2 bells
+            </button>
+          )}
         </div>
       )}
-
-      {!it.skipped && <LastTime it={it} complete={complete} />}
-
-      {total !== undefined && !it.skipped && <TotalLine it={it} total={total} />}
-
-      {it.plan.kind !== 'breath' && it.plan.kind !== 'routine' && (total !== undefined ? it.sets.some((s) => s.done) : it.sets.length > 1 || complete) && (
-        <div class="set-chips">
-          {it.sets.map((s, k) => (total !== undefined && !s.done ? null :
-            <button
-              key={k}
-              class={`set-chip ${s.done ? 'done' : ''} ${k === cur ? 'current' : ''}`}
-              onClick={() => s.done && undoSet(k)}
-              aria-label={s.done ? `Set ${k + 1} done, tap to undo` : `Set ${k + 1}`}
-            >
-              <span class="set-n">
-                {it.plan.kind === 'circuit' ? 'Round' : 'Set'} {k + 1}
-              </span>
-              <span class="set-v">
-                {s.done ? `✓ ${s.actual}` : s.actual}
-                {it.plan.kind === 'time' ? 's' : ''}
-              </span>
+      {twoOpen && pairs.length > 0 && (
+        <div class="bells pairs" role="group" aria-label="Two bells">
+          {pairs.map((b) => (
+            <button key={b} class={`bell-chip ${it.bell === b ? 'selected' : ''}`} onClick={() => setBell(b)}>
+              {bellShort(b)}
             </button>
           ))}
         </div>
       )}
 
+
+      {total !== undefined && !it.skipped && <TotalLine it={it} total={total} />}
+
+      <SetBoxes it={it} cur={cur} onTap={undoSet} />
+
       {!complete && it.plan.kind === 'reps' && total !== undefined && cur >= 0 && (
         <>
           <Stepper value={it.sets[cur].actual} onChange={setActual} min={1} unit={sideText(it.plan) ? ' / side' : ''} />
-          <div class="muted small center">{splitHint(it, total)}</div>
+          {extraOpen && <div class="muted small center">Log what you did.</div>}
           <button class="big-btn primary" onClick={onComplete}>
             {it.sets[cur].actual + repsDone(it.sets) >= total ? (
               <>
@@ -416,8 +421,38 @@ function ActiveItem({ it, i, onComplete }: { it: DraftItem; i: number; onComplet
   );
 }
 
+/** A box for every set (James, Nov 24: "Boxes start as prescription… Once I complete a set, the box flips
+ *  to green with the actual reps & weight"): the planned reps and bell until the set's done, then what he
+ *  did. During a workout, tapping a done set undoes it; in a look at another day's workout (`onTap`
+ *  missing) the boxes are only to read. */
+export function SetBoxes({ it, cur = -1, onTap }: { it: DraftItem; cur?: number; onTap?: (k: number) => void }) {
+  if (it.plan.kind === 'breath' || it.plan.kind === 'routine' || it.sets.length === 0) return null;
+  const Box = onTap ? 'button' : 'div';
+  return (
+    <div class="set-chips">
+      {it.sets.map((s, k) => (
+        <Box
+          key={k}
+          class={`set-chip ${s.done ? 'done' : ''} ${k === cur ? 'current' : ''}`}
+          onClick={onTap ? () => s.done && onTap(k) : undefined}
+          aria-label={s.done ? `Set ${k + 1} done${onTap ? ', tap to undo' : ''}` : `Set ${k + 1}`}
+        >
+          <span class="set-n">
+            {it.plan.kind === 'circuit' ? 'Round' : 'Set'} {k + 1}
+          </span>
+          <span class="set-v">
+            {s.done ? `✓ ${s.actual}` : s.target}
+            {it.plan.kind === 'time' ? 's' : ''}
+          </span>
+          {hasBell(s.bell) && <span class="set-x">{bellShort(s.bell!)} lb</span>}
+        </Box>
+      ))}
+    </div>
+  );
+}
+
 /** A circuit's moves with their counts and bells, or a flow's moves in order (Nov 20). Tap one for its cues. */
-function Parts({ it, count }: { it: DraftItem; count: number }) {
+export function Parts({ it, count }: { it: DraftItem; count: number }) {
   const parts = it.plan.parts ?? [];
   if (it.plan.kind === 'flow') {
     return (
@@ -444,7 +479,7 @@ function Parts({ it, count }: { it: DraftItem; count: number }) {
               {pt.name}
               {pt.perSide ? <span class="muted"> {pt.sideLabel ?? 'per side'}</span> : null}
             </span>
-            <span class="muted small">{pt.bell === null ? '' : pt.bell === 'BW' ? 'BW' : `${pt.bell} lb`}</span>
+            <span class="muted small">{pt.bell === null ? '' : pt.bell === 'BW' ? 'BW' : bellText(pt.bell)}</span>
           </button>
         </li>
       ))}
@@ -478,36 +513,6 @@ function PastTimes({ it, move }: { it: DraftItem; move: string }) {
   return null;
 }
 
-/** Last time's sets for this move, each with its bell and rest: the benchmark to beat (James, Nov 23).
- *  The one for the set he's on now is outlined. */
-function LastTime({ it, complete }: { it: DraftItem; complete: boolean }) {
-  const last = lastTime(sessions.value, it);
-  if (!last) return null;
-  const now = it.sets.filter((s) => s.done).length;
-  const unit = it.plan.kind === 'time' ? ' s' : '';
-  const word = it.plan.kind === 'circuit' ? 'Round' : 'Set';
-  return (
-    <div class="last-time">
-      <div class="last-time-head">Last time · {fmtDay(last.date)}</div>
-      <div class="set-chips">
-        {last.sets.map((s, k) => (
-          <div key={k} class={`set-chip past ${!complete && k === now ? 'current' : ''}`}>
-            <span class="set-n">
-              {word} {k + 1}
-            </span>
-            <span class="set-v">
-              {s.actual}
-              {unit}
-            </span>
-            {s.bell !== null && <span class="set-x">{s.bell === 'BW' ? 'BW' : `${s.bell} lb`}</span>}
-            {s.rest !== undefined && <span class="set-x">rest {fmtTime(s.rest * 1000)}</span>}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 /** Why last time earned an offer (Nov 23). */
 function offerText(it: DraftItem): string {
   const { kind, offer } = it.plan;
@@ -518,14 +523,6 @@ function offerText(it: DraftItem): string {
 }
 
 /** The total split evenly over the sets that are left (Nov 23): "Suggested: 8, 8, 7". */
-function splitHint(it: DraftItem, total: number): string {
-  const done = it.sets.filter((s) => s.done);
-  const left = total - repsDone(it.sets);
-  if (left <= 0) return 'Log what you did. 10 a set at most is the plan.';
-  const sets = Math.max(1, chosen(it).sets - done.length, Math.ceil(left / MAX_REPS));
-  return `Suggested: ${evenSplit(left, sets).filter((n) => n > 0).join(', ')}. Never more than 10 a set.`;
-}
-
 /** "16 of 24 · 8 to go" (Nov 19). */
 function TotalLine({ it, total }: { it: DraftItem; total: number }) {
   const done = repsDone(it.sets);

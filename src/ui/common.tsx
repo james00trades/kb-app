@@ -1,14 +1,16 @@
 import type { ComponentChildren } from 'preact';
 import type { PlannedItem, Prescription } from '../engine/engine';
-import type { Bell } from '../engine/schema';
+import { bellsIn, type Bell } from '../engine/schema';
 
+/** "45 lb", "45 + 30 lb" for two bells, "bodyweight". */
 export function bellText(b: Bell | null | undefined): string {
   if (b === null || b === undefined) return '';
-  return b === 'BW' ? 'bodyweight' : `${b} lb`;
+  return b === 'BW' ? 'bodyweight' : `${bellsIn(b).join(' + ')} lb`;
 }
 
+/** "45", "45+30", "BW". */
 export function bellShort(b: Bell): string {
-  return b === 'BW' ? 'BW' : String(b);
+  return b === 'BW' ? 'BW' : bellsIn(b).join('+');
 }
 
 export function sideText(item: PlannedItem): string {

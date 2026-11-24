@@ -1,8 +1,9 @@
 import { useState } from 'preact/hooks';
 import { chosen, moveTime, type SessionLog } from '../engine/engine';
-import { copyStatsForClaude, engine, progressView as view, sessions } from '../lib/store';
+import { copyStatsForClaude, engine, lookAtWorkout, progressView as view, sessions } from '../lib/store';
 import { BodyView } from './Body';
-import { Sheet, bellText, fmtDay, fmtDuration, fmtTime } from './common';
+import { Icon, Sheet, bellShort, bellText, fmtDay, fmtDuration, fmtTime } from './common';
+import { hasBell } from '../engine/schema';
 
 const STATUS_TEXT = { done: 'Done', partial: 'Partial', skipped: 'Skipped', rest: 'Rest day' } as const;
 
@@ -107,7 +108,7 @@ function setBellsAndRests(it: SessionLog['items'][number]): string {
   const bells = done.map((x) => x.bell);
   const mixed = new Set(bells.map(String)).size > 1;
   const out: string[] = [];
-  if (mixed) out.push(`bells ${bells.map((b) => (b === null ? '–' : b === 'BW' ? 'BW' : String(b))).join(', ')}`);
+  if (mixed) out.push(`bells ${bells.map((b) => (b === null ? '–' : bellShort(b))).join(', ')}`);
   const rests = done.map((x) => x.rest);
   if (rests.some((r) => r !== undefined)) out.push(`rests ${rests.map((r) => (r === undefined ? '–' : fmtTime(r * 1000))).join(', ')}`);
   return out.map((x) => ` · ${x}`).join('');
@@ -142,7 +143,7 @@ function SessionDetail({ s, onClose }: { s: SessionLog; onClose: () => void }) {
                       : done.length && it.plan.kind === 'flow'
                         ? `${done.length} set${done.length === 1 ? '' : 's'} of ${done.map((x) => x.actual).join(', ')} cycles` +
                           (it.plan.perSide ? ' per side' : '') +
-                          (typeof it.bell === 'number' ? ` · ${bellText(it.bell)}` : '')
+                          (hasBell(it.bell) ? ` · ${bellText(it.bell)}` : '')
                     : done.length
                       ? done.map((x) => `${x.actual}${unit}`).join(', ') +
                         (it.plan.perSide ? ` ${it.plan.sideLabel ?? 'per side'}` : '') +
@@ -156,6 +157,17 @@ function SessionDetail({ s, onClose }: { s: SessionLog; onClose: () => void }) {
             );
           })}
         </div>
+      )}
+      {s.items.some((it) => it.sets.length > 0) && (
+        <button
+          class="big-btn"
+          onClick={() => {
+            onClose();
+            lookAtWorkout(`${fmtDay(s.date)} · Week ${s.session.week}`, s.session, s);
+          }}
+        >
+          See the workout <Icon name="next" size={18} />
+        </button>
       )}
       <button class="big-btn" onClick={onClose}>Close</button>
     </Sheet>

@@ -3,7 +3,7 @@ import { useState } from 'preact/hooks';
 import { isItemComplete, nextRoutine, type PlannedSession, type RoutinePlan } from '../engine/engine';
 import { dayKept } from '../engine/streak';
 import {
-  backOneDay, backupDue, bodyDue, bodySheet, currentStreak, data, draft, meta, openDay, passToday, routinePicker, setPart, startWorkout, tab,
+  backOneDay, backupDue, bodyDue, bodySheet, currentStreak, data, draft, lookAtWorkout, meta, openDay, passToday, routinePicker, setPart, startWorkout, tab,
   today, week, workoutOpen, type DayPlan,
 } from '../lib/store';
 import { intervalSpec, startTimer } from '../lib/timer';
@@ -396,6 +396,22 @@ function WorkoutPart({ n, day, live }: { n: number; day: DayPlan; live: boolean 
           }}
         >
           <Icon name="play" /> Start workout
+        </button>
+      )}
+      {/* Look without starting it (James, Nov 24: "tapping in should be fine") */}
+      {!(live && !log && d) && (
+        <button
+          class={live && !log ? 'link-btn' : 'big-btn'}
+          onClick={() =>
+            lookAtWorkout(
+              `${live ? 'Today' : longDate(day.date)} · Week ${s.week}`,
+              s,
+              log,
+              live ? undefined : `A look ahead. You can start it on ${longDate(day.date)}. The numbers can still change with what you do before then.`,
+            )
+          }
+        >
+          See the workout {!(live && !log) && <Icon name="next" size={18} />}
         </button>
       )}
     </PartCard>

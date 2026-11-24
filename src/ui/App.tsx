@@ -1,7 +1,7 @@
 import { useEffect } from 'preact/hooks';
 import { updateReady } from '../lib/pwa';
 import { streakHeat, streakParts, streakPartsDone } from '../engine/streak';
-import { currentStreak, draft, levelUp, loadError, logDueCount, photoSession, ready, routinePicker, tab, type Tab } from '../lib/store';
+import { currentStreak, draft, levelUp, loadError, logDueCount, lookAt, photoSession, ready, routinePicker, tab, type Tab } from '../lib/store';
 import { timer } from '../lib/timer';
 import { setAwake } from '../lib/wakelock';
 import { BodySheet } from './Body';
@@ -17,6 +17,7 @@ import { UpdateOrb } from './UpdateOrb';
 import { RestBar, TimerOverlay } from './TimerView';
 import { Timers } from './Timers';
 import { Today } from './Today';
+import { WorkoutLook } from './WorkoutLook';
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'today', label: 'Today' },
@@ -53,11 +54,17 @@ export function App() {
           <RoutinePicker />
         ) : (
           <>
-            {t === 'today' && <Today />}
-            {t === 'timers' && <Timers />}
-            {t === 'library' && <Library />}
-            {t === 'history' && <History />}
-            {t === 'settings' && <Settings />}
+            {lookAt.value ? (
+              <WorkoutLook />
+            ) : (
+              <>
+                {t === 'today' && <Today />}
+                {t === 'timers' && <Timers />}
+                {t === 'library' && <Library />}
+                {t === 'history' && <History />}
+                {t === 'settings' && <Settings />}
+              </>
+            )}
           </>
         )}
       </main>
@@ -70,6 +77,7 @@ export function App() {
             onClick={() => {
               tab.value = x.id;
               routinePicker.value = null;
+              lookAt.value = null;
               window.scrollTo(0, 0);
             }}
           >

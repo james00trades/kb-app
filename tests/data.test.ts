@@ -51,8 +51,8 @@ describe('data files', () => {
     // cues written for moves the new routines use)
     expect(movements.filter((m) => m.guess).map((m) => m.id)).toEqual(expect.arrayContaining(
       ['curl-to-press', 'gravedigger', 'over-shoulder-pull', 'pullover-to-side-pull', 'side-to-front-raise', 'tactical-crossover']));
-    // His pick: 35 lb for the leg-driven ones, 18 lb for the rest
-    expect(added.filter((id) => moveById.get(id)!.startBell === 35).sort()).toEqual(['clean-to-squat', 'gravedigger', 'woodchop']);
+    // His pick: 35 lb for the leg-driven ones (his 30 since Nov 24: no 35 lb bell), 18 lb for the rest
+    expect(added.filter((id) => moveById.get(id)!.startBell === 30).sort()).toEqual(['clean-to-squat', 'gravedigger', 'woodchop']);
     expect(added.filter((id) => moveById.get(id)!.startBell === 18)).toHaveLength(11);
     // Only the easier row variation starts unlocked
     expect(added.filter((id) => moveById.get(id)!.unlocked)).toEqual(['supported-row']);
@@ -75,8 +75,8 @@ describe('data files', () => {
     expect(held.sort()).toEqual(['clean-to-halo', 'curl-to-goblet-press', 'extended-figure-8-chop', 'over-shoulder-toss',
       'rotation-pullover', 'side-toss-to-rotational-snatch']);
     for (const id of held) expect(moveById.get(id)!.cues!.at(-1), id).toMatch(/^Shoulder hold: /);
-    // Same start-bell rule as Nov 10: 35 lb for the leg-driven ones, 18 lb for the rest
-    expect(added.filter((id) => moveById.get(id)!.startBell === 35).sort()).toEqual(['gorilla-swing', 'over-shoulder-toss']);
+    // Same start-bell rule as Nov 10: the 30 (was 35) for the leg-driven ones, 18 lb for the rest
+    expect(added.filter((id) => moveById.get(id)!.startBell === 30).sort()).toEqual(['gorilla-swing', 'over-shoulder-toss']);
     expect(added.filter((id) => moveById.get(id)!.startBell === 18)).toHaveLength(8);
     // The Savage five are Month 9+
     for (const id of savage) expect(moveById.get(id)!.level, id).toBe('advanced');
