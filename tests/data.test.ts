@@ -42,7 +42,7 @@ describe('data files', () => {
     const added = ['tactical-crossover', 'front-to-back-raise', 'gravedigger', 'uppercut', 'curl-to-press', 'woodchop', 'clean-to-squat',
       'side-to-front-raise', 'pullover-to-side-pull', 'hammer-curl', 'around-the-world-to-curl', 'curl-to-pullover', 'hand-to-hand-curl',
       'over-shoulder-pull', 'supported-row'];
-    expect(movements).toHaveLength(120); // 107 + standing push-out, couch stretch (Nov 14), lying spinal twist (Nov 16), 10 on Nov 23
+    expect(movements).toHaveLength(126); // 107 + standing push-out, couch stretch (Nov 14), lying spinal twist (Nov 16), 10 on Nov 23, 6 on Nov 24
     for (const id of added) expect(moveById.get(id)?.cues?.length, id).toBeGreaterThan(0);
     // Shoulder hold: the ⚠ moves from his notes
     expect(added.filter((id) => moveById.get(id)!.shoulder).sort()).toEqual(
@@ -98,7 +98,7 @@ describe('data files', () => {
   it('every move has a difficulty level (James, Nov 18) that matches the routines and the unlock order', () => {
     const { moveById, movements, routines } = loadData();
     const count = (l: string) => movements.filter((m) => m.level === l).length;
-    expect([count('beginner'), count('intermediate'), count('advanced')]).toEqual([59, 40, 21]);
+    expect([count('beginner'), count('intermediate'), count('advanced')]).toEqual([61, 44, 21]);
     const movesOf = (level: number) =>
       routines.filter((r) => r.level === level).flatMap((r) => [...JSON.stringify(r).matchAll(/"move":"([a-z0-9-]+)"/g)].map((x) => x[1]));
     // Everything in Level 1 (warm-up, days, flows, evening holds) is Beginner

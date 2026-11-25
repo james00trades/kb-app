@@ -105,7 +105,7 @@ export function Settings() {
       <div class="card">
         <div class="mini-label">Default rest between sets</div>
         <Stepper value={s.defaultRest} onChange={(v) => void updateSettings({ defaultRest: v })} step={15} min={15} unit=" s" />
-        <p class="muted small">Change a rest with −15 or +15 during a workout and that exercise keeps it next time.</p>
+        <p class="muted small">Change a rest between sets with −15 or +15 and that exercise keeps it next time. The rest before the next exercise isn't saved.</p>
         {Object.keys(s.restByMove).length > 0 && (
           <div class="list">
             {Object.entries(s.restByMove).map(([k, sec]) => (

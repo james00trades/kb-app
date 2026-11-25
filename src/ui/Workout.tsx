@@ -87,10 +87,12 @@ export function Workout() {
     const rest = restAfter(it, settings.value.restByMove);
     const n = itemDone ? nextIncomplete(after, i) : i;
     if (!workoutDone && rest > 0) {
-      // A ±15 tap on this rest is remembered for this move (James, Nov 13)
+      // A ±15 tap on a rest between sets is remembered for this move (James, Nov 13). The rest after
+      // its last set, on the way to the next move, is not (Nov 25: "not whatever I use between exercises").
       const key = restKey(it);
       const spec = restSpec(rest, undefined, (skipped) => timedSetAfterRest(n, skipped));
-      startTimer({ ...spec, onAdjust: (s) => void setMoveRest(key, s), onEnd: (ms) => void saveRest(i, k, at, ms) });
+      const onAdjust = itemDone ? undefined : (s: number) => void setMoveRest(key, s);
+      startTimer({ ...spec, onAdjust, onEnd: (ms) => void saveRest(i, k, at, ms) });
     }
     if (itemDone && n >= 0) setActive(n);
   };
